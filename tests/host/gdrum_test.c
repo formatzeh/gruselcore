@@ -100,7 +100,7 @@ int main(int argc, char **argv)
             CHECK(n < MAXN, "%s %s: still sounding after 5 s", gd_kit_names[k], gdrum_slot_name(s));
             CHECK(peak < 1.0f, "%s %s: peak %.2f", gd_kit_names[k], gdrum_slot_name(s), (double)peak);
             CHECK(peak > 0.05f, "%s %s: too quiet, peak %.3f", gd_kit_names[k], gdrum_slot_name(s), (double)peak);
-            printf(" %s %.2f/%dms", gdrum_slot_name(s), (double)peak, len60 * 1000 / FS);
+            printf(" %s %.2f/%dms", gd_kit_snd_names[k][s], (double)peak, len60 * 1000 / FS);
             for (int i = 0; i < FS * 6 / 10 && i < n; i++) {
                 wl[wn + i] = L[i];
                 wr[wn + i] = R[i];

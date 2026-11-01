@@ -108,15 +108,15 @@ const gd_kit_t gd_kits[] = {
         {R,  84, 84, 15, 20,  0, 22,  0, 55, 110,  20,  65, CRSH,  0, 0, 76},
         {M,  76, 62, 30, 35,  0, 52,  0, 25, 110,  40,  75, FOLD,  0, 0, 84},
     }},
-    {{ /* DARK PROG: warm, rounded, subtle tops */
-        {K, 100, 27, 70, 62, 45, 70, 10, 45,  85,   0,  40, TUBE, 50, 0, 64},
-        {S,  88, 56, 25, 60,  8, 58,  0, 35,  88,  70,  35, TUBE, 10, 0, 64},
-        {C,  90, 58,  0,  0,  0, 62,  0, 12,  82, 127,  30, TUBE,  0, 0, 64},
-        {H,  72, 78,  0,  0,  0, 28,  0,  8, 108,  50,  20, SOFT,  0, 0, 70},
-        {H,  70, 78,  0,  0,  0, 64,  0,  8, 106,  50,  20, SOFT,  0, 0, 58},
-        {T,  86, 38, 30, 70, 20, 68,  0, 25,  68,   5,  35, TUBE, 15, 0, 54},
-        {R,  80, 74, 10, 30,  0, 28,  0, 35,  96,  10,  30, SOFT,  0, 0, 74},
-        {M,  70, 64, 10, 45,  0, 58,  0, 12,  92,  15,  35, TUBE,  0, 0, 80},
+    {{ /* DARK PROG: warm but punchy: a fast drop, a held body, a firmer snare and clap */
+        {K, 115, 27, 84, 52, 55, 74, 12, 70,  98,   0,  62, TUBE, 78, 0, 64},
+        {S,  92, 57, 32, 52, 10, 56,  0, 55,  95,  72,  55, TUBE, 20, 0, 64},
+        {C,  94, 59,  0,  0,  0, 60,  0, 25,  88, 127,  50, TUBE,  5, 0, 64},
+        {H,  72, 78,  0,  0,  0, 28,  0, 10, 108,  50,  25, SOFT,  0, 0, 70},
+        {H,  70, 78,  0,  0,  0, 64,  0, 10, 106,  50,  25, SOFT,  0, 0, 58},
+        {T,  88, 38, 38, 60, 20, 66,  0, 40,  72,   5,  45, TUBE, 25, 0, 54},
+        {R,  82, 74, 12, 28,  0, 28,  0, 45,  98,  10,  40, TUBE,  0, 0, 74},
+        {M,  70, 64, 10, 45,  0, 58,  0, 15,  92,  15,  40, TUBE,  0, 0, 80},
     }},
     {{ /* PSYCHILL: soft, round, a little air */
         {K,  96, 26, 50, 75, 30, 82, 20, 20,  60,   0,  20, SOFT, 20, 2, 64},
@@ -128,12 +128,53 @@ const gd_kit_t gd_kits[] = {
         {R,  76, 74,  8, 35,  0, 34,  0, 20,  90,  10,  15, SOFT,  0, 0, 76},
         {T,  80, 54, 20, 70, 10, 66,  0, 20,  75,  10,  20, SOFT, 10, 0, 82},
     }},
+    {{ /* TRIBE PERC: djembe, congas, bongo, shakers, wood, a low tribal tom (for Tribetek) */
+        {T,  95, 34, 30, 60, 20, 70, 10, 45,  70,   8,  40, TUBE, 20,  0, 60},
+        {T,  90, 52, 18, 45,  8, 60,  0, 50,  85,   6,  30, SOFT, 10,  0, 44},
+        {T,  88, 60, 16, 40,  6, 54,  0, 55,  90,   6,  30, SOFT,  8,  0, 84},
+        {H,  82, 90,  0,  0,  0, 26,  0,  0, 118, 127,  10, SOFT,  0, 12, 76},
+        {H,  80, 90,  0,  0,  0, 44,  0,  0, 116, 127,  10, SOFT,  0, 20, 52},
+        {T,  85, 70, 14, 35,  4, 46,  0, 60,  98,   8,  30, SOFT,  5,  0, 90},
+        {R,  80, 86,  6, 25,  0, 22,  0, 30, 105,   0,  20, SOFT,  0,  0, 38},
+        {T,  95, 30, 40, 70, 25, 80, 20, 35,  65,  10,  50, TUBE, 25,  0, 64},
+    }},
+    {{ /* MENTAL PERC: zaps, crushed toms and hats, folded metal (for Mentaltek) */
+        {Z,  85, 40, 120, 70, 30, 50, 0, 20, 100,   0,  60, HARD,  0,  0, 40},
+        {M,  78, 66, 25, 40,  0, 64,  0, 30, 105,  15,  80, FOLD,  0,  0, 84},
+        {T,  90, 46, 50, 50, 20, 56,  0, 40,  80,  15,  75, CRSH, 10,  0, 56},
+        {H,  78, 92,  0,  0,  0, 18,  0, 20, 122,  30,  80, CRSH,  0,  0, 72},
+        {H,  74, 92,  0,  0,  0, 48,  0, 20, 120,  30,  80, CRSH,  0,  0, 56},
+        {C,  85, 70,  0,  0,  0, 40,  0, 40, 110, 127,  80, HARD,  0,  0, 88},
+        {R,  85, 82, 20, 20,  0, 20,  0, 60, 115,  20,  85, HARD,  0,  0, 30},
+        {M,  72, 74, 10, 40,  0, 78, 10, 10, 100,   5,  50, FOLD,  0,  0, 64},
+    }},
+    {{ /* DARK PROG PERC: dark toms, soft shakers, clave, a dark bell, snap, knock (for Dark Prog) */
+        {T,  88, 38, 25, 65, 15, 66, 10, 25,  65,   5,  35, TUBE, 15,  0, 50},
+        {T,  84, 48, 22, 60, 12, 60,  0, 25,  70,   5,  35, TUBE, 12,  0, 78},
+        {H,  76, 88,  0,  0,  0, 24,  0,  0, 112, 127,   5, SOFT,  0, 10, 72},
+        {H,  74, 88,  0,  0,  0, 42,  0,  0, 110, 127,   5, SOFT,  0, 18, 56},
+        {R,  74, 84,  4, 25,  0, 22,  0, 25, 100,   0,  15, SOFT,  0,  0, 40},
+        {M,  80, 62,  0, 40,  0, 72, 10,  5,  85,   0,  25, TUBE,  0,  2, 86},
+        {C,  78, 64,  0,  0,  0, 34,  0, 20,  96, 127,  25, TUBE,  0,  0, 30},
+        {R,  82, 66, 10, 30,  0, 26,  0, 35,  85,   5,  30, TUBE,  0,  0, 64},
+    }},
 };
 
 const char *const gd_kit_names[] = {
     "HARDTEK", "TRIBETEK", "MENTALTEK", "TECHNO", "DARK TECHNO",
     "TRANCE", "PSYTRANCE", "DARKPSY", "DARK PROG", "PSYCHILL",
+    "TRIBE PERC", "MENTAL PERC", "DARK PROG PERC",
+};
+
+/* each kit's names for its 8 sounds (a percussion kit's slots are not kick, snare, ...) */
+#define DRUMS {"KICK", "SNARE", "CLAP", "C.HAT", "O.HAT", "TOM", "RIM", "PERC"}
+const char *const gd_kit_snd_names[][GD_NSND] = {
+    DRUMS, DRUMS, DRUMS, DRUMS, DRUMS, DRUMS, DRUMS, DRUMS, DRUMS, DRUMS,
+    {"DJEMBE", "CONGA L", "CONGA H", "SHAKE S", "SHAKE L", "BONGO", "WOOD", "SURDO"},
+    {"ZAP", "CLANG", "CR.TOM", "GLT.HAT", "GLT.OPN", "RATTLE", "SNAP", "F.BELL"},
+    {"TOM LO", "TOM HI", "SHAKE S", "SHAKE L", "CLAVE", "BELL", "SNAP", "KNOCK"},
 };
 
 const int gd_nkits = (int)(sizeof gd_kits / sizeof gd_kits[0]);
+typedef char gd_snd_names_match[(sizeof gd_kit_snd_names / sizeof gd_kit_snd_names[0]) == (sizeof gd_kits / sizeof gd_kits[0]) ? 1 : -1];
 typedef char gd_names_match[(sizeof gd_kit_names / sizeof gd_kit_names[0]) == (sizeof gd_kits / sizeof gd_kits[0]) ? 1 : -1];

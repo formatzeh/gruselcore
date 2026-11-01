@@ -8,7 +8,8 @@
  * oscillators for metal, retriggered noise for claps.
  *
  * A kit is plain data: 8 x GP_N pots (gd_kit_t). The factory kits are in gdrum_kits.c.
- * Slot 3 (closed hat) chokes slot 4 (open hat), as on most drum machines.
+ * Slot 3 (closed hat) chokes slot 4 (open hat), as on most drum machines; percussion kits put a
+ * short and a long shaker there, which choke the same way.
  *
  * The engine is instance based (no shared state but read-only tables), so each DRUM track owns
  * one gdrum_t. Everything runs in the audio ISR: gdrum_set() may be called there too (it only
@@ -79,4 +80,5 @@ const char *gdrum_slot_name(int snd);              /* "KICK", "SNARE", ... */
 /* factory kits (gdrum_kits.c) */
 extern const gd_kit_t gd_kits[];
 extern const char *const gd_kit_names[];
+extern const char *const gd_kit_snd_names[][GD_NSND];   /* each kit's names for its 8 sounds */
 extern const int gd_nkits;
