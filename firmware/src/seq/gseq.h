@@ -28,6 +28,10 @@
  * A step's lateness never carries over to the next (the grid-slot rule, as X0X's sequencer.h
  * explains): each step is scheduled from its grid slot, never from when the step before played.
  *
+ * Note tracks (303, VA) play the same steps. A step may carry a chord (BS_CHORD): the VA plays it as
+ * a chord, the 303 its root. With the track's arpeggiator on, the chord (or the note alone) is played
+ * as notes instead, arp_div + 1 of them a step, over arp_oct + 1 octaves; it carries on through TIEs.
+ *
  * 303 semantics (as the TB-303 and Open303's sequencer):
  *   NOTE  plays; the gate falls at half the step, unless the step slides (BS_SLIDE) or the next
  *         step is a TIE, in which case it is held through.
@@ -44,7 +48,7 @@
 
 typedef struct {
     int (*drum)(void *ctx, int trk, int snd, float vel);     /* 0: the hit did not play */
-    void (*note_on)(void *ctx, int trk, int note, int accent, int slide);
+    void (*note_on)(void *ctx, int trk, int note, int chord, int accent, int slide);   /* chord: gp_chords */
     void (*note_off)(void *ctx, int trk);
     void (*midi)(void *ctx, uint8_t status, uint8_t d1, uint8_t d2);   /* clock / transport / notes out */
     void (*step)(void *ctx, int trk, int step);                         /* UI playhead (optional) */
@@ -66,7 +70,13 @@ typedef struct {                      /* one track's runtime */
     uint32_t to_off;                  /* 303: samples to the gate falling, Q8; 0 = none */
     uint32_t rng;                     /* DIR_RANDOM */
     uint8_t note_out;                 /* 303: the note echoed on MIDI, for the note off */
-    uint8_t rsv[3];
+    uint8_t arp_i;                    /* the arpeggiator: notes played since its chord began */
+    uint8_t arp_left;                 /* notes still to come in this step */
+    uint8_t arp_root, arp_chord;      /* the chord it plays (the last NOTE step's) */
+    uint8_t arp_acc, arp_hold;        /* that step's accent; the step holds into the next (slide, tie) */
+    uint8_t rsv2[2];
+    uint32_t arp_period;              /* samples between its notes, Q8 */
+    uint32_t arp_to_next;             /* samples to its next note, Q8; 0 = none */
 } seq_track_t;
 
 typedef struct {

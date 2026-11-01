@@ -46,7 +46,7 @@ uint32_t gseq_step_q8(const seq_t *s, int rate)
 }
 
 static const tpart_t *tpart(const seq_t *s, int t) { return &s->pat[s->tpat[t] % NPAT].t[t]; }
-static int is_303(const seq_t *s, int t) { return t < NTRK && s->ttype[t] == TT_303; }
+static int is_303(const seq_t *s, int t) { return t < NTRK && tt_notes(s->ttype[t]); }   /* a note track */
 static int track_dir(const seq_t *s, int t) { return is_303(s, t) ? tpart(s, t)->dir & 3 : DIR_FWD; }
 
 int gseq_track_len(const seq_t *s, int t)
@@ -147,6 +147,13 @@ static void note_release(seq_t *s, int t, const seq_sink_t *o)
     tr->to_off = 0;
 }
 
+/* the arpeggiator's notes still to come in a step: none (stop, restart, rest) */
+static void arp_cancel(seq_track_t *tr)
+{
+    tr->arp_to_next = 0;
+    tr->arp_left = 0;
+}
+
 static void fire_drum(seq_t *s, int t, int p, const seq_sink_t *o)
 {
     const tpart_t *d = tpart(s, t);
@@ -168,15 +175,67 @@ static void fire_drum(seq_t *s, int t, int p, const seq_sink_t *o)
     }
 }
 
+/* a note to the engine, and its echo on MIDI (a chord's root) */
+static void play_note(seq_t *s, int t, int note, int chord, int accent, int slide, const seq_sink_t *o)
+{
+    seq_track_t *tr = &s->t[t];
+    o->note_on(o->ctx, t, note, chord, accent, slide);
+    if (s->send_notes && s->ch[t] != SEQ_CH_OFF) {
+        uint8_t old = tr->note_out;
+        midi(o, (uint8_t)(0x90 | s->ch[t]), (uint8_t)note, accent ? 127 : 90);
+        if (old && old != note)
+            midi(o, (uint8_t)(0x80 | s->ch[t]), old, 0);   /* legato: the new note first */
+        tr->note_out = (uint8_t)note;
+    }
+    tr->sounding = 1;
+}
+
+/* the arpeggiator's next note: its chord over its octaves, in its order */
+static int arp_next(seq_t *s, int t)
+{
+    seq_track_t *tr = &s->t[t];
+    const tpart_t *bp = tpart(s, t);
+    uint8_t nt[CHORD_NMAX];
+    int n = gp_chord_notes(tr->arp_root, tr->arp_chord, nt), oct = bp->u.b.arp_oct % 3 + 1;
+    int N = n * oct, i = tr->arp_i++, k, P, j, x;
+    switch (bp->u.b.arp % NARPS) {
+    case ARP_DOWN: k = N - 1 - i % N; break;
+    case ARP_UPDN:
+        P = N > 1 ? 2 * N - 2 : 1;
+        j = i % P;
+        k = j < N ? j : P - j;
+        break;
+    case ARP_RAND: k = (int)(rng_next(&tr->rng) % (uint32_t)N); break;
+    default: k = i % N; break;
+    }
+    x = nt[k % n] + 12 * (k / n);
+    return x > 127 ? 127 : x;
+}
+
+/* the arpeggiator's note now; carry: how far into this sample it was due */
+static void arp_fire(seq_t *s, int t, uint32_t carry, const seq_sink_t *o)
+{
+    seq_track_t *tr = &s->t[t];
+    play_note(s, t, arp_next(s, t), 0, tr->arp_acc, 0, o);
+    tr->to_off = tr->arp_left || !tr->arp_hold ? carry + tr->arp_period / 2u : 0;
+    if (tr->arp_left) {
+        tr->arp_left--;
+        tr->arp_to_next = carry + tr->arp_period;
+    } else {
+        tr->arp_to_next = 0;
+    }
+}
+
 static void fire_303(seq_t *s, int t, int p, uint32_t step_q8, uint32_t carry, const seq_sink_t *o)
 {
     seq_track_t *tr = &s->t[t];
     const tpart_t *bp = tpart(s, t);
     const bstep_t *st = &bp->u.b.step[p];
-    int gate = bstep_gate(st), note, hold, nx;
+    int gate = bstep_gate(st), note, hold, nx, chord = bstep_chord(st), acc = (st->flags & BS_ACCENT) != 0;
     uint8_t prev_slide = tr->held_note & 0x80u;
     if (s->mute & (1u << t))
         gate = G_REST;
+    arp_cancel(tr);
     if (gate == G_REST) {
         note_release(s, t, o);
         tr->held_note = 0;
@@ -184,20 +243,26 @@ static void fire_303(seq_t *s, int t, int p, uint32_t step_q8, uint32_t carry, c
     }
     note = st->note + (int)bp->u.b.transpose - 24;
     note = note < 0 ? 0 : note > 127 ? 127 : note;
-    if (gate == G_NOTE || !tr->sounding) {
-        int slide = tr->sounding && prev_slide;
-        o->note_on(o->ctx, t, note, (st->flags & BS_ACCENT) != 0, slide);
-        if (s->send_notes && s->ch[t] != SEQ_CH_OFF) {
-            uint8_t old = tr->note_out;
-            midi(o, (uint8_t)(0x90 | s->ch[t]), (uint8_t)note, (st->flags & BS_ACCENT) ? 127 : 90);
-            if (old && old != note)
-                midi(o, (uint8_t)(0x80 | s->ch[t]), old, 0);   /* legato: the new note first */
-            tr->note_out = (uint8_t)note;
-        }
-        tr->sounding = 1;
-    }
     nx = next_pos(s, t, p, 0);
     hold = (st->flags & BS_SLIDE) || bstep_gate(&bp->u.b.step[nx]) == G_TIE;
+    if (bp->u.b.arp % NARPS) {                       /* the arpeggiator plays the step */
+        int div = bp->u.b.arp_div % 4 + 1;
+        if (gate == G_NOTE || !tr->sounding) {
+            if (note != tr->arp_root || chord != tr->arp_chord)
+                tr->arp_i = 0;                       /* a new chord: from its first note */
+            tr->arp_root = (uint8_t)note;
+            tr->arp_chord = (uint8_t)chord;
+            tr->arp_acc = (uint8_t)acc;
+        }
+        tr->arp_hold = (uint8_t)hold;
+        tr->arp_period = step_q8 / (uint32_t)div;
+        tr->arp_left = (uint8_t)(div - 1);
+        tr->held_note = 0;
+        arp_fire(s, t, carry, o);
+        return;
+    }
+    if (gate == G_NOTE || !tr->sounding)
+        play_note(s, t, note, chord, acc, tr->sounding && prev_slide, o);
     tr->held_note = (uint8_t)((note & 0x7F) | ((st->flags & BS_SLIDE) ? 0x80 : 0));
     tr->to_off = hold ? 0 : carry + step_q8 / 2u;
 }
@@ -225,8 +290,9 @@ static void restart_tracks(seq_t *s, uint32_t mask, const seq_sink_t *o)
         seq_track_t *tr = &s->t[t];
         if (!(mask >> t & 1u))
             continue;
-        if (tr->sounding && tr->played_type == TT_303)
+        if (tr->sounding && tt_notes(tr->played_type))
             note_release(s, t, o);
+        arp_cancel(tr);
         tr->started = 0;
         tr->to_next = s->ext ? NEVER : 0;
         tr->swing_delay = 0;
@@ -260,14 +326,16 @@ static uint32_t fire_step(seq_t *s, int t, const seq_sink_t *o)
     tr->pos = (uint8_t)p;
     if (t < NTRK) {
         int tt = s->ttype[t];
-        if (tr->played_type == TT_303 && tt != TT_303)
-            note_release(s, t, o);                   /* its type changed under a held note */
+        if (tt_notes(tr->played_type) && !tt_notes(tt)) {
+            note_release(s, t, o);
+            arp_cancel(tr);
+        }                   /* its type changed under a held note */
         tr->played_type = (uint8_t)tt;
         if (o->step)
             o->step(o->ctx, t, p);
         if (tt == TT_DRUM)
             fire_drum(s, t, p, o);
-        else if (tt == TT_303)
+        else if (tt_notes(tt))
             fire_303(s, t, p, L, carry, o);
     }
     if (s->ext) {
@@ -294,6 +362,7 @@ static void do_start(seq_t *s, int from_top, const seq_sink_t *o)
         if (from_top) {
             tr->started = 0;
             tr->pp_dir = 1;
+            tr->arp_i = 0;
         }
         tr->to_off = 0;
         tr->swing_delay = !s->ext && tr->started ? next_swing_delay(s, t, tr->pos, rate, gseq_step_q8(s, rate)) : 0;
@@ -310,8 +379,10 @@ static void do_stop(seq_t *s, const seq_sink_t *o)
 {
     int t;
     s->playing = 0;
-    for (t = 0; t < NTRK; t++)
+    for (t = 0; t < NTRK; t++) {
         note_release(s, t, o);
+        arp_cancel(&s->t[t]);
+    }
     for (t = 0; t <= NTRK; t++)
         s->t[t].to_next = NEVER;
     if (!s->ext && s->send_clock)
@@ -358,6 +429,8 @@ uint32_t gseq_until_event(seq_t *s, uint32_t n)
         if (s->t[t].to_next != NEVER && (e = s->t[t].to_next >> 8) < m)
             m = e;
         if (s->t[t].to_off && (e = s->t[t].to_off >> 8) < m)
+            m = e;
+        if (s->t[t].arp_to_next && (e = s->t[t].arp_to_next >> 8) < m)
             m = e;
     }
     if (!s->ext && s->send_clock && (e = s->clk_to_next >> 8) < m)
@@ -418,6 +491,8 @@ void gseq_advance(seq_t *s, uint32_t k, const seq_sink_t *o)
             tr->to_next = tr->to_next > dq ? tr->to_next - dq : 0;
         if (tr->to_off)
             tr->to_off = tr->to_off > dq ? tr->to_off - dq : 1;   /* 1: due, still "set" */
+        if (tr->arp_to_next)
+            tr->arp_to_next = tr->arp_to_next > dq ? tr->arp_to_next - dq : 1;
     }
     if (!s->ext && s->send_clock)
         s->clk_to_next = s->clk_to_next > dq ? s->clk_to_next - dq : 0;
@@ -436,6 +511,10 @@ void gseq_advance(seq_t *s, uint32_t k, const seq_sink_t *o)
             seq_track_t *tr = &s->t[t];
             if (tr->to_off && tr->to_off < 256u) {    /* gate falls (before a new step at the same time) */
                 note_release(s, t, o);
+                fired = 1;
+            }
+            if (tr->arp_to_next && tr->arp_to_next < 256u && tr->to_next >= 256u) {   /* the arp's next note */
+                arp_fire(s, t, tr->arp_to_next < 256u ? tr->arp_to_next - 1u : 0, o);
                 fired = 1;
             }
             if (tr->to_next < 256u) {

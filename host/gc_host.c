@@ -13,7 +13,8 @@
  *   reboot                  power off and on (the flash kept)
  *   expect WHAT VALUE       playing | view | trk | snd | cur | type.T | hit.T.S.STEP | gate.T.STEP |
  *                           note.T.STEP | len.T | mute | dirty | peak_min (output peak, % of full, since
- *                           the last peakreset) | kit.T
+ *                           the last peakreset) | kit.T | chord.T.STEP | acc.T.STEP | arp.T | arpdiv.T |
+ *                           va.T.I | sounds.T (its meter moves) | spage | bpm | oct | barbeat | dmac.T.I
  *   peakreset */
 #include <stdio.h>
 #include <stdlib.h>
@@ -249,6 +250,13 @@ static int value_of(const char *what)
     if (sscanf(what, "hit.%d.%d.%d", &t, &s, &st) == 3) return sm_get(proj.pat[seq.tpat[t]].t[t].u.d.hit[s], st);
     if (sscanf(what, "gate.%d.%d", &t, &st) == 2) return bstep_gate(&proj.pat[seq.tpat[t]].t[t].u.b.step[st]);
     if (sscanf(what, "note.%d.%d", &t, &st) == 2) return proj.pat[seq.tpat[t]].t[t].u.b.step[st].note;
+    if (sscanf(what, "chord.%d.%d", &t, &st) == 2) return bstep_chord(&proj.pat[seq.tpat[t]].t[t].u.b.step[st]);
+    if (sscanf(what, "acc.%d.%d", &t, &st) == 2) return (proj.pat[seq.tpat[t]].t[t].u.b.step[st].flags & BS_ACCENT) != 0;
+    if (sscanf(what, "arp.%d", &t) == 1) return proj.pat[seq.tpat[t]].t[t].u.b.arp;
+    if (sscanf(what, "arpdiv.%d", &t) == 1) return proj.pat[seq.tpat[t]].t[t].u.b.arp_div;
+    if (sscanf(what, "va.%d.%d", &t, &s) == 2) return proj.sound.va[t][s];
+    if (sscanf(what, "sounds.%d", &t) == 1) return eng_peak[t] > 300;   /* the track's meter moves */
+    if (!strcmp(what, "spage")) return ui.spage;
     fprintf(stderr, "unknown expect %s\n", what);
     exit(2);
 }

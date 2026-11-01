@@ -25,6 +25,9 @@ turn K1 1
 tap SEL
 turn K1 1
 tap SEL
+expect type.7 33
+turn K1 1
+tap SEL
 expect type.7 0
 turn ALGO -2
 turn K1 2

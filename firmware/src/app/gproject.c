@@ -278,8 +278,11 @@ static void sound_sanitize(sound_t *s)
     for (t = 0; t < NTRK; t++) {
         if (s->ttype[t] >= NTT)
             s->ttype[t] = TT_OFF;
-        if (s->kit[t] >= gd_nkits)
+        if (s->kit[t] >= (s->ttype[t] == TT_VA ? gva_npresets : gd_nkits))
             s->kit[t] = 0;
+        for (i = 0; i < VA_N; i++)
+            if (s->va[t][i] > gva_param(i)->max)
+                s->va[t][i] = gva_param(i)->max;
         for (v = 0; v < NDSND; v++)
             for (i = 0; i < GP_N; i++)
                 if (s->drum[t][v][i] > gdrum_param(i)->max)
@@ -399,11 +402,17 @@ int project_save_settings(void) { return save_obj(OBJ_SET, &proj.set, sizeof pro
  * steps are cleared after, so a step that fires in between plays the new type's empty step */
 void project_set_type(int t, int tt)
 {
-    int p;
+    int p, keep;
     if (t < 0 || t >= NTRK || tt < 0 || tt >= NTT || proj.sound.ttype[t] == tt)
         return;
+    keep = tt_notes(tt) && tt_notes(proj.sound.ttype[t]);   /* 303 <-> VA: the same steps, kept */
     proj.sound.ttype[t] = (uint8_t)tt;
     engine_set(T_TRK, t, TK_TYPE, tt);
-    for (p = 0; p < NPAT; p++)
-        gpat_track_clear(&proj.pat[p].t[t], tt);
+    if (tt == TT_VA)
+        engine_track_preset(&proj.sound, t, 0);           /* a VA starts from its first preset */
+    else if (proj.sound.kit[t] >= gd_nkits)
+        proj.sound.kit[t] = 0;
+    if (!keep)
+        for (p = 0; p < NPAT; p++)
+            gpat_track_clear(&proj.pat[p].t[t], tt);
 }

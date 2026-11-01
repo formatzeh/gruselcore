@@ -4,13 +4,14 @@
  * changes through engine_set, so nothing ever waits for the sequencer to stop.
  *
  * Screens (the button that opens each):
- *   HOME  all 8 tracks; the keyboard plays the selected track (drum sounds, or a 303 chromatic,
+ *   HOME  all 8 tracks; the keyboard plays the selected track (drum sounds, or a 303 / VA chromatic,
  *         OCT-/+ the octave). HOME held: white keys cue the selected track's pattern 1-16 (OCT-/+:
- *         17-32; with SEL held too, every track's), black keys 1-8 mute. Knobs: TEMPO, SWING (one,
- *         global), master FILTER, PUMP
+ *         17-32; with SEL held too, every track's), black keys 1-8 mute. Knobs: the track's four main
+ *         controls (a kit's macros, the 303's or VA's filter)
  *   SEQ   the selected track's steps. DRUM: a grid of its 8 sounds; black keys 1-8 pick the sound,
- *         white keys set its steps (ENV held: accents). 303: white keys pick a step and switch it
- *         on / off; held, KNOB 1-4 set its note, gate, accent, slide. OCT-/+: steps 17-64
+ *         white keys set its steps (ENV held: accents). 303 / VA: white keys pick a step and switch it
+ *         on / off (ENV held: its accent); held, KNOB 1-4 set its note, gate, chord, slide. SELECT or
+ *         ARP: the arpeggiator's page. OCT-/+: steps 17-64
  *   EDIT  the selected track's sound, 4 pots a page (SELECT turns the pages); the keyboard plays the
  *         track (on a DRUM track a key also picks the sound to edit); PRESETS loads a kit
  *   FX    the track's filter, resonance, drive, level; then pan and sends; press again: the shared
@@ -22,11 +23,13 @@
 #include "gc.h"
 #include "../dsp/master.h"           /* MST_* (HOME's knobs, the master pages) */
 #include "../dsp/bass303.h"          /* BASS303_* (HOME's knobs on a 303 track) */
+#include "../dsp/gva.h"              /* VA_* (HOME's knobs on a VA track), the presets */
 
 /* ------------------------------------------------------------- state --- */
 enum { V_HOME, V_SEQ, V_EDIT, V_FX, V_MIX, V_GLO, NVIEWS };
 static const char *const VIEW_N[NVIEWS] = {"HOME", "SEQ", "EDIT", "FX", "MIX", "GLO"};
-static const char *const TYPE_N[NTT] = {"OFF", "DRUM", "303"};
+static const char *const TYPE_N[NTT] = {"OFF", "DRUM", "303", "VA"};
+static const char *const ARP_N[NARPS] = {"OFF", "UP", "DOWN", "UP-DN", "RAND"};
 static const char *const RATE_N[NRATES] = {"1/16", "1/16T", "1/32", "1/8T", "1/8"};
 static const char *const DIR_N[NDIRS] = {"FWD", "REV", "PING", "RAND"};
 static const char *const GATE_N[3] = {"REST", "NOTE", "TIE"};
@@ -35,6 +38,7 @@ static const char *const NOTE_N[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G"
 static struct {
     uint8_t view, trk, snd, page;      /* screen, selected track, drum sound, 16-step page */
     uint8_t epage, fxpage, glopage;    /* knob pages of EDIT, FX, GLO */
+    uint8_t spage;                     /* SEQ, a note track: 0 the track, 1 its arpeggiator */
     uint8_t pbank;                     /* HOME: patterns 1-16 or 17-32 */
     uint8_t rec;                       /* recording */
     int8_t oct;                        /* the keyboard's octave, -3..+3 (0: F2 on the lowest key) */
@@ -138,6 +142,7 @@ void ui_warn(const char *a, const char *b)
 static tpart_t *tp_of(int t) { return &proj.pat[seq.tpat[t] % NPAT].t[t]; }   /* track t in the pattern it plays */
 static tpart_t *cur_tp(void) { return tp_of(ui.trk); }
 static int ttype(int t) { return proj.sound.ttype[t]; }
+static int notes(int t) { return tt_notes(proj.sound.ttype[t]); }   /* a 303 or VA track */
 
 /* a pot of the sound: set in the mirror and sent to the engine */
 static void pot_set(int target, int voice, int i, int v)
@@ -154,6 +159,7 @@ static void pot_set(int target, int voice, int i, int v)
     case T_FX: m = &proj.sound.fx[voice * 16 + i]; break;
     case T_MST: m = &proj.sound.mst[i]; break;
     case T_DMAC: m = &proj.sound.dmac[voice][i]; break;
+    case T_VA: m = &proj.sound.va[voice][i]; break;
     default: return;
     }
     if (*m == v)
@@ -171,6 +177,7 @@ static int pot_get(int target, int voice, int i)
     case T_FX: return proj.sound.fx[voice * 16 + i];
     case T_MST: return proj.sound.mst[i];
     case T_DMAC: return proj.sound.dmac[voice][i];
+    case T_VA: return proj.sound.va[voice][i];
     default: return 0;
     }
 }
@@ -188,7 +195,7 @@ static void pot_turn(int target, int voice, int i, int d)
 /* ----------------------------------------------------- knob pages --- */
 /* what KNOB 1-4 control on the screen showing: (target, voice, index) each, or a special role */
 enum { KR_NONE, KR_POT, KR_TEMPO, KR_SWING, KR_LEN, KR_RATE, KR_TSWING, KR_DIR, KR_TRANS,
-       KR_SNOTE, KR_SGATE, KR_SACC, KR_SSLIDE, KR_TYPE, KR_MCH, KR_CLK, KR_NOTES };
+       KR_SNOTE, KR_SGATE, KR_SCHORD, KR_SSLIDE, KR_ARP, KR_ARPDIV, KR_ARPOCT, KR_TYPE, KR_MCH, KR_CLK, KR_NOTES };
 typedef struct { uint8_t role, target, voice, index; } knob_t;
 
 static int fx_pages(void) { return (engine_nparams(T_FX, 0) + engine_nparams(T_FX, 1) + 3) / 4; }
@@ -207,19 +214,28 @@ static void knobs_of(knob_t *k)
             static const uint8_t B[4] = {BASS303_CUTOFF, BASS303_RESO, BASS303_ENVMOD, BASS303_DECAY};
             for (i = 0; i < 4; i++)
                 k[i] = (knob_t){KR_POT, T_303, (uint8_t)t, B[i]};
+        } else if (ttype(t) == TT_VA) {
+            static const uint8_t V[4] = {VA_CUTOFF, VA_RESO, VA_ENV, VA_FDEC};
+            for (i = 0; i < 4; i++)
+                k[i] = (knob_t){KR_POT, T_VA, (uint8_t)t, V[i]};
         }
         break;
     case V_SEQ:
-        if (ttype(t) == TT_303 && ui.held_step >= 0) {
+        if (notes(t) && ui.held_step >= 0) {
             k[0].role = KR_SNOTE;
             k[1].role = KR_SGATE;
-            k[2].role = KR_SACC;
+            k[2].role = KR_SCHORD;
             k[3].role = KR_SSLIDE;
+        } else if (notes(t) && ui.spage) {           /* the arpeggiator (ARP, or SELECT) */
+            k[0].role = KR_ARP;
+            k[1].role = KR_ARPDIV;
+            k[2].role = KR_ARPOCT;
+            k[3].role = KR_DIR;
         } else {
             k[0].role = KR_LEN;
             k[1].role = KR_RATE;
             k[2].role = KR_TSWING;
-            k[3].role = ttype(t) == TT_303 ? KR_TRANS : KR_NONE;
+            k[3].role = notes(t) ? KR_TRANS : KR_NONE;
         }
         break;
     case V_EDIT:
@@ -229,6 +245,9 @@ static void knobs_of(knob_t *k)
         else if (ttype(t) == TT_303)
             for (i = 0; i < 4 && ui.epage * 4 + i < engine_nparams(T_303, t); i++)
                 k[i] = (knob_t){KR_POT, T_303, (uint8_t)t, (uint8_t)(ui.epage * 4 + i)};
+        else if (ttype(t) == TT_VA)
+            for (i = 0; i < 4 && ui.epage * 4 + i < VA_N; i++)
+                k[i] = (knob_t){KR_POT, T_VA, (uint8_t)t, (uint8_t)(ui.epage * 4 + i)};
         break;
     case V_FX:
         if (ui.fxpage == 0) {
@@ -292,6 +311,11 @@ static void knob_label(const knob_t *k, char *name, char *val)
             scat(val, p->names[v]);
         else if (k->target == T_MIX && k->index == MX_PAN && v == 64)
             scat(val, "C");
+        else if (k->target == T_VA && k->index == VA_TUNE2) {   /* semitones from oscillator 1 */
+            if (v > 24)
+                scat(val, "+");
+            put_num(val + (v > 24), v - 24);
+        }
         else if (k->target == T_DMAC) {                 /* a kit macro: its offset from the kit */
             if (v > 64)
                 scat(val, "+");
@@ -330,7 +354,10 @@ static void knob_label(const knob_t *k, char *name, char *val)
     case KR_TRANS: scat(name, "TRANSP"); put_num(val, (int)tp->u.b.transpose - 24); break;
     case KR_SNOTE: scat(name, "NOTE"); note_name(val, tp->u.b.step[ui.held_step].note); break;
     case KR_SGATE: scat(name, "GATE"); scat(val, GATE_N[bstep_gate(&tp->u.b.step[ui.held_step]) % 3]); break;
-    case KR_SACC: scat(name, "ACCENT"); scat(val, (tp->u.b.step[ui.held_step].flags & BS_ACCENT) ? "ON" : "OFF"); break;
+    case KR_SCHORD: scat(name, "CHORD"); scat(val, gp_chords[bstep_chord(&tp->u.b.step[ui.held_step])].name); break;
+    case KR_ARP: scat(name, "ARP"); scat(val, ARP_N[tp->u.b.arp % NARPS]); break;
+    case KR_ARPDIV: scat(name, "NOTES"); put_num(val, tp->u.b.arp_div % 4 + 1); scat(val, "/STEP"); break;
+    case KR_ARPOCT: scat(name, "OCTAVES"); put_num(val, tp->u.b.arp_oct % 3 + 1); break;
     case KR_SSLIDE: scat(name, "SLIDE"); scat(val, (tp->u.b.step[ui.held_step].flags & BS_SLIDE) ? "ON" : "OFF"); break;
     case KR_TYPE:
         scat(name, "TYPE");
@@ -397,7 +424,7 @@ static void knob_turn(const knob_t *k, int d)
         if (bstep_gate(s) == G_REST)
             s->flags = (uint8_t)((s->flags & ~BS_GATE_MASK) | G_NOTE);
         if (!seq.playing)
-            engine_note_on(ui.trk, s->note, 0, 0);
+            engine_note_on(ui.trk, s->note, bstep_chord(s), 0, 0);
         break;
     }
     case KR_SGATE: {
@@ -406,7 +433,32 @@ static void knob_turn(const knob_t *k, int d)
         s->flags = (uint8_t)((s->flags & ~BS_GATE_MASK) | g);
         break;
     }
-    case KR_SACC: tp->u.b.step[ui.held_step].flags = (uint8_t)(d > 0 ? tp->u.b.step[ui.held_step].flags | BS_ACCENT : tp->u.b.step[ui.held_step].flags & ~BS_ACCENT); break;
+    case KR_SCHORD: {
+        bstep_t *s = &tp->u.b.step[ui.held_step];
+        int c = bstep_chord(s) + d;
+        c = c < 0 ? 0 : c >= NCHORDS ? NCHORDS - 1 : c;
+        s->flags = (uint8_t)((s->flags & ~BS_CHORD_MASK) | (c << BS_CHORD_SHIFT));
+        if (bstep_gate(s) == G_REST)
+            s->flags = (uint8_t)((s->flags & ~BS_GATE_MASK) | G_NOTE);
+        if (!seq.playing)
+            engine_note_on(ui.trk, s->note, c, 0, 0);
+        break;
+    }
+    case KR_ARP: {
+        int a = tp->u.b.arp % NARPS + d;
+        tp->u.b.arp = (uint8_t)(a < 0 ? 0 : a >= NARPS ? NARPS - 1 : a);
+        break;
+    }
+    case KR_ARPDIV: {
+        int a = tp->u.b.arp_div % 4 + d;
+        tp->u.b.arp_div = (uint8_t)(a < 0 ? 0 : a > 3 ? 3 : a);
+        break;
+    }
+    case KR_ARPOCT: {
+        int a = tp->u.b.arp_oct % 3 + d;
+        tp->u.b.arp_oct = (uint8_t)(a < 0 ? 0 : a > 2 ? 2 : a);
+        break;
+    }
     case KR_SSLIDE: tp->u.b.step[ui.held_step].flags = (uint8_t)(d > 0 ? tp->u.b.step[ui.held_step].flags | BS_SLIDE : tp->u.b.step[ui.held_step].flags & ~BS_SLIDE); break;
     case KR_TYPE: ui.pend_type = (uint8_t)(((ui.pend_type + d) % NTT + NTT) % NTT); break;
     case KR_MCH: {
@@ -432,6 +484,7 @@ static void select_track(int t)
     ui.held_step = -1;
     ui.pend_type = (uint8_t)ttype(t);
     ui.epage = 0;
+    ui.spage = 0;
     if (ui.page * 16 >= cur_tp()->len)
         ui.page = 0;
 }
@@ -442,6 +495,8 @@ static void open_view(int v)
         ui.fxpage = (uint8_t)(ui.fxpage < 2 ? 2 : 0);    /* FX again: the shared effects, and back */
     else if (v == V_GLO && ui.view == V_GLO)
         ui.glopage ^= 1u;
+    if (v == V_SEQ && ui.view != V_SEQ)
+        ui.spage = 0;                                   /* SEQ opens on the track's page (ARP: its arpeggiator) */
     ui.view = (uint8_t)v;
     ui.held_step = -1;
     ui.pend_type = (uint8_t)ttype(ui.trk);
@@ -483,14 +538,16 @@ static void white_key(int w, int down)
         else
             sm_flip(tp->u.d.hit[ui.snd], step);
         touch();
-    } else if (ttype(t) == TT_303) {
+    } else if (notes(t)) {
         if (down) {
             bstep_t *s = &tp->u.b.step[step];
             ui.held_step = (int8_t)step;
-            if (!(ui.btn & ((1u << B_ENV) | (1u << B_LFO)))) {
+            if (ui.btn & (1u << B_ENV)) {                 /* ENV held: the step's accent */
+                s->flags ^= BS_ACCENT;
+            } else if (!(ui.btn & (1u << B_LFO))) {
                 s->flags = (uint8_t)((s->flags & ~BS_GATE_MASK) | (bstep_gate(s) == G_REST ? G_NOTE : G_REST));
                 if (bstep_gate(s) != G_REST && !seq.playing)
-                    engine_note_on(t, s->note, 0, 0);
+                    engine_note_on(t, s->note, bstep_chord(s), 0, 0);
             }
             touch();
         } else if (ui.held_step == step) {
@@ -575,7 +632,7 @@ static void play_key(int k, int down)
         }
         return;
     }
-    if (ttype(t) != TT_303)
+    if (!notes(t))
         return;
     if (!down) {
         if (keys_down)
@@ -586,7 +643,10 @@ static void play_key(int k, int down)
     }
     {
         int note = 41 + 12 * ui.oct + k;              /* F2 on the lowest key, an octave a step */
-        engine_note_on(t, note, 0, keys_down != 0);
+        if (keys_down && ttype(t) == TT_VA && proj.sound.va[t][VA_MODE] == VAM_CHORD)
+            engine_note_add(t, note);                   /* a VA in CHORD: the keys held sound together */
+        else
+            engine_note_on(t, note, 0, 0, keys_down != 0);
         keys_down++;
         if (ui.rec) {
             int st = seq.playing ? eng_step[t] : rec_step;
@@ -622,7 +682,7 @@ static void input(void)
         ui.rec ^= 1u;
         rec_step = 0;
         keys_down = 0;
-        ui_say(ui.rec ? "REC ON" : "REC OFF", !ui.rec ? 0 : ttype(ui.trk) == TT_303 ? "THE KEYS PLAY THE 303" :
+        ui_say(ui.rec ? "REC ON" : "REC OFF", !ui.rec ? 0 : notes(ui.trk) ? "THE KEYS RECORD NOTES" :
                ttype(ui.trk) == TT_DRUM ? "BLACK KEYS RECORD HITS" : 0);
     }
     if (down & (1u << B_HOME)) open_view(V_HOME);
@@ -634,16 +694,24 @@ static void input(void)
         ui.glo_used = 0;
     if ((up & (1u << B_GLO)) && !ui.glo_used)      /* GLO opens on release: held with SELECT, it set the tempo */
         open_view(V_GLO);
-    if (down & (1u << B_ARP))
-        ui_say("ARPEGGIATOR", "COMES IN V0.2");
+    if (down & (1u << B_ARP)) {                    /* the selected note track's arpeggiator */
+        if (!notes(ui.trk)) {
+            ui_say("ARPEGGIATOR", "ON 303 AND VA TRACKS");
+        } else {
+            ui.spage = (uint8_t)(ui.view == V_SEQ ? !ui.spage : 1);
+            ui.view = V_SEQ;
+            ui.held_step = -1;
+        }
+    }
     if (down & (1u << B_SAVE))
         save_project();
     if (down & (1u << B_SEL)) {
         if (ui.view == V_GLO && ui.pend_type != ttype(ui.trk)) {
+            int keep = notes(ui.trk) && tt_notes(ui.pend_type);   /* 303 <-> VA: the same steps */
             project_set_type(ui.trk, ui.pend_type);
             ui.page = 0;
             touch();
-            ui_say("TYPE CHANGED", "ITS STEPS ARE CLEARED");
+            ui_say("TYPE CHANGED", keep ? "THE STEPS STAY" : "ITS STEPS ARE CLEARED");
         }
     }
     if (down & ((1u << B_OCTDN) | (1u << B_OCTUP))) {
@@ -651,7 +719,7 @@ static void input(void)
         if (b & (1u << B_HOME)) {
             ui.pbank = (uint8_t)(dir > 0);
             ui.home_used = 1;
-        } else if (ui.view == V_HOME || ui.view == V_EDIT || (ui.rec && ttype(ui.trk) == TT_303)) {
+        } else if (ui.view == V_HOME || ui.view == V_EDIT || (ui.rec && notes(ui.trk))) {
             int o = ui.oct + dir;
             ui.oct = (int8_t)(o < -3 ? -3 : o > 3 ? 3 : o);
         } else if (ui.view == V_SEQ) {
@@ -665,7 +733,7 @@ static void input(void)
             continue;
         if (b & (1u << B_HOME))
             home_key(i, (kd & m) != 0);
-        else if (ui.view == V_HOME || ui.view == V_EDIT || (ui.view == V_SEQ && ui.rec && ttype(ui.trk) == TT_303))
+        else if (ui.view == V_HOME || ui.view == V_EDIT || (ui.view == V_SEQ && ui.rec && notes(ui.trk)))
             play_key(i, (kd & m) != 0);
         else if (key_white[i] >= 0)
             white_key(key_white[i], (kd & m) != 0);
@@ -690,7 +758,8 @@ static void input(void)
     else if (d) {
         int s = d > 0 ? 1 : -1;
         if (ui.view == V_EDIT) {
-            int n = ttype(ui.trk) == TT_DRUM ? GP_N : engine_nparams(T_303, ui.trk), pages = (n + 3) / 4;
+            int n = ttype(ui.trk) == TT_DRUM ? GP_N : ttype(ui.trk) == TT_VA ? VA_N : engine_nparams(T_303, ui.trk);
+            int pages = (n + 3) / 4;
             int p = ui.epage + s;
             ui.epage = (uint8_t)(p < 0 ? 0 : p >= pages ? pages - 1 : p);
         } else if (ui.view == V_FX) {
@@ -698,6 +767,8 @@ static void input(void)
             ui.fxpage = (uint8_t)(p < 0 ? 0 : p >= n ? n - 1 : p);
         } else if (ui.view == V_GLO) {
             ui.glopage ^= 1u;
+        } else if (ui.view == V_SEQ && notes(ui.trk)) {
+            ui.spage = (uint8_t)(s > 0);
         }
     }
     d = plat_enc(EN_PRESET);
@@ -706,6 +777,12 @@ static void input(void)
         kit = ((kit % gd_nkits) + gd_nkits) % gd_nkits;
         engine_track_kit(&proj.sound, ui.trk, kit);   /* loads while playing */
         ui_say("KIT", gd_kit_names[kit]);
+        touch();
+    } else if (d && ttype(ui.trk) == TT_VA && (ui.view == V_EDIT || ui.view == V_SEQ || ui.view == V_HOME)) {
+        int k = (int)proj.sound.kit[ui.trk] + d;
+        k = ((k % gva_npresets) + gva_npresets) % gva_npresets;
+        engine_track_preset(&proj.sound, ui.trk, k);
+        ui_say("PRESET", gva_presets[k].name);
         touch();
     }
     knobs_of(kn);
@@ -801,7 +878,7 @@ static void draw_steps(int t, int x0, int w, int y, int h, int page, int sound, 
             } else
                 on = sm_get(tp->u.d.hit[sound], s);
             acc = sm_get(tp->u.d.acc, s);
-        } else if (ttype(t) == TT_303) {
+        } else if (notes(t)) {
             on = bstep_gate(&tp->u.b.step[s]) != G_REST;
             acc = (tp->u.b.step[s].flags & BS_ACCENT) != 0;
         }
@@ -847,7 +924,8 @@ static void draw_home(void)
             cv_rect(0, y - 1, 2, 15, C_HI);                 /* the selected track: a bar at its lane's edge */
         cv_text(3, y, &FONT_T, b, c);
         b[0] = 0;
-        scat(b, ttype(t) == TT_DRUM ? gd_kit_names[proj.sound.kit[t] % gd_nkits] : ttype(t) == TT_303 ? "303 BASS" : "OFF");
+        scat(b, ttype(t) == TT_DRUM ? gd_kit_names[proj.sound.kit[t] % gd_nkits] : ttype(t) == TT_303 ? "303 BASS" :
+                ttype(t) == TT_VA ? gva_presets[proj.sound.kit[t] % gva_npresets].name : "OFF");
         cv_text(14, y, &FONT_T, b, muted ? RGB(255, 90, 60) : ttype(t) == TT_OFF ? C_DIM : c);
         if (muted)
             cv_text(14 + text_w(&FONT_T, b) + 4, y, &FONT_T, "M", RGB(255, 90, 60));
@@ -894,7 +972,7 @@ static void draw_seq(void)
         b[0] = 0;
         scat(b, gd_kit_names[proj.sound.kit[t] % gd_nkits]);
         cv_text(2, 130, &FONT_T, b, C_AMB);
-    } else if (ttype(t) == TT_303) {
+    } else if (notes(t)) {
         int i;
         draw_steps(t, 32, 13, 4, 12, ui.page, -1, 1);
         for (i = 0; i < 16; i++) {                       /* each step's note as a bar in a 2-octave range */
@@ -909,10 +987,33 @@ static void draw_seq(void)
                 cv_rect(32 + i * 13 + 11, 121 - n * 2, 4, 1, C_AMB);
             if (bstep_gate(st) == G_TIE)
                 cv_rect(32 + i * 13, 121 - n * 2, 3, 1, C_HI);
+            if (bstep_chord(st))                        /* a chord: a mark over its note */
+                cv_rect(32 + i * 13 + 4, 116 - n * 2, 5, 2, C_AMB);
         }
         if (ui.held_step >= 0) {
-            note_name(b, tp->u.b.step[ui.held_step].note);
+            const bstep_t *hs = &tp->u.b.step[ui.held_step];
+            note_name(b, hs->note);
+            if (bstep_chord(hs)) {
+                scat(b, " ");
+                scat(b, gp_chords[bstep_chord(hs)].name);
+            }
             cv_text(2, 24, &FONT_S, b, C_WHITE);
+        }
+        if (tp->u.b.arp % NARPS) {                      /* the arpeggiator, when on */
+            char n[4];
+            b[0] = 0;
+            scat(b, "ARP ");
+            scat(b, ARP_N[tp->u.b.arp % NARPS]);
+            scat(b, " ");
+            put_num(n, tp->u.b.arp_div % 4 + 1);
+            scat(b, n);
+            scat(b, "/ST ");
+            put_num(n, tp->u.b.arp_oct % 3 + 1);
+            scat(b, n);
+            scat(b, " OCT");
+            cv_text(2, 130, &FONT_T, b, ui.spage ? C_WHITE : C_AMB);
+        } else if (ui.spage) {
+            cv_text(2, 130, &FONT_T, "ARP OFF", C_WHITE);
         }
     } else {
         cv_text(20, 60, &FONT_S, "TRACK OFF: GLO SETS ITS TYPE", C_GRAY);
@@ -988,6 +1089,12 @@ static void draw_edit(void)
         cv_text(4, 100, &FONT_T, "BLACK KEYS: SOUND   PRESETS: KIT", C_DIM);
     } else if (ttype(t) == TT_303) {
         cv_text(4, 6, &FONT_B, "303", C_WHITE);
+    } else if (ttype(t) == TT_VA) {
+        static const char *const PG[] = {"OSCILLATORS", "MIX", "FILTER", "FILTER ENVELOPE", "AMP ENVELOPE",
+                                         "VOICE", "LFO"};
+        cv_text(4, 6, &FONT_B, gva_presets[proj.sound.kit[t] % gva_npresets].name, C_WHITE);
+        cv_text(4, 30, &FONT_S, ui.epage < 7 ? PG[ui.epage] : "", C_AMB);
+        cv_text(4, 100, &FONT_T, "SELECT: PAGE   PRESETS: PRESET", C_DIM);
     } else {
         cv_text(20, 60, &FONT_S, "TRACK OFF: GLO SETS ITS TYPE", C_GRAY);
         return;
@@ -1067,7 +1174,7 @@ static uint32_t screen_hash(void)
     const uint8_t *p;
     unsigned i;
 #define MIX(x) (h = (h ^ (uint32_t)(x)) * 16777619u)
-    MIX(ui.view); MIX(ui.trk); MIX(ui.snd); MIX(ui.page); MIX(ui.epage); MIX(ui.fxpage); MIX(ui.glopage);
+    MIX(ui.view); MIX(ui.trk); MIX(ui.snd); MIX(ui.page); MIX(ui.epage); MIX(ui.fxpage); MIX(ui.glopage); MIX(ui.spage);
     MIX(ui.held_step); MIX(ui.pend_type); MIX(ui.dirty); MIX(ui.rec); MIX(seq.tpat[ui.trk]); MIX(seq.tcue[ui.trk]); MIX(seq.swing);
     for (i = 0; i < NTRK; i++)
         MIX(seq.tpat[i] | seq.tcue[i] << 8);
@@ -1109,7 +1216,7 @@ static void leds(void)
                 if (s < tp->len) {
                     if (ttype(ui.trk) == TT_DRUM)
                         on = sm_get(tp->u.d.hit[ui.snd], s);
-                    else if (ttype(ui.trk) == TT_303)
+                    else if (notes(ui.trk))
                         on = bstep_gate(&tp->u.b.step[s]) != G_REST;
                     if (seq.playing && eng_step[ui.trk] == s)
                         lk |= 1u << i;

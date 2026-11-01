@@ -13,6 +13,7 @@
  *   T_FX     voice 0 / 1: fxbus.h params k = voice * 16 + index (reverb, delay, master drive)
  *   T_MST    voice 0: master.h params (compressor / pump, filter, limiter)
  *   T_DMAC   voice = track: a drum track's kit macros, index = gdrum.h GDK_* (64 = the kit as it is)
+ *   T_VA     voice = track, index = gva.h VA_*
  *   T_TRK    voice = track: index TK_TYPE (value = TT_*) changes the track's type; TK_RELOAD (value
  *            ignored) re-reads every pot of the track from the project's sound (after a kit load)
  *
@@ -22,9 +23,10 @@
 #include <stdint.h>
 #include "../dsp/x0x_param.h"
 #include "../dsp/gdrum.h"
+#include "../dsp/gva.h"
 #include "../seq/gseq.h"
 
-enum { T_DRUM, T_303, T_MIX, T_FX, T_MST, T_TRK, T_DMAC, NTARGETS };
+enum { T_DRUM, T_303, T_MIX, T_FX, T_MST, T_TRK, T_DMAC, T_VA, NTARGETS };   /* (< 8: the queue's command types) */
 enum { TK_TYPE, TK_RELOAD };
 /* T_MIX, per track: level, pan, the two sends, the track's filter (64 = off, under it a low-pass,
  * over it a high-pass), its resonance, its drive (0 = clean) */
@@ -35,17 +37,19 @@ enum { MX_LEVEL, MX_PAN, MX_REV, MX_DLY, MX_FILTER, MX_RESO, MX_DRIVE, MX_NPARAM
 #define B303_NP 16                     /* room for the 303's pots in the sound */
 #define FX_NP 32                       /* room for fxbus's pots */
 #define MST_NP 16                      /* room for master's pots */
+#define VA_NP VA_N                     /* a VA track's pots */
 
 /* the sound of a project: every pot of every engine, mirrored here by the main loop */
 typedef struct {
     uint8_t ttype[NTRK];               /* TT_* */
-    uint8_t kit[NTRK];                 /* the factory kit last loaded on a drum track (shown, not used) */
+    uint8_t kit[NTRK];                 /* the factory kit (DRUM) or preset (VA) last loaded (shown) */
     uint8_t drum[NTRK][NDSND][GP_N];   /* a drum track's 8 sounds */
     uint8_t b303[NTRK][B303_NP];       /* a 303 track's pots */
     uint8_t mix[NTRK][MX_NPARAMS + 1]; /* (+1: aligned) */
     uint8_t fx[FX_NP];
     uint8_t mst[MST_NP];
     uint8_t dmac[NTRK][GDK_N];         /* a drum track's kit macros (HOME's knobs) */
+    uint8_t va[NTRK][VA_NP];           /* a VA track's pots */
 } sound_t;
 
 extern seq_t seq;                      /* the sequencer (its pattern pointer is the project's) */
@@ -76,8 +80,10 @@ void engine_apply_sound(const sound_t *s);                  /* queue every value
 void engine_sound_defaults(sound_t *s);                     /* the power-on sound: see gengine.c */
 void engine_track_kit(sound_t *s, int trk, int kit);        /* a factory kit into a drum track's mirror,
                                                              * then TK_RELOAD queued */
+void engine_track_preset(sound_t *s, int trk, int preset);  /* the same for a VA preset */
 void engine_drum(int trk, int snd, float vel);              /* play now (keys) */
-void engine_note_on(int trk, int note, int accent, int slide);
+void engine_note_on(int trk, int note, int chord, int accent, int slide);   /* chord: gp_chords (VA) */
+void engine_note_add(int trk, int note);                    /* a VA in CHORD: one more note sounding */
 void engine_note_off(int trk);
 void engine_out_loud(int on);
 void engine_usb_full(int on);

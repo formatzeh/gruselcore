@@ -18,15 +18,29 @@
 #define NSW (NSTEPS / 32)            /* 32-bit words in a row of steps */
 #define NDSND 8                      /* sounds in a drum kit (gdrum.h GD_NSND) */
 
-enum { TT_OFF, TT_DRUM, TT_303, NTT };                       /* track types */
+enum { TT_OFF, TT_DRUM, TT_303, TT_VA, NTT };                /* track types */
+/* a note track (303, VA): the same steps (u.b), chords and arpeggiator; a change between the two
+ * keeps the steps */
+static inline int tt_notes(int tt) { return tt == TT_303 || tt == TT_VA; }
 enum { RATE_16, RATE_16T, RATE_32, RATE_8T, RATE_8, NRATES };  /* step length */
 enum { DIR_FWD, DIR_REV, DIR_PINGPONG, DIR_RANDOM, NDIRS };    /* playback direction (303 tracks) */
 enum { G_REST, G_NOTE, G_TIE };                              /* a 303 step's gate */
 
-/* 303 step: one byte of note, one of flags (the TB-303's own semantics, see gseq.h) */
+/* a note step: one byte of note, one of flags (the TB-303's own semantics, see gseq.h) */
 #define BS_GATE_MASK 0x03u
 #define BS_ACCENT 0x04u
 #define BS_SLIDE 0x08u                /* slide INTO the next step */
+#define BS_CHORD_SHIFT 4              /* the step's chord (gp_chords), 0 = the note alone */
+#define BS_CHORD_MASK 0xF0u
+#define NCHORDS 16
+#define CHORD_NMAX 4
+typedef struct { const char *name; int8_t iv[CHORD_NMAX]; } chord_t;   /* intervals, -1 = none */
+extern const chord_t gp_chords[NCHORDS];
+int gp_chord_notes(int root, int chord, uint8_t *out);   /* the chord's notes (1..4), from the root */
+
+/* the arpeggiator of a note track (tpart_t.u.b.arp): OFF plays the chord as a chord. Each step's chord
+ * (or its note alone) is played as notes, ARP_DIV of them a step, over ARP_OCT octaves */
+enum { ARP_OFF, ARP_UP, ARP_DOWN, ARP_UPDN, ARP_RAND, NARPS };
 typedef struct {
     uint8_t note;                     /* MIDI note */
     uint8_t flags;                    /* gate | BS_ACCENT | BS_SLIDE */
@@ -47,7 +61,9 @@ typedef struct {
         struct {
             bstep_t step[NSTEPS];
             uint8_t transpose;        /* semitones + 24 (24 = none), applied when played */
-            uint8_t rsv[3];
+            uint8_t arp;              /* ARP_* */
+            uint8_t arp_div;          /* notes a step - 1 (0..3) */
+            uint8_t arp_oct;          /* octaves - 1 (0..2) */
         } b;
     } u;
 } tpart_t;
@@ -59,6 +75,7 @@ typedef struct {
 } pattern_t;
 
 static inline int bstep_gate(const bstep_t *s) { return s->flags & BS_GATE_MASK; }
+static inline int bstep_chord(const bstep_t *s) { return s->flags >> BS_CHORD_SHIFT; }
 
 /* a row of steps (NSW words): step s */
 static inline int sm_get(const uint32_t *m, int s) { return (int)((m[s >> 5] >> (s & 31)) & 1u); }

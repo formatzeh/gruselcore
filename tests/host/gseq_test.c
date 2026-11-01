@@ -8,14 +8,14 @@ static int fails;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL %s:%d: ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
 
 #define MAXEV 4096
-typedef struct { uint32_t at; char kind; int trk, a, b; } ev_t;   /* kind: d drum, n note on, o note off */
+typedef struct { uint32_t at; char kind; int trk, a, b, c; } ev_t;   /* kind: d drum, n note on (c: chord), o note off */
 static ev_t ev[MAXEV];
 static int nev;
 static uint32_t now;
 
-static int s_drum(void *c, int t, int v, float vel) { (void)c; if (nev < MAXEV) ev[nev++] = (ev_t){now, 'd', t, v, vel >= 0.99f}; return 1; }
-static void s_on(void *c, int t, int n, int acc, int sl) { (void)c; if (nev < MAXEV) ev[nev++] = (ev_t){now, 'n', t, n, acc | sl << 1}; }
-static void s_off(void *c, int t) { (void)c; if (nev < MAXEV) ev[nev++] = (ev_t){now, 'o', t, 0, 0}; }
+static int s_drum(void *c, int t, int v, float vel) { (void)c; if (nev < MAXEV) ev[nev++] = (ev_t){now, 'd', t, v, vel >= 0.99f, 0}; return 1; }
+static void s_on(void *c, int t, int n, int ch, int acc, int sl) { (void)c; if (nev < MAXEV) ev[nev++] = (ev_t){now, 'n', t, n, acc | sl << 1, ch}; }
+static void s_off(void *c, int t) { (void)c; if (nev < MAXEV) ev[nev++] = (ev_t){now, 'o', t, 0, 0, 0}; }
 static const seq_sink_t SINK = {s_drum, s_on, s_off, 0, 0, 0};
 
 static pattern_t pat[NPAT];
@@ -222,6 +222,92 @@ int main(void)
     gseq_stop(&seq);
     run(64);
     CHECK(count('o', 3, -1) == 1 && !seq.playing, "stop did not let the 303 go");
+
+    /* chords: a VA step with a chord sends it with the note; the arpeggiator plays it as notes */
+    {
+        static const uint8_t VT[NTRK] = {TT_OFF, TT_OFF, TT_VA, TT_303, TT_OFF, TT_OFF, TT_OFF, TT_OFF};
+        int seen[3] = {0, 0, 0}, ok = 1, n = 0;
+        setup(VT, 120.0f);
+        pat[0].t[2].u.b.step[0].note = 48;
+        pat[0].t[2].u.b.step[0].flags = G_NOTE | (4u << BS_CHORD_SHIFT);   /* MIN */
+        gseq_start(&seq);
+        run(step / 2);
+        CHECK(count('n', 2, 48) == 1, "the chord step did not play");
+        for (i = 0; i < nev; i++)
+            if (ev[i].kind == 'n' && ev[i].trk == 2)
+                CHECK(ev[i].c == 4, "the chord sent %d, want 4 (MIN)", ev[i].c);
+        /* ARP UP, 2 notes a step, 1 octave: C Eb G C Eb G ... over the held chord (step + 2 TIEs) */
+        setup(VT, 120.0f);
+        pat[0].t[2].u.b.step[0].note = 48;
+        pat[0].t[2].u.b.step[0].flags = G_NOTE | (4u << BS_CHORD_SHIFT);
+        pat[0].t[2].u.b.step[1].flags = G_TIE;
+        pat[0].t[2].u.b.step[2].flags = G_TIE;
+        pat[0].t[2].u.b.arp = ARP_UP;
+        pat[0].t[2].u.b.arp_div = 1;
+        gseq_start(&seq);
+        run(step * 3 - 10);
+        {
+            static const int want[6] = {48, 51, 55, 48, 51, 55};
+            for (i = 0; i < nev; i++)
+                if (ev[i].kind == 'n' && ev[i].trk == 2) {
+                    if (n < 6 && ev[i].a != want[n])
+                        ok = 0;
+                    CHECK(ev[i].c == 0, "an arp note carried a chord");
+                    if (n < 6) {
+                        uint32_t g = (uint32_t)(n * step / 2.0 + 0.5);
+                        CHECK(ev[i].at + 2 >= g && ev[i].at <= g + 2, "arp note %d at %u, want %u", n, ev[i].at, g);
+                    }
+                    n++;
+                }
+            CHECK(n == 6 && ok, "arp up: %d notes, order %s", n, ok ? "right" : "wrong");
+        }
+        /* ARP DOWN over 2 octaves, a note a step, a 5TH: G+12 C+12 G C ... */
+        setup(VT, 120.0f);
+        for (i = 0; i < 16; i++) {
+            pat[0].t[3].u.b.step[i].note = 36;
+            pat[0].t[3].u.b.step[i].flags = G_NOTE | (2u << BS_CHORD_SHIFT);
+        }
+        pat[0].t[3].u.b.arp = ARP_DOWN;
+        pat[0].t[3].u.b.arp_oct = 1;
+        gseq_start(&seq);
+        run(step * 4 - 10);
+        {
+            static const int want[4] = {55, 48, 43, 36};
+            n = 0;
+            ok = 1;
+            for (i = 0; i < nev; i++)
+                if (ev[i].kind == 'n' && ev[i].trk == 3) {
+                    if (n < 4 && ev[i].a != want[n])
+                        ok = 0;
+                    n++;
+                }
+            CHECK(n == 4 && ok, "arp down 2 oct on a 303: %d notes, order %s", n, ok ? "right" : "wrong");
+        }
+        /* UPDN over C E G: C E G E C E ... and the gate falls between the arp's notes */
+        setup(VT, 120.0f);
+        pat[0].t[2].u.b.step[0].note = 60;
+        pat[0].t[2].u.b.step[0].flags = G_NOTE | (5u << BS_CHORD_SHIFT);   /* MAJ */
+        for (i = 1; i < 6; i++)
+            pat[0].t[2].u.b.step[i].flags = G_TIE;
+        pat[0].t[2].u.b.arp = ARP_UPDN;
+        pat[0].t[2].u.b.arp_div = 1;
+        gseq_start(&seq);
+        run(step * 5 / 2 - 10);
+        {
+            static const int want[5] = {60, 64, 67, 64, 60};
+            n = 0;
+            ok = 1;
+            for (i = 0; i < nev; i++)
+                if (ev[i].kind == 'n' && ev[i].trk == 2) {
+                    if (n < 5 && ev[i].a != want[n])
+                        ok = 0;
+                    n++;
+                }
+            CHECK(n == 5 && ok, "arp up-down: %d notes, order %s", n, ok ? "right" : "wrong");
+            CHECK(count('o', 2, -1) >= 3, "arp: the gate did not fall between its notes (%d)", count('o', 2, -1));
+            (void)seen;
+        }
+    }
 
     printf(fails ? "gseq: %d FAILED\n" : "gseq: all checks passed\n", fails);
     return fails != 0;

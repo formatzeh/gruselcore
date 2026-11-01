@@ -41,7 +41,7 @@ CFLAGS = ["-Os", "-ffunction-sections", "-fno-builtin", "-Wall", "-Wno-unused-fu
 # build (-ffp-contract=off) computes the same samples
 FPU = ["-mcpu=r3", "-mfprev1", "-ffp-contract=off"]
 # the DSP, the sequencer and the audio engine: separate units at -O2
-O2_UNITS = ["dsp/gdrum.c", "dsp/gdrum_kits.c", "dsp/bass303.c", "dsp/fxbus.c", "dsp/master.c", "dsp/x0x_tables.c",
+O2_UNITS = ["dsp/gdrum.c", "dsp/gdrum_kits.c", "dsp/gva.c", "dsp/gva_presets.c", "dsp/bass303.c", "dsp/fxbus.c", "dsp/master.c", "dsp/x0x_tables.c",
             "seq/gseq.c", "seq/gpat.c", "app/gengine.c"]
 LINE = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*\t(.*)$")
 
