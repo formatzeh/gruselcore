@@ -393,7 +393,6 @@ static void fm1_main(void)
 {
     int32_t knob = 512 * 16;
     uint32_t last_frame = 0, k;
-    uint8_t last_pat = 0xFF;
     {
         uint32_t f = irq_save();
         fm1_vdc14_raise(7);                         /* M-VAVE's own supplies before anything loads them: */
@@ -441,7 +440,7 @@ static void fm1_main(void)
     panel_init();
     led_pos_init();
     plat_perf_init();
-    engine_init(proj.pat, &proj.arr.song, proj.arr.lane, &proj.sound);
+    engine_init(proj.pat, &proj.sound);
     if (bootguard.flags & BG_SKIP_LOAD) {           /* safe mode, REC: start on defaults; the saved project stays
                                                      * in the flash and nothing saves over it unless SAVE is pressed */
         project_defaults();
@@ -454,7 +453,6 @@ static void fm1_main(void)
     seq.bpm = (float)proj.set.bpm_x10 / 10.0f;
     seq.accent_q7 = proj.set.accent_q7;
     project_apply_io();                             /* clock and notes out, the MIDI channels, the output */
-    engine_brk_loops();
     if (plat_cpu2_barred() && !proj.set.one_core) { /* it crashed (or was given up) with two cores: one from now on */
         proj.set.one_core = 1;
         project_save_settings();                    /* written now, on one core, not in the session that crashed;
@@ -536,17 +534,10 @@ static void fm1_main(void)
                 enter_uboot("UBOOT");
             }
         }
-        {   /* a screen reader's SysEx (announce.c), before the editor and the updater look */
-            const uint8_t *p;
-            uint32_t n;
-            if (ota_frame_get(&p, &n) && ann_frame(p, n, fm1_ms))
-                ota_frame_done();
-        }
-        ed_service();                               /* sample upload SysEx */
         backup_service(ota_service());              /* M-UPGRADE handshake; backup and restore */
         if (usb.ota_req) {
             usb.ota_req = 0;
-            seq_stop(&seq);
+            gseq_stop(&seq);
             if (flash_ok)
                 ota_session();                      /* returns only if nothing was committed */
             lcd_fill(0, 0, 240, 240, C_BLACK);
@@ -557,10 +548,6 @@ static void fm1_main(void)
 #if X0X_CDC
         cdc_task();
 #endif
-        if (seq.ppat[TRK_BRK] != last_pat) {        /* the break's new pattern may name other loops */
-            last_pat = seq.ppat[TRK_BRK];
-            engine_brk_loops();
-        }
         if (fm1_ms - last_frame >= 16u) {           /* ~60 frames/s at most; input in between */
             last_frame = fm1_ms;
             x0x_dbg.ui_frames++;

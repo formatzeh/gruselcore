@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
-"""Build X0X (a fork of Felucca): the app, the update loader and an installable .fwsc package.
+"""Build GruselCore (a fork of X0X, itself a fork of Felucca): the app, the update loader and an installable .fwsc package.
 
   tools/build.py [--release X.Y[-suffix]]
 
@@ -41,8 +41,8 @@ CFLAGS = ["-Os", "-ffunction-sections", "-fno-builtin", "-Wall", "-Wno-unused-fu
 # build (-ffp-contract=off) computes the same samples
 FPU = ["-mcpu=r3", "-mfprev1", "-ffp-contract=off"]
 # the DSP, the sequencer and the audio engine: separate units at -O2
-O2_UNITS = ["dsp/drum909.c", "dsp/drum808.c", "dsp/bass303.c", "dsp/breaks.c", "dsp/fxbus.c", "dsp/master.c",
-            "seq/sequencer.c", "seq/tb3po.c", "seq/pattern.c", "seq/motion.c", "app/engine.c"]
+O2_UNITS = ["dsp/gdrum.c", "dsp/gdrum_kits.c", "dsp/bass303.c", "dsp/fxbus.c", "dsp/master.c", "dsp/x0x_tables.c",
+            "seq/gseq.c", "seq/gpat.c", "app/gengine.c"]
 LINE = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*\t(.*)$")
 
 # SDK files of AC79NN_SDK_V1.2.1_2023-12-13 (the tested version)
@@ -141,16 +141,6 @@ def generate():
             failed.append(c[0].name)
     if failed:
         raise SystemExit(f"build: {', '.join(failed)} failed")
-    # the BREAK part's built-in bank: the 909-rendered loops (no recordings), or, opt-in,
-    # one-bar WAVs from X0X_BREAK_BANK (made by tools/import_breaks.py; not in this tree)
-    bank = os.environ.get("X0X_BREAK_BANK")
-    cmd = ([sys.executable, str(tools / "gen_break_bank.py"), bank, str(GEN / "x0x_break_bank.h")] if bank
-           else ["sh", str(tools / "gen_builtin_break.sh"), str(GEN)])
-    r = subprocess.run(cmd, capture_output=True, text=True)
-    sys.stdout.write(r.stdout)
-    if r.returncode:
-        sys.stderr.write(r.stderr)
-        raise SystemExit("build: break bank failed")
 
 
 # ---- update loader
