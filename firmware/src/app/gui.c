@@ -1042,12 +1042,14 @@ void ui_frame(void)
     ui.frame_t = now;
     leds();
     h = screen_hash();
-    if (h != ui.last_hash || ui.redraw || seq.playing || ui.view == V_MIX) {
+    if (h != ui.last_hash || ui.redraw) {                 /* something changed: the whole screen */
         ui.last_hash = h;
         ui.redraw = 0;
         draw_top();
         draw_main();
         draw_bottom();
+    } else if (seq.playing || ui.view == V_MIX) {         /* only the playheads and meters move */
+        draw_main();
     }
 }
 
