@@ -3,7 +3,9 @@
 A lean 8-track groovebox firmware for the M-VAVE FM-1, made for Hardtek, Techno, Dark Techno,
 Trance, Psytrance, Psychill, Darkpsy, Forest Psy, Dark Prog, Mentaltek and Tribetek.
 
-> **Status: in development, not ready to install yet.** The first playable version is v0.1.
+> **Status: v0.1-beta1, the first test build.** It has run in the simulator and passed every test, but
+> not yet on a real FM-1. Install it only if you are ready to use the rescue (below). Controls:
+> [docs/GUIDE.md](docs/GUIDE.md).
 
 ## What it will be
 
@@ -44,10 +46,15 @@ The firmware identity is `FM-1_966` for development builds and `FM-1_966XXYYZZ` 
 
 ## Safety
 
-The update loader and its USB code are X0X's and Felucca's, unchanged, so every GruselCore build
-can install the next firmware. If something goes wrong: X0X's safe mode starts after repeated
-crashes, and the FM-1 Firmware Hub's [rescue](https://thefirmwarehub.com/#rescue) puts any
-firmware back through the chip's ROM bootloader. Installing custom firmware is at your own risk.
+- The update loader and its USB code are X0X's and Felucca's, unchanged (tests/loader_guard.sh fails
+  on any change), so every GruselCore build can install the next firmware.
+- **OCT− held at power-on:** safe mode (no sound, USB on) before anything saved is loaded; there,
+  REC starts once without the saved project.
+- **OCT− + OCT+ held 5 s:** update mode. Two failed starts: safe mode by itself.
+- Last resort: the FM-1 Firmware Hub's [rescue](https://thefirmwarehub.com/#rescue) through the
+  chip's ROM bootloader.
+
+Installing custom firmware is at your own risk.
 
 ## Credits and licence
 
