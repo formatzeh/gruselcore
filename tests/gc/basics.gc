@@ -1,5 +1,7 @@
 # GruselCore basics: drum steps, a kit load, 303 steps, play, a cue, a type change, save and reboot
 wait 100
+expect view 0
+tap SEQ
 expect view 1
 expect type.0 11
 expect type.2 22

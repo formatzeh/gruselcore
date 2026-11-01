@@ -1,4 +1,5 @@
 # Drum sounds are heard from the black keys while playing; with REC on, the hit is recorded
+tap SEQ
 tapkey w0
 tapkey w8
 tap PLAY

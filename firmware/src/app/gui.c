@@ -1172,7 +1172,7 @@ void ui_init(void)
     ui.trk = 0;
     ui.held_step = -1;
     ui.pend_type = (uint8_t)ttype(0);
-    ui.view = V_SEQ;
+    ui.view = V_HOME;                                     /* the start screen */
     ui.redraw = 1;
     ui.btn = plat_buttons();                              /* held at power-on: not presses */
     ui.keys = plat_keys();

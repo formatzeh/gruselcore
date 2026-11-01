@@ -1,4 +1,5 @@
 # Live: everything changed while playing, nothing stops, the sound keeps going
+tap SEQ
 tapkey w0
 tapkey w4
 tapkey w8
