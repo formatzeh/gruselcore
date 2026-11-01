@@ -22,6 +22,7 @@ run() {
     fi
 }
 W="-O2 -ffp-contract=off -Wall -Wextra -Wdouble-promotion -Werror"
+run loader-guard sh tests/loader_guard.sh   # the update loader must stay X0X's / Felucca's (the way to any other firmware)
 run fastmath sh -c "$CC -O2 -ffp-contract=off -Wall -Wextra -Werror -o $OUT/fastmath_test tests/host/fastmath_test.c -lm && $OUT/fastmath_test"   # its reference is double on purpose
 run gdrum sh -c "$CC $W -o $OUT/gdrum_test tests/host/gdrum_test.c firmware/src/dsp/gdrum.c firmware/src/dsp/gdrum_kits.c -lm && mkdir -p build/gdrum && $OUT/gdrum_test build/gdrum"   # GruselCore drums: every kit rendered, checked, measured (WAVs in build/gdrum)
 run gdrum-groove sh -c "$CC $W -o $OUT/gdrum_groove tests/host/gdrum_groove.c firmware/src/dsp/gdrum.c firmware/src/dsp/gdrum_kits.c -lm && $OUT/gdrum_groove build/gdrum"   # demo grooves to listen to (build/gdrum)

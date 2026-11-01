@@ -169,7 +169,9 @@ void fm1_timer5_irq(void)
 extern void isr_timer5(void);
 
 /* ------------------------------------------------------------- boot --- */
-#define BOOTGUARD_MAGIC 0x42475244u
+#define BOOTGUARD_MAGIC 0x47434247u   /* "GBCG": GruselCore's (X0X's left by another firmware is not trusted) */
+#define BG_RESCUE 1u                  /* safe mode asked for: OCT- held alone at power-on */
+#define BG_SKIP_LOAD 2u               /* the next start leaves the saved project alone (safe mode, REC) */
 struct bootguard_s bootguard __attribute__((section(".noinit")));   /* declared in x0x.c (ota_commit) */
 
 static void hexs(char *b, uint32_t v)
@@ -223,22 +225,26 @@ static void enter_uboot(const char *why)
 static void safe_main(void)
 {
     char b[24];
-    uint32_t t0, play, both, t_oct;
+    uint32_t t0, play, rec, both, t_oct;
+    int rescue = (bootguard.flags & BG_RESCUE) != 0;
     lcd_fill(0, 0, 240, 240, C_BLACK);
-    draw_text_box(0, 18, 240, &FONT_B, "X0X SAFE MODE", C_HI, 1);
-    draw_text_box(0, 52, 240, &FONT_S, "IT CRASHED TWICE", C_WHITE, 1);
-    draw_text_box(0, 72, 240, &FONT_S, "WHILE STARTING.", C_WHITE, 1);
-    draw_text_box(0, 102, 240, &FONT_S, "NO SOUND. USB IS ON:", C_WHITE, 1);
-    draw_text_box(0, 122, 240, &FONT_S, "REINSTALL FROM THE", C_WHITE, 1);
-    draw_text_box(0, 142, 240, &FONT_S, "WEB INSTALLER.", C_WHITE, 1);
-    draw_text_box(0, 172, 240, &FONT_S, "PLAY: TRY AGAIN", C_HI, 1);
-    draw_text_box(0, 190, 240, &FONT_S, "HOLD OCT- + OCT+: UPDATE", C_GRAY, 1);
+    draw_text_box(0, 12, 240, &FONT_B, "SAFE MODE", C_HI, 1);
+    draw_text_box(0, 44, 240, &FONT_S, rescue ? "OCT- HELD AT POWER-ON." : "IT CRASHED TWICE WHILE", C_WHITE, 1);
+    draw_text_box(0, 62, 240, &FONT_S, rescue ? "GRUSELCORE DID NOT START." : "STARTING.", C_WHITE, 1);
+    draw_text_box(0, 90, 240, &FONT_S, "NO SOUND. USB IS ON:", C_WHITE, 1);
+    draw_text_box(0, 108, 240, &FONT_S, "INSTALL ANY FIRMWARE", C_WHITE, 1);
+    draw_text_box(0, 126, 240, &FONT_S, "OR THE OFFICIAL ONE.", C_WHITE, 1);
+    draw_text_box(0, 154, 240, &FONT_S, "PLAY: START NORMALLY", C_HI, 1);
+    draw_text_box(0, 172, 240, &FONT_S, "REC: START WITHOUT", C_HI, 1);
+    draw_text_box(0, 188, 240, &FONT_S, "THE SAVED PROJECT", C_HI, 1);
+    draw_text_box(0, 210, 240, &FONT_S, "OCT- + OCT+ 5 S: UPDATE", C_GRAY, 1);
     if (fm1_crash.magic == FM1_CRASH_MAGIC) {
         b[0] = 'P';
         b[1] = 'C';
         b[2] = ' ';
         hexs(b + 3, fm1_crash.pc);
-        draw_text_box(0, 208, 240, &FONT_S, b, C_GRAY, 1);
+        if (!rescue)
+            draw_text_box(0, 226, 240, &FONT_S, b, C_GRAY, 1);
     }
     fm1_input_init();
     panel_init();
@@ -247,6 +253,7 @@ static void safe_main(void)
     fm1_guard_lock_top();
     fm1_irq_enable_all();
     play = 1u << panel.btn[B_PLAY];
+    rec = 1u << panel.btn[B_REC];
     both = (1u << panel.btn[B_OCTDN]) | (1u << panel.btn[B_OCTUP]);
     t0 = t_oct = fm1_ms;
     for (;;) {
@@ -254,10 +261,13 @@ static void safe_main(void)
         usb_retry(fm1_ms);
         if (bootguard.pending && fm1_ms - t0 > 10000u)
             bootguard.pending = 0;                  /* safe mode itself is up: not another failed boot */
-        if ((fm1_in.buttons & play) && fm1_ms - t0 > 500u) {
-            bootguard.failed = 0;                   /* try X0X again, from scratch */
+        if ((fm1_in.buttons & (play | rec)) && fm1_ms - t0 > 500u) {
+            bootguard.failed = 0;                   /* try GruselCore again, from scratch */
             bootguard.pending = 0;
-            draw_text_box(0, 172, 240, &FONT_S, "STARTING X0X...", C_HI, 1);
+            bootguard.flags = (fm1_in.buttons & rec) ? BG_SKIP_LOAD : 0u;   /* REC: the saved project stays
+                                                     * untouched in the flash; nothing saves over it by itself */
+            lcd_fill(0, 154, 240, 50, C_BLACK);
+            draw_text_box(0, 172, 240, &FONT_S, "STARTING...", C_HI, 1);
             usb_detach();
             fm1_delay_ms(30);
             fm1_reboot();
@@ -402,8 +412,8 @@ static void fm1_main(void)
     }
     lcd_init();
     palette_set(1);
-    draw_text_box(0, 96, 240, &FONT_M, "X0X", C_HI, 1);
-    draw_text_box(0, 134, 240, &FONT_S, "909 808 303 303 BREAK", C_GRAY, 1);
+    draw_text_box(0, 96, 240, &FONT_M, "GRUSELCORE", C_HI, 1);
+    draw_text_box(0, 134, 240, &FONT_S, "8-TRACK GROOVEBOX", C_GRAY, 1);
     if (x0x_dbg.magic != DBG_MAGIC) {
         memset(&x0x_dbg, 0, sizeof x0x_dbg);
         x0x_dbg.magic = DBG_MAGIC;
@@ -432,8 +442,14 @@ static void fm1_main(void)
     led_pos_init();
     plat_perf_init();
     engine_init(proj.pat, &proj.arr.song, proj.arr.lane, &proj.sound);
-    if (project_load() != 0)
+    if (bootguard.flags & BG_SKIP_LOAD) {           /* safe mode, REC: start on defaults; the saved project stays
+                                                     * in the flash and nothing saves over it unless SAVE is pressed */
+        project_defaults();
+        ui_autosave_block = 1;
+    } else if (project_load() != 0) {
         project_defaults();                         /* nothing saved yet (or another format) */
+    }
+    bootguard.flags = 0;
     engine_apply_sound(&proj.sound);
     seq.bpm = (float)proj.set.bpm_x10 / 10.0f;
     seq.accent_q7 = proj.set.accent_q7;
@@ -461,11 +477,24 @@ static void fm1_main(void)
     fm1_guard_lock_top();
     fm1_irq_enable_all();
     fm1_delay_ms(30);
-    if ((fm1_in.buttons & 3u) == 3u)
+    if ((fm1_in.buttons & 3u) == 3u) {
         panel_setup();                              /* OCT- + OCT+ held at power-on */
+    } else if ((fm1_in.buttons & (1u << panel.btn[B_OCTDN])) && !(fm1_in.buttons & (1u << panel.btn[B_OCTUP]))) {
+        /* OCT- alone held at power-on: the USB rescue. Straight to safe mode (no sound, USB on), before
+         * the next start loads anything: a saved setting that breaks GruselCore cannot stop the rescue */
+        draw_text_box(0, 110, 240, &FONT_S, "RESCUE: SAFE MODE", C_HI, 1);
+        bootguard.failed = 2;
+        bootguard.pending = 0;
+        bootguard.flags = BG_RESCUE;
+        usb_detach();
+        fm1_delay_ms(30);
+        fm1_reboot();
+    }
     fm1_delay_ms(300);
     lcd_fill(0, 0, 240, 240, C_BLACK);
     ui_init();
+    if (ui_autosave_block)
+        ui_warn("SAVED PROJECT NOT LOADED", "SAVE WOULD REPLACE IT");
 
     for (;;) {
         fm1_wdt_feed();
@@ -557,6 +586,7 @@ void fm1_cstart(void)
         bootguard.magic = BOOTGUARD_MAGIC;
         bootguard.failed = 0;
         bootguard.pending = 0;
+        bootguard.flags = 0;
     }
     if (bootguard.pending)
         bootguard.failed++;

@@ -4664,6 +4664,7 @@ void ui_init(void)
  * audio. Only the objects that changed are written (project.c), usually one or two sectors. */
 #define AUTOSAVE_QUIET 4000u
 #define AUTOSAVE_GAP 20000u
+uint8_t ui_autosave_block;                         /* started without the saved project: only SAVE writes */
 static void autosave(void)
 {
     uint32_t now = plat_ms();
@@ -4673,6 +4674,8 @@ static void autosave(void)
         save_project();
         return;
     }
+    if (ui_autosave_block)
+        return;
     if (!ui.dirty || (proj.set.autosave_off && !ui.last_autosave) || seq.playing || seq.req_stop || ui.rec || perf_testing() ||
         ui.overlay == O_ASK || now - ui.act_t < AUTOSAVE_QUIET || (ui.saved_t && now - ui.saved_t < AUTOSAVE_GAP))
         return;

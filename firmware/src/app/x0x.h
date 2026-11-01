@@ -70,6 +70,7 @@ void project_apply_cc(void);             /* CC OUT and MIX MIDI CH into the engi
 int project_mem_pct(void);
 void project_flash_changed(void);        /* a restore wrote the flash: the next save writes every object */               /* how full the room for patterns, song and motion is, % */
 
+extern uint8_t ui_autosave_block;       /* 1: no autosave (started without the saved project) */
 void ui_init(void);
 void ui_frame(void);
 void ui_input_only(void);

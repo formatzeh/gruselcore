@@ -81,7 +81,7 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
 }
 #include "storage.c"
 
-struct bootguard_s { uint32_t magic, failed, pending; };
+struct bootguard_s { uint32_t magic, failed, pending, flags; };   /* flags: BG_* (main_fm1.c) */
 extern struct bootguard_s bootguard;
 #include "ota.c"
 static uint32_t ota_now_ms(void) { return fm1_ms; }
