@@ -500,12 +500,13 @@ static void render_sub(float *out_l, float *out_r, uint32_t n)
 }
 
 /* ------------------------------------------------------------ output --- */
-static volatile float out_scale = 4194303.0f, out_lim = 2.0f;
-void engine_out_loud(int on)
-{
-    out_scale = on ? 8388607.0f : 4194303.0f;
-    out_lim = on ? 1.0f : 2.0f;
-}
+/* the codec at its full scale: the master's limiter keeps the mix under 1.0, so nothing clips. (X0X
+ * ran 6 dB under it by default; GruselCore's sounds are normalised to -16 dB, so the FM-1 was far too
+ * quiet.) BUS_GAIN (+9 dB) lifts the mix into the limiter: a groove of two drum tracks and a 303 plays
+ * at about -16 dBFS RMS, its peaks held at -2 dBFS. */
+#define BUS_GAIN 2.8f
+static const float out_scale = 8388607.0f, out_lim = 1.0f;
+void engine_out_loud(int on) { (void)on; }
 static volatile int usb_full;
 static float vol_after = -1.0f;
 void engine_usb_full(int on) { usb_full = on; }
@@ -559,7 +560,7 @@ void engine_render(int32_t *out_lr, uint32_t n)
     }
     {
         PROF_T(pt);
-        master_process_st(&mst, out_l, out_r, (int)n, vol);
+        master_process_st(&mst, out_l, out_r, (int)n, vol * BUS_GAIN);
         PROF_ADD(PR_MST, pt);
     }
     for (i = 0; i < n; i++) {

@@ -48,6 +48,7 @@ static struct {
     char say_a[28], say_b[28];
     uint8_t say_warn;
     uint32_t last_hash;
+    int last_bar;                        /* the bar.beat on the screen (bar_key) */
 } ui;
 uint8_t ui_autosave_block;
 static uint8_t save_hold;
@@ -719,17 +720,20 @@ static void input(void)
 #define BOT_Y 168
 #define BOT_H 72
 
-/* the selected track's bar.beat (as Skiff): its step counted in bars of 16 sixteenths at its rate */
+/* bar.beat (as Skiff): the bars since PLAY, counted by the sequencer's bar clock, and the beat in the
+ * bar; 1.1 when stopped */
+static int bar_key(void)
+{
+    return seq.playing ? (int)(seq.bars % 1000u) * 4 + (seq.t[TRK_BAR].pos & 15) / 4 : 0;
+}
 static void bar_beat(char *b)
 {
-    static const uint8_t SPB[NRATES] = {4, 6, 8, 3, 2};   /* steps a beat: 1/16, 1/16T, 1/32, 1/8T, 1/8 */
-    const tpart_t *tp = cur_tp();
-    int spb = SPB[tp->rate % NRATES], st = seq.playing ? eng_step[ui.trk] : 0, bar = st / (spb * 4) + 1;
+    int k = bar_key();
     char n[4];
     b[0] = 0;
-    put_num(b, bar);
+    put_num(b, k / 4 + 1);
     scat(b, ".");
-    put_num(n, (st % (spb * 4)) / spb + 1);
+    put_num(n, k % 4 + 1);
     scat(b, n);
 }
 
@@ -1190,10 +1194,15 @@ void ui_frame(void)
     if (h != ui.last_hash || ui.redraw) {                 /* something changed: the whole screen */
         ui.last_hash = h;
         ui.redraw = 0;
+        ui.last_bar = bar_key();
         draw_top();
         draw_main();
         draw_bottom();
     } else if (seq.playing || ui.view == V_MIX) {         /* only the playheads and meters move */
+        if (bar_key() != ui.last_bar) {                   /* and bar.beat */
+            ui.last_bar = bar_key();
+            draw_top();
+        }
         draw_main();
     }
 }

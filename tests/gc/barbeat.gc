@@ -1,0 +1,13 @@
+# bar.beat counts the bars since PLAY (145 BPM: a beat 414 ms, a bar 1655 ms), and the top line follows
+tap HOME
+expect barbeat 11
+tap PLAY
+wait 2300
+expect barbeat 22
+expect topbar 5
+shot barbeat_playing
+wait 5000
+expect barbeat 52
+tap PLAY
+wait 100
+expect barbeat 11

@@ -122,7 +122,7 @@ static void render_ms(uint32_t ms)
         uint32_t k = n - done > 128u ? 128u : n - done;
         engine_render(out, k);
         for (i = 0; i < 2u * k; i++) {
-            float x = (float)out[i] / 4194304.0f;
+            float x = (float)out[i] / 8388608.0f;   /* the codec's full scale */
             if (fabsf(x) > peak)
                 peak = fabsf(x);
             if (wavf) {
@@ -224,6 +224,8 @@ static int value_of(const char *what)
     if (!strcmp(what, "dirty")) return ui.dirty;
     if (!strcmp(what, "bpm")) return (int)(seq.bpm * 10.0f + 0.5f);   /* the tempo x 10 */
     if (!strcmp(what, "oct")) return ui.oct;
+    if (!strcmp(what, "barbeat")) return (bar_key() / 4 + 1) * 10 + bar_key() % 4 + 1;   /* 2.3 -> 23 */
+    if (!strcmp(what, "topbar")) return ui.last_bar;               /* what the top line shows */
     if (sscanf(what, "dmac.%d.%d", &t, &s) == 2) return proj.sound.dmac[t][s];
     if (sscanf(what, "b303.%d.%d", &t, &s) == 2) return proj.sound.b303[t][s];
     if (!strcmp(what, "litkeys")) return (int)lit_keys;          /* the keys lit (bits), 0 = none */

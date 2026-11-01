@@ -20,7 +20,7 @@ anything for a few seconds.
 
 ## HOME – all 8 tracks, and the keyboard
 
-- **Top line:** play / stop, the selected track's **bar.beat** (running while playing), the tempo,
+- **Top line:** play / stop, **bar.beat** (the bars since PLAY, and the beat), the tempo,
   the keyboard's octave (when not 0), the selected track and its pattern.
 - **Each track's lane:** its number, its name (the kit, or 303 BASS; M when muted) and its steps; the
   selected track has a bar at its edge.

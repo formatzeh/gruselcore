@@ -25,7 +25,7 @@ typedef struct {
     uint8_t accent_q7;
     uint8_t autosave_off;                /* 0: saves by itself while stopped and idle */
     uint8_t midi_ch[NTRK];               /* each track's MIDI channel: 0 = its default (track n on n), 1-16, 17 = OFF */
-    uint8_t out_loud;                    /* 1: the output 6 dB hotter (the codec's full scale) */
+    uint8_t out_loud;                    /* unused: the output is always at the codec's full scale */
     uint8_t usb_full;                    /* 1: USB audio at full level, the MASTER knob for the FM-1's own outputs */
     uint8_t one_core;                    /* 1: the second core stays off (after it crashed beside it) */
     uint8_t swing;                       /* the global swing, 0..100 */
