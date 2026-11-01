@@ -345,8 +345,11 @@ int project_load(void)
         bad = 1;
     }
     patterns_sanitize();
-    if (proj.set.pattern >= NPAT)
-        proj.set.pattern = 0;
+    for (n = 0; n < NTRK; n++)
+        if (proj.set.tpat[n] >= NPAT)
+            proj.set.tpat[n] = 0;
+    if (proj.set.swing > 100)
+        proj.set.swing = 0;
     return bad ? -1 : 0;
 }
 
@@ -359,6 +362,9 @@ void project_apply_io(void)
         int v = proj.set.midi_ch[t];
         seq.ch[t] = (uint8_t)(!v ? t : v > 16 ? SEQ_CH_OFF : v - 1);
     }
+    seq.swing = proj.set.swing;
+    for (t = 0; t < NTRK; t++)
+        seq.tpat[t] = proj.set.tpat[t];
     engine_out_loud(proj.set.out_loud);
     engine_usb_full(proj.set.usb_full);
 }
@@ -372,7 +378,9 @@ int project_save(void)
     proj.set.accent_q7 = seq.accent_q7;
     proj.set.clk_out = seq.send_clock;
     proj.set.notes_out = seq.send_notes;
-    proj.set.pattern = seq.cur;
+    proj.set.swing = seq.swing;
+    for (t = 0; t < NTRK; t++)
+        proj.set.tpat[t] = seq.tpat[t];
     if (save_obj(OBJ_SET, &proj.set, sizeof proj.set))
         return -1;
     if (save_obj(OBJ_SOUND, &proj.sound, sizeof proj.sound))

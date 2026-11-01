@@ -28,7 +28,8 @@ typedef struct {
     uint8_t out_loud;                    /* 1: the output 6 dB hotter (the codec's full scale) */
     uint8_t usb_full;                    /* 1: USB audio at full level, the MASTER knob for the FM-1's own outputs */
     uint8_t one_core;                    /* 1: the second core stays off (after it crashed beside it) */
-    uint8_t pattern;                     /* the pattern that was playing */
+    uint8_t swing;                       /* the global swing, 0..100 */
+    uint8_t tpat[NTRK];                  /* the pattern each track was playing */
     uint8_t rsv[4];
 } settings_t;
 

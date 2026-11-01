@@ -54,7 +54,7 @@ typedef struct {
 
 typedef struct {
     tpart_t t[NTRK];
-    uint8_t swing;                    /* 0..100: 0 = straight (50 %), 100 = 75 % shuffle */
+    uint8_t swing;                    /* unused: the swing is global (seq.swing, saved in the settings) */
     uint8_t rsv[3];
 } pattern_t;
 

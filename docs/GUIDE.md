@@ -22,10 +22,13 @@ anything for a few seconds.
 - **The keyboard plays the selected track.** A drum track: its 8 sounds on the black keys 1–8 and on
   the white keys 1–8 (again on 9–16). A 303: the keys from F, chromatic; **OCT− / OCT+** the octave.
   With **REC** on, what you play is recorded into the steps.
-- **Hold HOME** and press a **white key:** the next pattern. It starts at the end of the bar (at once
-  when stopped). Hold HOME and press **OCT− / OCT+:** patterns 1–16 or 17–32.
+- **Hold HOME** and press a **white key:** the selected track's next pattern. It switches at the end
+  of the bar (at once when stopped) and starts from its first step; the other tracks keep playing.
+  Hold HOME and press **OCT− / OCT+:** patterns 1–16 or 17–32.
+- **Hold HOME + SEL** and press a **white key:** every track switches to that pattern at the bar.
+- While HOME is held, the screen shows every track's pattern and the change waiting for the bar.
 - **Hold HOME** and press a **black key 1–8:** mute / unmute that track.
-- **Knobs:** TEMPO, SWING, the master FILTER (low-pass left, high-pass right), PUMP (ducks
+- **Knobs:** TEMPO, SWING (one for all tracks), the master FILTER (low-pass left, high-pass right), PUMP (ducks
   everything on the kick).
 
 ## SEQ – the steps of the selected track

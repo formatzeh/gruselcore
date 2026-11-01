@@ -17,11 +17,14 @@
  * its kit's sounds, 303 plays notes, OFF nothing. A type changed while playing takes effect at the
  * track's next step (a 303 note sounding is let go first).
  *
- * The bar: a hidden clock track (index NTRK) of 16 sixteenths. When it wraps, a cued pattern takes
- * over and every track starts again from its first step. So a pattern change always lands on the
- * bar, whatever the tracks' lengths.
+ * Patterns per track: each track plays its own pattern (tpat[]) and can be cued on its own (tcue[]).
+ * The bar: a hidden clock track (index NTRK) of 16 sixteenths. When it wraps, every track with a
+ * cue takes its new pattern and starts again from its first step; the others keep running. So a
+ * pattern change always lands on the bar, whatever the tracks' lengths. Cueing every track at once
+ * is a whole-pattern change.
  *
- * Swing delays every second 16th (or 32nd); triplets are never swung, nor a track with TF_NOSWING.
+ * Swing (one, global: swing) delays every second 16th (or 32nd); triplets and 8ths are never swung,
+ * nor a track with TF_NOSWING.
  * A step's lateness never carries over to the next (the grid-slot rule, as X0X's sequencer.h
  * explains): each step is scheduled from its grid slot, never from when the step before played.
  *
@@ -70,8 +73,9 @@ typedef struct {
     pattern_t *pat;                   /* NPAT patterns (the project's) */
     volatile uint8_t ttype[NTRK];     /* each track's type (TT_*) */
     volatile uint8_t playing;         /* 1 = running */
-    volatile uint8_t cur;             /* the pattern playing */
-    volatile uint8_t cue;             /* the cued pattern (0xFF = none): starts at the bar */
+    volatile uint8_t tpat[NTRK];      /* the pattern each track plays */
+    volatile uint8_t tcue[NTRK];      /* each track's cued pattern (0xFF = none): starts at the bar */
+    volatile uint8_t swing;           /* 0..100: 0 = straight (50 %), 100 = 75 % shuffle */
     volatile uint8_t ext;             /* 1 = following an external clock */
     volatile uint8_t send_clock;      /* 1 = emit MIDI clock + transport when internal */
     volatile uint8_t send_notes;      /* 1 = echo the sequence on MIDI, on each track's channel */
@@ -98,8 +102,9 @@ void gseq_start(seq_t *s);            /* from step 1 of the current (or cued) pa
 void gseq_stop(seq_t *s);
 void gseq_continue(seq_t *s);
 void gseq_ext_clock(seq_t *s);        /* one 24-ppqn tick (MIDI 0xF8) */
-void gseq_cue(seq_t *s, int pattern); /* at the end of the bar (at once, if stopped) */
-int gseq_cue_of(const seq_t *s);      /* the cued pattern, or -1 */
+void gseq_cue(seq_t *s, int pattern); /* every track, at the end of the bar (at once, if stopped) */
+void gseq_cue_track(seq_t *s, int t, int pattern);   /* one track, the same way */
+int gseq_cue_of(const seq_t *s, int t);              /* track t's cued pattern, or -1 */
 
 uint32_t gseq_step_q8(const seq_t *s, int rate);   /* a step of this rate in samples, Q8 (no swing) */
 float gseq_tempo(const seq_t *s);     /* the tempo in effect (internal or measured) */

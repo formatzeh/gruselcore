@@ -5,8 +5,9 @@
  *
  * Screens (the button that opens each):
  *   HOME  all 8 tracks; the keyboard plays the selected track (drum sounds, or a 303 chromatic,
- *         OCT-/+ the octave). HOME held: white keys cue patterns 1-16 (OCT-/+: 17-32), black keys
- *         1-8 mute. Knobs: TEMPO, SWING, master FILTER, PUMP
+ *         OCT-/+ the octave). HOME held: white keys cue the selected track's pattern 1-16 (OCT-/+:
+ *         17-32; with SEL held too, every track's), black keys 1-8 mute. Knobs: TEMPO, SWING (one,
+ *         global), master FILTER, PUMP
  *   SEQ   the selected track's steps. DRUM: a grid of its 8 sounds; black keys 1-8 pick the sound,
  *         white keys set its steps (ENV held: accents). 303: white keys pick a step and switch it
  *         on / off; held, KNOB 1-4 set its note, gate, accent, slide. OCT-/+: steps 17-64
@@ -123,8 +124,8 @@ void ui_warn(const char *a, const char *b)
     ui_say(a, b);
     ui.say_warn = 1;
 }
-static pattern_t *cur_pat(void) { return &proj.pat[seq.cur]; }
-static tpart_t *cur_tp(void) { return &cur_pat()->t[ui.trk]; }
+static tpart_t *tp_of(int t) { return &proj.pat[seq.tpat[t] % NPAT].t[t]; }   /* track t in the pattern it plays */
+static tpart_t *cur_tp(void) { return tp_of(ui.trk); }
 static int ttype(int t) { return proj.sound.ttype[t]; }
 
 /* a pot of the sound: set in the mirror and sent to the engine */
@@ -290,7 +291,7 @@ static void knob_label(const knob_t *k, char *name, char *val)
     }
     case KR_SWING:
         scat(name, "SWING");
-        put_num(val, 50 + cur_pat()->swing / 4);
+        put_num(val, 50 + seq.swing / 4);
         scat(val, "%");
         break;
     case KR_LEN: scat(name, "LENGTH"); put_num(val, tp->len); break;
@@ -336,8 +337,8 @@ static void knob_turn(const knob_t *k, int d)
         break;
     }
     case KR_SWING: {
-        int s = cur_pat()->swing + d * 4;
-        cur_pat()->swing = (uint8_t)(s < 0 ? 0 : s > 100 ? 100 : s);
+        int s = seq.swing + d * 4;
+        seq.swing = (uint8_t)(s < 0 ? 0 : s > 100 ? 100 : s);
         break;
     }
     case KR_LEN:
@@ -501,9 +502,18 @@ static void home_key(int k, int down)
     if (!down)
         return;
     if (w >= 0) {
-        int p = ui.pbank * 16 + w;
-        char t[16] = "PATTERN ", n[4];
-        gseq_cue(&seq, p);
+        int p = ui.pbank * 16 + w, all = (ui.btn & (1u << B_SEL)) != 0;
+        char t[24] = "", n[4];
+        if (all) {
+            gseq_cue(&seq, p);                          /* HOME + SEL: every track */
+            scat(t, "ALL: PATTERN ");
+        } else {
+            gseq_cue_track(&seq, ui.trk, p);            /* the selected track only */
+            t[0] = 'T';
+            t[1] = (char)('1' + ui.trk);
+            t[2] = 0;
+            scat(t, ": PATTERN ");
+        }
         put_num(n, p + 1);
         scat(t, n);
         ui_say(t, seq.playing ? "AT THE NEXT BAR" : 0);
@@ -690,13 +700,13 @@ static void draw_top(void)
         cv_text(4, 4, &FONT_B, b, C_HI);
         cv_text(84, 4, &FONT_S, VIEW_N[ui.view], C_GRAY);
         b[0] = 'P';
-        put_2(b + 1, seq.cur + 1);
-        if (seq.cue < NPAT) {
+        put_2(b + 1, seq.tpat[ui.trk] + 1);          /* the selected track's pattern, and its cue */
+        if (seq.tcue[ui.trk] < NPAT) {
             scat(b, ">");
-            put_2(n, seq.cue + 1);
+            put_2(n, seq.tcue[ui.trk] + 1);
             scat(b, n);
         }
-        cv_text(132, 4, &FONT_S, b, seq.cue < NPAT ? C_WHITE : C_AMB);
+        cv_text(132, 4, &FONT_S, b, seq.tcue[ui.trk] < NPAT ? C_WHITE : C_AMB);
         put_num(b, (int)(gseq_tempo(&seq) + 0.5f));
         cv_text(196, 4, &FONT_S, b, C_AMB);
         if (seq.playing)
@@ -713,7 +723,7 @@ static void draw_top(void)
 /* the step row of track t at y, 16 cells from the current page, h px tall */
 static void draw_steps(int t, int y, int h, int page, int sound, int hi)
 {
-    const tpart_t *tp = &cur_pat()->t[t];
+    const tpart_t *tp = tp_of(t);
     int i, w = 13, x0 = 32, play = seq.playing ? eng_step[t] : -1;
     for (i = 0; i < 16; i++) {
         int s = page * 16 + i, on = 0, acc = 0;
@@ -748,6 +758,26 @@ static void draw_steps(int t, int y, int h, int page, int sound, int hi)
 static void draw_home(void)
 {
     int t;
+    if (ui.btn & (1u << B_HOME)) {                    /* HOME held: each track's pattern and cue */
+        for (t = 0; t < NTRK; t++) {
+            int y = 2 + t * 15, muted = (seq.mute >> t) & 1;
+            char b[24] = {(char)('1' + t), ' ', 0}, n[4];
+            uint16_t c = t == ui.trk ? C_WHITE : muted ? C_DIM : C_GRAY;
+            scat(b, TYPE_N[ttype(t) % NTT]);
+            cv_text(4, y, &FONT_T, b, c);
+            b[0] = 'P';
+            put_2(b + 1, seq.tpat[t] + 1);
+            if (seq.tcue[t] < NPAT) {
+                scat(b, " > P");
+                put_2(n, seq.tcue[t] + 1);
+                scat(b, n);
+            }
+            cv_text(60, y, &FONT_T, b, seq.tcue[t] < NPAT ? C_WHITE : c);
+            if (muted)
+                cv_text(180, y, &FONT_T, "MUTE", RGB(255, 90, 60));
+        }
+        return;
+    }
     for (t = 0; t < NTRK; t++) {
         int y = 2 + t * 17, muted = (seq.mute >> t) & 1;
         char b[8] = {(char)('1' + t), ' ', 0};
@@ -755,7 +785,7 @@ static void draw_home(void)
         cv_text(2, y, &FONT_T, b, c);
         cv_text(12, y, &FONT_T, ttype(t) == TT_DRUM ? "D" : ttype(t) == TT_303 ? "B" : "-", c);
         if (ttype(t) != TT_OFF)
-            draw_steps(t, y + 2, 10, eng_step[t] / 16 < (cur_pat()->t[t].len + 15) / 16 && seq.playing ? eng_step[t] / 16 : 0,
+            draw_steps(t, y + 2, 10, eng_step[t] / 16 < (tp_of(t)->len + 15) / 16 && seq.playing ? eng_step[t] / 16 : 0,
                        -1, !muted);
         if (muted)
             cv_text(32 + 16 * 13 - 34, y, &FONT_T, "MUTE", RGB(255, 90, 60));
@@ -930,8 +960,8 @@ static void draw_main(void)
     }
     if (ui.btn & (1u << B_HOME)) {                    /* HOME held: what the keys do now */
         cv_rect(0, MAIN_H - 20, 240, 20, C_LINE);
-        cv_text(4, MAIN_H - 18, &FONT_S, ui.pbank ? "WHITE: PAT 17-32  BLACK: MUTE" : "WHITE: PAT 1-16  BLACK: MUTE",
-                C_WHITE);
+        cv_text(4, MAIN_H - 18, &FONT_S, (ui.btn & (1u << B_SEL)) ? (ui.pbank ? "WHITE: ALL TRACKS 17-32" : "WHITE: ALL TRACKS 1-16")
+                : ui.pbank ? "WHITE: PAT 17-32  BLACK: MUTE" : "WHITE: PAT 1-16  BLACK: MUTE", C_WHITE);
     } else if (ui.say_t && plat_ms() - ui.say_t < 1500u && ui.say_b[0]) {   /* a message's second part */
         cv_rect(0, MAIN_H - 20, 240, 20, C_LINE);
         cv_text(4, MAIN_H - 18, &FONT_S, ui.say_b, C_WHITE);
@@ -974,7 +1004,10 @@ static uint32_t screen_hash(void)
     unsigned i;
 #define MIX(x) (h = (h ^ (uint32_t)(x)) * 16777619u)
     MIX(ui.view); MIX(ui.trk); MIX(ui.snd); MIX(ui.page); MIX(ui.epage); MIX(ui.fxpage); MIX(ui.glopage);
-    MIX(ui.held_step); MIX(ui.pend_type); MIX(ui.dirty); MIX(ui.rec); MIX(seq.cur); MIX(seq.cue);
+    MIX(ui.held_step); MIX(ui.pend_type); MIX(ui.dirty); MIX(ui.rec); MIX(seq.tpat[ui.trk]); MIX(seq.tcue[ui.trk]); MIX(seq.swing);
+    for (i = 0; i < NTRK; i++)
+        MIX(seq.tpat[i] | seq.tcue[i] << 8);
+   
     MIX(seq.playing); MIX(seq.mute); MIX((int)(seq.bpm * 10.0f)); MIX(seq.ch[ui.trk]); MIX(seq.send_clock);
     MIX(seq.send_notes); MIX(ui.say_t && plat_ms() - ui.say_t < 1500u); MIX(ui.btn); MIX(ui.pbank); MIX(ui.oct);
     p = (const uint8_t *)cur_tp();
@@ -1002,9 +1035,9 @@ static void leds(void)
         if (w >= 0) {
             if (ui.view == V_HOME && (ui.btn & (1u << B_HOME))) {
                 int p = ui.pbank * 16 + w;
-                if (p == seq.cur)
+                if (p == seq.tpat[ui.trk])
                     lk |= 1u << i;
-                else if (p == seq.cue && (plat_ms() / 200u) & 1u)
+                else if (p == seq.tcue[ui.trk] && (plat_ms() / 200u) & 1u)
                     lk |= 1u << i;
             } else if (ui.view == V_SEQ) {
                 const tpart_t *tp = cur_tp();
@@ -1079,7 +1112,6 @@ void ui_init(void)
     ui.redraw = 1;
     ui.btn = plat_buttons();                              /* held at power-on: not presses */
     ui.keys = plat_keys();
-    seq.cur = proj.set.pattern < NPAT ? proj.set.pattern : 0;
     lcd_fill(0, 0, 240, 240, C_BLACK);
 }
 

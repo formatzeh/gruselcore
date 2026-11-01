@@ -14,7 +14,8 @@ void gseq_init(seq_t *s, pattern_t *patterns)
     for (i = 0; i < sizeof *s; i++)
         p[i] = 0;
     s->pat = patterns;
-    s->cue = 0xFF;
+    for (i = 0; i < NTRK; i++)
+        s->tcue[i] = 0xFF;
     s->bpm = 140.0f;
     s->ext_bpm = 140.0f;
     s->accent_q7 = 88;
@@ -44,7 +45,7 @@ uint32_t gseq_step_q8(const seq_t *s, int rate)
     return (uint32_t)(q * 256.0f * (float)TICKS_PER_STEP[rate] / 24.0f);
 }
 
-static const tpart_t *tpart(const seq_t *s, int t) { return &s->pat[s->cur].t[t]; }
+static const tpart_t *tpart(const seq_t *s, int t) { return &s->pat[s->tpat[t] % NPAT].t[t]; }
 static int is_303(const seq_t *s, int t) { return t < NTRK && s->ttype[t] == TT_303; }
 static int track_dir(const seq_t *s, int t) { return is_303(s, t) ? tpart(s, t)->dir & 3 : DIR_FWD; }
 
@@ -63,7 +64,7 @@ static int track_rate(const seq_t *s, int t)
 /* swing offset of a step, Q8: odd 16ths / 32nds come late; triplets and 8ths are never swung */
 static uint32_t swing_q8(const seq_t *s, int t, int rate, uint32_t step_q8)
 {
-    uint32_t sw = s->pat[s->cur].swing;
+    uint32_t sw = s->swing;
     if ((rate != RATE_16 && rate != RATE_32) || !sw || t >= NTRK || (tpart(s, t)->flags & TF_NOSWING))
         return 0;
     if (sw > 100u)
@@ -201,23 +202,29 @@ static void fire_303(seq_t *s, int t, int p, uint32_t step_q8, uint32_t carry, c
     tr->to_off = hold ? 0 : carry + step_q8 / 2u;
 }
 
-/* the bar's end (the bar clock wrapping), or the start: a cued pattern takes over. 1 = it changed */
-static int bar_end(seq_t *s)
+/* the bar's end (the bar clock wrapping), or the start: each cued track takes its pattern. Returns the
+ * tracks that switched (bit t); a cue of the pattern a track plays restarts it too */
+static uint32_t bar_end(seq_t *s)
 {
-    if (s->cue < NPAT) {                             /* (a cue of the pattern playing restarts it too) */
-        s->cur = s->cue;
-        s->cue = 0xFF;
-        return 1;
-    }
-    return 0;
+    uint32_t changed = 0;
+    int t;
+    for (t = 0; t < NTRK; t++)
+        if (s->tcue[t] < NPAT) {
+            s->tpat[t] = s->tcue[t];
+            s->tcue[t] = 0xFF;
+            changed |= 1u << t;
+        }
+    return changed;
 }
 
-/* every track from its first step at once (a pattern change at the bar) */
-static void restart_tracks(seq_t *s, const seq_sink_t *o)
+/* these tracks from their first step at once (their pattern changed at the bar) */
+static void restart_tracks(seq_t *s, uint32_t mask, const seq_sink_t *o)
 {
     int t;
     for (t = 0; t < NTRK; t++) {
         seq_track_t *tr = &s->t[t];
+        if (!(mask >> t & 1u))
+            continue;
         if (tr->sounding && tr->played_type == TT_303)
             note_release(s, t, o);
         tr->started = 0;
@@ -228,11 +235,12 @@ static void restart_tracks(seq_t *s, const seq_sink_t *o)
     }
 }
 
-/* fire track t's next step now; returns 1 when the bar clock's wrap switched the pattern */
-static int fire_step(seq_t *s, int t, const seq_sink_t *o)
+/* fire track t's next step now; returns the tracks whose pattern the bar clock's wrap switched */
+static uint32_t fire_step(seq_t *s, int t, const seq_sink_t *o)
 {
     seq_track_t *tr = &s->t[t];
-    int rate = track_rate(s, t), p, wrapped, changed = 0;
+    int rate = track_rate(s, t), p, wrapped;
+    uint32_t changed = 0;
     uint32_t L = gseq_step_q8(s, rate);
     uint32_t carry = tr->to_next < 256u ? tr->to_next : 0;   /* the step was due this far into the sample */
     if (!tr->started) {
@@ -391,10 +399,11 @@ void gseq_advance(seq_t *s, uint32_t k, const seq_sink_t *o)
     if (!s->playing) {
         if (!s->ext)
             s->clk_to_next = 0;
-        if (s->cue < NPAT) {                         /* stopped: a cue takes effect at once */
-            s->cur = s->cue;
-            s->cue = 0xFF;
-        }
+        for (t = 0; t < NTRK; t++)                   /* stopped: a cue takes effect at once */
+            if (s->tcue[t] < NPAT) {
+                s->tpat[t] = s->tcue[t];
+                s->tcue[t] = 0xFF;
+            }
         for (t = 0; t < NTRK; t++)                   /* a note played by hand while stopped falls by itself */
             if (s->t[t].to_off) {
                 s->t[t].to_off = s->t[t].to_off > dq ? s->t[t].to_off - dq : 1;
@@ -418,8 +427,9 @@ void gseq_advance(seq_t *s, uint32_t k, const seq_sink_t *o)
         int fired = 0;
         seq_track_t *bar = &s->t[TRK_BAR];
         if (bar->to_next < 256u) {
-            if (fire_step(s, TRK_BAR, o))
-                restart_tracks(s, o);
+            uint32_t ch = fire_step(s, TRK_BAR, o);
+            if (ch)
+                restart_tracks(s, ch, o);
             fired = 1;
         }
         for (t = 0; t < NTRK; t++) {
@@ -448,7 +458,14 @@ void gseq_continue(seq_t *s) { s->req_cont = 1; }
 void gseq_ext_clock(seq_t *s) { s->ext_pending++; }
 void gseq_cue(seq_t *s, int p)
 {
+    int t;
     if (p >= 0 && p < NPAT)
-        s->cue = (uint8_t)p;
+        for (t = 0; t < NTRK; t++)
+            s->tcue[t] = (uint8_t)p;
 }
-int gseq_cue_of(const seq_t *s) { return s->cue < NPAT ? s->cue : -1; }
+void gseq_cue_track(seq_t *s, int t, int p)
+{
+    if (t >= 0 && t < NTRK && p >= 0 && p < NPAT)
+        s->tcue[t] = (uint8_t)p;
+}
+int gseq_cue_of(const seq_t *s, int t) { return t >= 0 && t < NTRK && s->tcue[t] < NPAT ? s->tcue[t] : -1; }

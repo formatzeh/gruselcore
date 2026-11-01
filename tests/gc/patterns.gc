@@ -1,0 +1,38 @@
+# Patterns per track: HOME + white key switches the selected track; HOME + SEL + white key, every track
+tap HOME
+turn ALGO 1
+expect trk 1
+hold HOME
+tapkey w3
+release HOME
+expect pat.1 3
+expect pat.0 0
+hold HOME
+hold SEL
+shot held_sel
+tapkey w6
+release SEL
+release HOME
+expect pat.0 6
+expect pat.5 6
+# playing: a track's cue waits for the bar, the others keep theirs
+tap PLAY
+wait 300
+hold HOME
+tapkey w2
+shot held_home
+release HOME
+expect pat.1 6
+wait 1800
+expect pat.1 2
+expect pat.0 6
+# the swing is one, global
+turn K2 5
+tap PLAY
+wait 100
+tap SAVE
+wait 100
+reboot
+expect pat.1 2
+expect pat.0 6
+expect pat.7 6

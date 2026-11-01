@@ -99,20 +99,37 @@ int main(void)
     run(step * 6);
     gseq_cue(&seq, 1);
     run(step * 9);                                          /* still in bar 1 */
-    CHECK(seq.cur == 0 && count('d', 0, 2) == 0, "the cue took over before the bar's end");
+    CHECK(seq.tpat[0] == 0 && count('d', 0, 2) == 0, "the cue took over before the bar's end");
     run(step * 2);                                          /* past the bar line */
-    CHECK(seq.cur == 1, "the cue did not take over at the bar (cur %d)", seq.cur);
+    CHECK(seq.tpat[0] == 1 && seq.tpat[5] == 1, "the cue did not take over at the bar (track 1 on %d)", seq.tpat[0]);
     CHECK(count('d', 0, 2) == 1, "pattern 2's first step did not fire at the bar");
     for (i = 0; i < nev; i++)
         if (ev[i].kind == 'd' && ev[i].a == 2)
             CHECK(ev[i].at >= 88199u && ev[i].at <= 88201u, "pattern 2 started at %u, want 88200 (a bar at 120 BPM)", ev[i].at);
     CHECK(count('d', 0, 0) == 0, "pattern 1's step 20 played after the change");
 
+    /* one track cued on its own: it switches at the bar and restarts; the others keep their steps */
+    setup(TYPES, 120.0f);
+    pat[0].t[0].len = 64;
+    sm_set(pat[0].t[0].u.d.hit[0], 20);                     /* track 1, pattern 1: step 21 */
+    pat[0].t[1].len = 32;
+    sm_set(pat[0].t[1].u.d.hit[1], 20);                     /* track 2, pattern 1: step 21 */
+    sm_set(pat[3].t[1].u.d.hit[4], 0);                      /* track 2, pattern 4: step 1 */
+    gseq_start(&seq);
+    run(step * 4);
+    gseq_cue_track(&seq, 1, 3);
+    CHECK(gseq_cue_of(&seq, 1) == 3 && gseq_cue_of(&seq, 0) == -1, "per-track cue not stored");
+    run(step * 18);                                         /* past the bar, into bar 2 (step 21 of track 1) */
+    CHECK(seq.tpat[1] == 3 && seq.tpat[0] == 0, "track 2 should be on pattern 4, track 1 on 1 (%d, %d)", seq.tpat[1], seq.tpat[0]);
+    CHECK(count('d', 1, 4) == 1, "track 2's new pattern did not start at the bar");
+    CHECK(count('d', 1, 1) == 0, "track 2's old step 21 played after its switch");
+    CHECK(count('d', 0, 0) == 1, "track 1 did not keep running through the bar (its step 21)");
+
     /* stopped: a cue takes effect at once */
     setup(TYPES, 120.0f);
     gseq_cue(&seq, 5);
     run(64);
-    CHECK(seq.cur == 5, "stopped cue not applied");
+    CHECK(seq.tpat[3] == 5, "stopped cue not applied");
 
     /* 303: note, gate at half a step, slide, tie */
     setup(TYPES, 120.0f);
@@ -176,7 +193,7 @@ int main(void)
 
     /* swing: odd 16ths late by the swing; a TF_NOSWING track straight */
     setup(TYPES, 120.0f);
-    pat[0].swing = 100;                                     /* half a step late */
+    seq.swing = 100;                                        /* half a step late */
     sm_set(pat[0].t[0].u.d.hit[0], 1);
     sm_set(pat[0].t[1].u.d.hit[0], 1);
     pat[0].t[1].flags = TF_NOSWING;

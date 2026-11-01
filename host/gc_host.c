@@ -218,7 +218,8 @@ static int value_of(const char *what)
     if (!strcmp(what, "view")) return ui.view;
     if (!strcmp(what, "trk")) return ui.trk;
     if (!strcmp(what, "snd")) return ui.snd;
-    if (!strcmp(what, "cur")) return seq.cur;
+    if (!strcmp(what, "cur")) return seq.tpat[ui.trk];             /* the selected track's pattern */
+    if (sscanf(what, "pat.%d", &t) == 1) return seq.tpat[t];
     if (!strcmp(what, "mute")) return seq.mute;
     if (!strcmp(what, "dirty")) return ui.dirty;
     if (!strcmp(what, "litkeys")) return (int)lit_keys;          /* the keys lit (bits), 0 = none */
@@ -228,20 +229,20 @@ static int value_of(const char *what)
     if (sscanf(what, "anyhit.%d.%d", &t, &s) == 2) {          /* any step of that sound set */
         int n = 0;
         for (st = 0; st < NSTEPS; st++)
-            n += sm_get(proj.pat[seq.cur].t[t].u.d.hit[s], st);
+            n += sm_get(proj.pat[seq.tpat[t]].t[t].u.d.hit[s], st);
         return n;
     }
     if (sscanf(what, "anynote.%d.%d", &t, &s) == 2) {         /* steps of that 303 holding note s, gate on */
         int n = 0;
         for (st = 0; st < NSTEPS; st++)
-            n += proj.pat[seq.cur].t[t].u.b.step[st].note == s && bstep_gate(&proj.pat[seq.cur].t[t].u.b.step[st]) != G_REST;
+            n += proj.pat[seq.tpat[t]].t[t].u.b.step[st].note == s && bstep_gate(&proj.pat[seq.tpat[t]].t[t].u.b.step[st]) != G_REST;
         return n;
     }
     if (sscanf(what, "heard.%d.%d", &t, &s) == 2) return eng_hit[t][s] > 0;   /* the sound played lately */
-    if (sscanf(what, "len.%d", &t) == 1) return proj.pat[seq.cur].t[t].len;
-    if (sscanf(what, "hit.%d.%d.%d", &t, &s, &st) == 3) return sm_get(proj.pat[seq.cur].t[t].u.d.hit[s], st);
-    if (sscanf(what, "gate.%d.%d", &t, &st) == 2) return bstep_gate(&proj.pat[seq.cur].t[t].u.b.step[st]);
-    if (sscanf(what, "note.%d.%d", &t, &st) == 2) return proj.pat[seq.cur].t[t].u.b.step[st].note;
+    if (sscanf(what, "len.%d", &t) == 1) return proj.pat[seq.tpat[t]].t[t].len;
+    if (sscanf(what, "hit.%d.%d.%d", &t, &s, &st) == 3) return sm_get(proj.pat[seq.tpat[t]].t[t].u.d.hit[s], st);
+    if (sscanf(what, "gate.%d.%d", &t, &st) == 2) return bstep_gate(&proj.pat[seq.tpat[t]].t[t].u.b.step[st]);
+    if (sscanf(what, "note.%d.%d", &t, &st) == 2) return proj.pat[seq.tpat[t]].t[t].u.b.step[st].note;
     fprintf(stderr, "unknown expect %s\n", what);
     exit(2);
 }
