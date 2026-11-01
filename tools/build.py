@@ -52,7 +52,7 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-PRODUCT = "FM-1_900"                # package identity; release builds are FM-1_9XXYYZZ (see main)
+PRODUCT = "FM-1_966"                # GruselCore package identity; release builds are FM-1_966XXYYZZ (see main)
 VERSION = None                      # FELUCCA_VERSION for release builds (default: firmware/src/ui.c)
 
 
@@ -363,7 +363,7 @@ def mmio_check():
 def main():
     global PRODUCT, VERSION
     ap = argparse.ArgumentParser()
-    ap.add_argument("--release", metavar="X.Y[.Z]", help="release build: identity FM-1_9XXYYZZ, version string X.Y[.Z]")
+    ap.add_argument("--release", metavar="X.Y[.Z]", help="release build: identity FM-1_966XXYYZZ, version string X.Y[.Z]")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     name = "x0x.fwsc"
@@ -375,9 +375,10 @@ def main():
         m = re.fullmatch(r"(\d{1,2})\.(\d{1,2})(?:\.(\d{1,2}))?(-[A-Za-z0-9]+)?", a.release)
         if not m:
             raise SystemExit(f"--release {a.release}: use X.Y[.Z][-suffix], up to two digits each")
-        PRODUCT = "FM-1_9%02d%02d%02d" % (int(m[1]), int(m[2]), int(m[3] or 0))
+        # GruselCore: FM-1_966 + major, minor, patch (0.1 -> FM-1_966000100), 14 of the 20 characters
+        PRODUCT = "FM-1_966%02d%02d%02d" % (int(m[1]), int(m[2]), int(m[3] or 0))
         VERSION = a.release.upper() if "BETA" in a.release.upper() else a.release.upper() + " BETA"
-        name = f"x0x-{a.release}.fwsc"
+        name = f"gruselcore-{a.release}.fwsc"
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
         if hashlib.sha256(fm1pkg_make.sdk_file(rel)).hexdigest() != sha:

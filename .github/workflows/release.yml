@@ -6,13 +6,14 @@ name: Build and attest firmware
 on:
   push:
     tags: ['v[0-9]*']
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: x0x-release-${{ github.ref }}
+  group: gruselcore-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -37,7 +38,7 @@ jobs:
             [[ "$draft" == true ]] || { echo 'Refusing to rebuild a public release'; exit 1; }
           else
             gh release create "$GITHUB_REF_NAME" --verify-tag --draft \
-              --title "X0X $version" --generate-notes "${flags[@]}"
+              --title "GruselCore $version" --generate-notes "${flags[@]}"
           fi
 
   firmware:
@@ -62,13 +63,13 @@ jobs:
         if [[ "$GITHUB_REF" == refs/tags/* ]]; then
           version=${GITHUB_REF_NAME#v}
           ./build.sh --release "$version"
-          cp "build/x0x-$version.fwsc" build/x0x.fwsc
-          cp "build/x0x-$version.fwsc" build/release-assets/
-          cp build/x0x.bin "build/release-assets/x0x-$version-app.bin"
+          cp "build/gruselcore-$version.fwsc" build/x0x.fwsc
+          cp "build/gruselcore-$version.fwsc" build/release-assets/
+          cp build/x0x.bin "build/release-assets/gruselcore-$version-app.bin"
         else
           ./build.sh
-          cp build/x0x.fwsc build/release-assets/
-          cp build/x0x.bin build/release-assets/x0x-app.bin
+          cp build/x0x.fwsc build/release-assets/gruselcore-dev.fwsc
+          cp build/x0x.bin build/release-assets/gruselcore-dev-app.bin
         fi
       test: |
         set -euo pipefail

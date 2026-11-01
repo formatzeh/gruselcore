@@ -1,87 +1,64 @@
-# X0X for the M-VAVE FM-1
+# GruselCore
 
-X0X turns the M-VAVE FM-1 into a groovebox: a **909**, an **808**, two **303s** with an acid line
-generator, and a **breakbeat player**, all playing at once. Each part can play its own pattern,
-you can string patterns into a song, and you can record knob moves. Everything runs in stereo,
-with a shared reverb and tape delay and a punchy master compressor. Over USB, the FM-1 is both a
-MIDI device and an audio input, with no driver needed.
+A lean 8-track groovebox firmware for the M-VAVE FM-1, made for Hardtek, Techno, Dark Techno,
+Trance, Psytrance, Psychill, Darkpsy, Forest Psy, Dark Prog, Mentaltek and Tribetek.
 
-The factory sound is set up for big beat, so it should make noise the moment you press PLAY.
+> **Status: in development, not ready to install yet.** The first playable version is v0.1.
 
-[![X0X running on the FM-1 (watch on YouTube)](https://img.youtube.com/vi/cZLYrZaLDUk/maxresdefault.jpg)](https://www.youtube.com/watch?v=cZLYrZaLDUk)
+## What it will be
 
-- **Try it in your browser** (no FM-1 needed): <https://charlesvestal.github.io/fm1-x0x/emu/>
-- **Install it** (Chrome or Edge, with the FM-1 plugged in): <https://charlesvestal.github.io/fm1-x0x/install/>
-- **Read the manual**: <https://charlesvestal.github.io/fm1-x0x/manual/>
-- **Download the firmware file**: [releases](https://github.com/charlesvestal/fm1-x0x/releases)
+- **8 tracks**, each freely set to DRUM, 303, VA or FM, changeable while playing. Two drum kits at
+  once is two tracks set to DRUM.
+- **Synthesized sounds only**: synth drums (8 sounds per kit, each fully editable), a TB-303, a
+  virtual-analog synth and a 4-operator FM synth.
+- **Sequencer**: one global tempo and swing; 8, 16, 32 or 64 steps per track; pattern changes at
+  the end of the bar; mute and solo.
+- **Per-track arpeggiator and gate**, locked to the tempo.
+- **Effects**: filter, drive, chorus and gate on every track; shared delay and reverb with a send
+  per track; per-track delays as far as the RAM allows; master compressor with pump and a DJ filter.
+- **Never stops**: every edit happens while the sequencer runs.
 
-> **X0X is in beta.** It's solid for everyday playing, but a very busy pattern can push the FM-1
-> to its limit. When that happens, X0X trades a little sound quality to keep playing rather than
-> drop out. Installing it is at your own risk, though it's hard to get stuck: the web installer
-> can put M-VAVE's firmware back, an FM-1 that keeps crashing starts in a safe mode, and the
-> manual's Troubleshooting section covers the rest.
+The full spec, with the roadmap, is kept with the project owner.
 
-## What's inside
+## Roadmap
 
-| Part | What it is | Based on |
-|---|---|---|
-| 909 | 11 voices: modelled kick, snare, toms, rim and clap, with sampled hats and cymbals | [9W9](https://github.com/athousanddetails/schwung-9W9) (samples from ER-99) |
-| 808 | 11 tracks, including the 808's tom/conga, rim/claves and clap/maracas switches | [8W8](https://github.com/athousanddetails/schwung-8W8) |
-| 303 A and B | Open303 with Devilfish-style ranges, each with a TB-3PO line generator | [schwung-303](https://github.com/charlesvestal/schwung-303), [schwung-tb3po](https://github.com/charlesvestal/schwung-tb3po) |
-| Break | A loop cut into eight slices and rearranged as it plays | [BB Gen](https://github.com/mestela/schwung-breakbeat) |
+| Version | Content |
+| --- | --- |
+| v0.1 | Foundation: 8 tracks (DRUM, 303), lengths, tempo, swing, mutes, pattern queue, filter and drive per track, delay, reverb, pump, OCT− USB rescue |
+| v0.2 | VA and FM engines, chords, arpeggiator, gate and chorus per track, per-track delays, genre presets |
+| v0.3 | Live polish: controls, copy, undo, save, MIDI clock in, drum rolls |
+| Later | Knob recording, song mode, free lengths 1–64, acid line generator, web editor and backup |
 
-Each part has its own step length (up to 64 steps) and rate, so parts can drift against each
-other. Pattern changes wait for the end of the bar, and patterns can be chained.
+## Building
 
-X0X is a fork of [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita (Hügelton
-Instruments). It keeps Felucca's foundations (the hardware layer, USB, the update loader, the web
-installer and the storage) and replaces the instrument on top.
+GruselCore is built from this repository by GitHub Actions, with the Firmware Hub's shared build
+workflow ([zvenson/fm1-build](https://github.com/zvenson/fm1-build)), which brings the JieLi
+toolchain and the AC79 SDK. Every push to `main` builds a development package
+(`gruselcore-dev.fwsc`, in the run's artifacts); a `v*` tag builds a signed release.
 
-## Your own breaks
+Locally, the PC simulator and the tests need only a C compiler: `sh tests/run_tests.sh`.
+A local firmware build needs the JieLi toolchain: see [BUILDING.md](BUILDING.md).
 
-X0X doesn't ship with any recorded breaks, only two loops played by its own 909. You can load
-your own into the FM-1's three sample slots, which hold about nine one-bar loops in total.
-The [break loops page](https://charlesvestal.github.io/fm1-x0x/breaks/) does it from Chrome or
-Edge (drop the files, press Upload); from the command line:
+The firmware identity is `FM-1_966` for development builds and `FM-1_966XXYYZZ` for releases
+(0.1 is `FM-1_966000100`). Over USB the FM-1 shows up as **GruselCore FM-1**.
 
-```
-tools/upload_breaks.py --bars amen.wav think.wav ...   # take one bar of each and upload them
-tools/upload_breaks.py --dry-run OUTDIR ...            # see what fits, without the FM-1
-```
+## Safety
 
-Recorded breaks belong to whoever made them and aren't covered by this project's licence.
+The update loader and its USB code are X0X's and Felucca's, unchanged, so every GruselCore build
+can install the next firmware. If something goes wrong: X0X's safe mode starts after repeated
+crashes, and the FM-1 Firmware Hub's [rescue](https://thefirmwarehub.com/#rescue) puts any
+firmware back through the chip's ROM bootloader. Installing custom firmware is at your own risk.
 
-## Building and testing
+## Credits and licence
 
-[BUILDING.md](BUILDING.md) explains the toolchain. In short:
+GruselCore is a fork of [X0X](https://github.com/charlesvestal/fm1-x0x) by Charles Vestal, itself a
+fork of [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita (Hügelton Instruments).
+X0X's README, with its full credits (9W9, 8W8, Open303, TB-3PO, BB Gen, Optimist, Melodee,
+Jangada), is kept in [docs/X0X-README.md](docs/X0X-README.md).
 
-```
-tests/run_tests.sh      # the maths, the sequencer, every engine against its original, the app in a simulator
-./build.sh              # build/x0x.fwsc
-```
-
-`host/x0x_host` runs the whole app on a computer from a script (`tests/scenarios/*.x0x`). Button
-presses, keys, knob turns and MIDI go in; audio and screenshots come out. That's how most of
-X0X is tested before it reaches the FM-1.
-
-## Licence and credits
-
-X0X is GPL-3.0-only, like Felucca, 9W9, 8W8 and schwung-tb3po. Open303 (by Robin Schmidt) is
-MIT. BB Gen is ported from mestela's schwung-breakbeat with the author's permission. The 909's
-hi-hat, ride and crash samples come from ER-99 (Matthew Cieplak, GPL-3.0). The fonts are Barlow
-Semi Condensed and Terminus (SIL OFL 1.1).
-
-The second core follows what keremimo's [Melodee](https://github.com/keremimo/melodee) found on the
-device (how to start it, the jobs done kept in a register), with zednaked's
-[Jangada](https://github.com/zednaked/jangada) measurements and mailbox layout.
-
-The 303's render in passes, the 909's sample voices past their end and the 808's metal bank by
-blocks are after [Optimist](https://github.com/w0ts/optimist) (henri), a fork of X0X: the same
-sound, bit for bit, for less of the CPU.
-
-Felucca's own assets that aren't under its GPL (the icon set, the panel photo and the Hügelton
-drum pack) aren't part of this fork.
+GPL-3.0-only, like X0X and Felucca: see [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md).
+Written with Claude (Anthropic).
 
 M-VAVE and FM-1 are trademarks of their owners. TR-808, TR-909 and TB-303 are Roland trademarks,
-used here only to describe what the parts are modelled on. X0X isn't affiliated with or endorsed
-by M-VAVE, Roland or Hügelton Instruments.
+used only to describe what the sounds are modelled on. GruselCore is not affiliated with M-VAVE,
+Roland or Hügelton Instruments.
