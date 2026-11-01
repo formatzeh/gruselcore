@@ -17,11 +17,14 @@ switched off. Everything can be edited while the sequencer plays.
 Changes are also saved by themselves when the sequencer is stopped and you have not touched
 anything for a few seconds.
 
-## HOME – all 8 tracks
+## HOME – all 8 tracks, and the keyboard
 
-- **White keys 1–16:** the next pattern. It starts at the end of the bar (at once when stopped).
-  **OCT− / OCT+:** patterns 1–16 or 17–32.
-- **Black keys 1–8:** mute / unmute a track.
+- **The keyboard plays the selected track.** A drum track: its 8 sounds on the black keys 1–8 and on
+  the white keys 1–8 (again on 9–16). A 303: the keys from F, chromatic; **OCT− / OCT+** the octave.
+  With **REC** on, what you play is recorded into the steps.
+- **Hold HOME** and press a **white key:** the next pattern. It starts at the end of the bar (at once
+  when stopped). Hold HOME and press **OCT− / OCT+:** patterns 1–16 or 17–32.
+- **Hold HOME** and press a **black key 1–8:** mute / unmute that track.
 - **Knobs:** TEMPO, SWING, the master FILTER (low-pass left, high-pass right), PUMP (ducks
   everything on the kick).
 
@@ -43,7 +46,8 @@ anything for a few seconds.
 ## EDIT – the selected track's sound
 
 - 4 values a page; the **SELECT knob** turns the pages.
-- DRUM: **black keys** pick the sound, **PRESETS** loads a kit. Each sound has MODEL, LEVEL, TUNE,
+- The keyboard plays the track, as on HOME; on a drum track the key also picks the sound to edit.
+  **PRESETS** loads a kit. Each sound has MODEL, LEVEL, TUNE,
   PITCH, P.DEC, BODY, DECAY, TAIL, CLICK, TONE, NOISE, DRIVE, CURVE, PUNCH, ATTACK, PAN.
 
 ## FX

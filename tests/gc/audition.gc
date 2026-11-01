@@ -16,3 +16,27 @@ expect heard.0.6 1
 expect anyhit.0.6 1
 tap REC
 tap PLAY
+# HOME: the keyboard plays the selected track; HOME held: patterns and mutes
+tap HOME
+tapkey w2
+expect heard.0.2 1
+expect snd 2
+hold HOME
+tapkey b3
+release HOME
+expect mute 8
+hold HOME
+tapkey b3
+tapkey w5
+release HOME
+expect mute 0
+expect cur 5
+turn ALGO 2
+tap PLAY
+holdkey w0
+expect view 0
+releasekey w0
+tap REC
+tapkey w5
+expect anynote.2.38 1
+tap REC

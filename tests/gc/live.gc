@@ -65,10 +65,14 @@ expect playing 1
 expect peak_min 5
 # patterns cued one after another
 tap HOME
+hold HOME
 tapkey w3
+release HOME
 wait 1700
 expect cur 3
+hold HOME
 tapkey w0
+release HOME
 wait 1700
 expect cur 0
 tap PLAY

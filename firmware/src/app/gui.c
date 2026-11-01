@@ -4,13 +4,14 @@
  * changes through engine_set, so nothing ever waits for the sequencer to stop.
  *
  * Screens (the button that opens each):
- *   HOME  all 8 tracks; white keys cue patterns 1-16 (OCT-/+: 17-32); black keys 1-8 mute;
- *         knobs: TEMPO, SWING, master FILTER, PUMP
+ *   HOME  all 8 tracks; the keyboard plays the selected track (drum sounds, or a 303 chromatic,
+ *         OCT-/+ the octave). HOME held: white keys cue patterns 1-16 (OCT-/+: 17-32), black keys
+ *         1-8 mute. Knobs: TEMPO, SWING, master FILTER, PUMP
  *   SEQ   the selected track's steps. DRUM: a grid of its 8 sounds; black keys 1-8 pick the sound,
  *         white keys set its steps (ENV held: accents). 303: white keys pick a step and switch it
  *         on / off; held, KNOB 1-4 set its note, gate, accent, slide. OCT-/+: steps 17-64
- *   EDIT  the selected track's sound, 4 pots a page (SELECT turns the pages); on a DRUM track the
- *         black keys pick the sound and PRESETS loads a kit
+ *   EDIT  the selected track's sound, 4 pots a page (SELECT turns the pages); the keyboard plays the
+ *         track (on a DRUM track a key also picks the sound to edit); PRESETS loads a kit
  *   FX    the track's filter, resonance, drive, level; then pan and sends; press again: the shared
  *         reverb, delay and master
  *   LFO   the mixer: levels, pans, sends, meters; black keys mute
@@ -33,7 +34,8 @@ static struct {
     uint8_t view, trk, snd, page;      /* screen, selected track, drum sound, 16-step page */
     uint8_t epage, fxpage, glopage;    /* knob pages of EDIT, FX, GLO */
     uint8_t pbank;                     /* HOME: patterns 1-16 or 17-32 */
-    uint8_t rec, oct;                  /* recording; the keyboard's octave (REC on a 303) */
+    uint8_t rec, oct;                  /* recording; the keyboard's octave (a 303) */
+    uint8_t home_used;                 /* HOME held: a key was used (patterns, mutes) */
     int8_t held_step;                  /* SEQ, 303: the step held (-1 none) */
     uint8_t pend_type;                 /* GLO: the type SEL would apply */
     uint8_t dirty, redraw, save_wait;
@@ -443,20 +445,6 @@ static void white_key(int w, int down)
 {
     tpart_t *tp = cur_tp();
     int t = ui.trk, step = ui.page * 16 + w;
-    if (ui.view == V_HOME) {
-        if (down) {
-            int p = ui.pbank * 16 + w;
-            gseq_cue(&seq, p);
-            {
-                char b[16] = "PATTERN ";
-                char n[4];
-                put_num(n, p + 1);
-                scat(b, n);
-                ui_say(b, seq.playing ? "AT THE NEXT BAR" : 0);
-            }
-        }
-        return;
-    }
     if (ui.view != V_SEQ || step >= tp->len)
         return;
     if (ttype(t) == TT_DRUM && down) {
@@ -487,7 +475,7 @@ static void black_key(int b, int down)
 {
     if (!down || b >= NTRK)
         return;
-    if (ui.view == V_HOME || ui.view == V_MIX) {
+    if (ui.view == V_MIX) {
         seq.mute ^= (uint8_t)(1u << b);
         select_track(b);
         return;
@@ -506,28 +494,71 @@ static void black_key(int b, int down)
     select_track(b);
 }
 
-/* REC on a 303 track: the keys are a keyboard; a note goes into the step playing (or the next step
- * while stopped) */
-static uint8_t rec_step;
-static void rec_note(int key, int down)
+/* HOME held: the white keys cue patterns (OCT-/+ choose 1-16 or 17-32), the black keys mute tracks */
+static void home_key(int k, int down)
 {
+    int w = key_white[k], b = key_black[k];
+    if (!down)
+        return;
+    if (w >= 0) {
+        int p = ui.pbank * 16 + w;
+        char t[16] = "PATTERN ", n[4];
+        gseq_cue(&seq, p);
+        put_num(n, p + 1);
+        scat(t, n);
+        ui_say(t, seq.playing ? "AT THE NEXT BAR" : 0);
+        ui.home_used = 1;
+    } else if (b >= 0 && b < NTRK) {
+        seq.mute ^= (uint8_t)(1u << b);
+        ui.home_used = 1;
+    }
+}
+
+/* the keyboard plays the selected track (HOME, EDIT; on SEQ with REC, a 303):
+ *   DRUM  the black keys 1-8 are the kit's sounds, and the white keys 1-8 (and again 9-16)
+ *   303   the keys from F, chromatic; OCT-/+ the octave; a key pressed while another is held slides
+ * With REC on, what is played is written into the steps: while playing, into the step playing; a
+ * 303 while stopped, one step after another */
+static uint8_t rec_step, keys_down;
+static void play_key(int k, int down)
+{
+    int t = ui.trk, w = key_white[k], b = key_black[k];
     tpart_t *tp = cur_tp();
-    int note = 12 * (ui.oct + 2) + 5 + key;            /* F of the octave + the key */
-    if (!down) {
-        if (!seq.playing)
-            engine_note_off(ui.trk);
+    if (ttype(t) == TT_DRUM) {
+        int snd = w >= 0 ? w % NDSND : b < NDSND ? b : -1;
+        if (!down || snd < 0)
+            return;
+        ui.snd = (uint8_t)snd;
+        engine_drum(t, snd, 0.8f);
+        if (ui.rec && seq.playing) {
+            sm_set(tp->u.d.hit[snd], eng_step[t] % tp->len);
+            touch();
+        }
         return;
     }
-    engine_note_on(ui.trk, note, 0, 0);
-    {
-        int s = seq.playing ? eng_step[ui.trk] : rec_step;
-        bstep_t *st = &tp->u.b.step[s % tp->len];
-        st->note = (uint8_t)note;
-        st->flags = (uint8_t)((st->flags & ~BS_GATE_MASK) | G_NOTE);
-        if (!seq.playing)
-            rec_step = (uint8_t)((s + 1) % tp->len);
+    if (ttype(t) != TT_303)
+        return;
+    if (!down) {
+        if (keys_down)
+            keys_down--;
+        if (!keys_down)
+            engine_note_off(t);
+        return;
     }
-    touch();
+    {
+        int note = 12 * (ui.oct + 2) + 5 + k;          /* F of the octave + the key */
+        engine_note_on(t, note, 0, keys_down != 0);
+        keys_down++;
+        if (ui.rec) {
+            int st = seq.playing ? eng_step[t] : rec_step;
+            bstep_t *x = &tp->u.b.step[st % tp->len];
+            x->note = (uint8_t)note;
+            x->flags = (uint8_t)((x->flags & ~BS_GATE_MASK) | G_NOTE);
+            if (!seq.playing)
+                rec_step = (uint8_t)((st + 1) % tp->len);
+            touch();
+        }
+    }
 }
 
 static void input(void)
@@ -551,6 +582,7 @@ static void input(void)
     if (down & (1u << B_REC)) {
         ui.rec ^= 1u;
         rec_step = 0;
+        keys_down = 0;
         ui_say(ui.rec ? "REC ON" : "REC OFF", !ui.rec ? 0 : ttype(ui.trk) == TT_303 ? "THE KEYS PLAY THE 303" :
                ttype(ui.trk) == TT_DRUM ? "BLACK KEYS RECORD HITS" : 0);
     }
@@ -574,12 +606,18 @@ static void input(void)
     }
     if (down & ((1u << B_OCTDN) | (1u << B_OCTUP))) {
         int dir = (down & (1u << B_OCTUP)) ? 1 : -1;
-        if (ui.rec && ttype(ui.trk) == TT_303) {
+        if (b & (1u << B_HOME)) {
+            ui.pbank = (uint8_t)(dir > 0);
+            ui.home_used = 1;
+        } else if (ttype(ui.trk) == TT_303 && (ui.view == V_HOME || ui.view == V_EDIT || ui.rec)) {
             int o = ui.oct + dir;
             ui.oct = (uint8_t)(o < 0 ? 0 : o > 4 ? 4 : o);
-        } else if (ui.view == V_HOME) {
-            ui.pbank = (uint8_t)(dir > 0);
-        } else {
+            {
+                char n[4];
+                put_num(n, ui.oct + 2);
+                ui_say("OCTAVE", n);
+            }
+        } else if (ui.view == V_SEQ) {
             int pages = (cur_tp()->len + 15) / 16, p = ui.page + dir;
             ui.page = (uint8_t)(p < 0 ? 0 : p >= pages ? pages - 1 : p);
         }
@@ -588,8 +626,10 @@ static void input(void)
         uint32_t m = 1u << i;
         if (!((kd | ku) & m))
             continue;
-        if (ui.rec && ttype(ui.trk) == TT_303 && ui.view != V_HOME)
-            rec_note(i, (kd & m) != 0);
+        if (b & (1u << B_HOME))
+            home_key(i, (kd & m) != 0);
+        else if (ui.view == V_HOME || ui.view == V_EDIT || (ui.view == V_SEQ && ui.rec && ttype(ui.trk) == TT_303))
+            play_key(i, (kd & m) != 0);
         else if (key_white[i] >= 0)
             white_key(key_white[i], (kd & m) != 0);
         else
@@ -888,7 +928,11 @@ static void draw_main(void)
     case V_GLO: draw_glo(); break;
     default: break;
     }
-    if (ui.say_t && plat_ms() - ui.say_t < 1500u && ui.say_b[0]) {   /* a message's second part */
+    if (ui.btn & (1u << B_HOME)) {                    /* HOME held: what the keys do now */
+        cv_rect(0, MAIN_H - 20, 240, 20, C_LINE);
+        cv_text(4, MAIN_H - 18, &FONT_S, ui.pbank ? "WHITE: PAT 17-32  BLACK: MUTE" : "WHITE: PAT 1-16  BLACK: MUTE",
+                C_WHITE);
+    } else if (ui.say_t && plat_ms() - ui.say_t < 1500u && ui.say_b[0]) {   /* a message's second part */
         cv_rect(0, MAIN_H - 20, 240, 20, C_LINE);
         cv_text(4, MAIN_H - 18, &FONT_S, ui.say_b, C_WHITE);
     }
@@ -932,7 +976,7 @@ static uint32_t screen_hash(void)
     MIX(ui.view); MIX(ui.trk); MIX(ui.snd); MIX(ui.page); MIX(ui.epage); MIX(ui.fxpage); MIX(ui.glopage);
     MIX(ui.held_step); MIX(ui.pend_type); MIX(ui.dirty); MIX(ui.rec); MIX(seq.cur); MIX(seq.cue);
     MIX(seq.playing); MIX(seq.mute); MIX((int)(seq.bpm * 10.0f)); MIX(seq.ch[ui.trk]); MIX(seq.send_clock);
-    MIX(seq.send_notes); MIX(ui.say_t && plat_ms() - ui.say_t < 1500u);
+    MIX(seq.send_notes); MIX(ui.say_t && plat_ms() - ui.say_t < 1500u); MIX(ui.btn); MIX(ui.pbank); MIX(ui.oct);
     p = (const uint8_t *)cur_tp();
     for (i = 0; i < sizeof(tpart_t); i++)
         MIX(p[i]);
@@ -956,7 +1000,7 @@ static void leds(void)
     for (i = 0; i < NKEYS; i++) {
         int w = key_white[i], b = key_black[i];
         if (w >= 0) {
-            if (ui.view == V_HOME) {
+            if (ui.view == V_HOME && (ui.btn & (1u << B_HOME))) {
                 int p = ui.pbank * 16 + w;
                 if (p == seq.cur)
                     lk |= 1u << i;
@@ -977,7 +1021,7 @@ static void leds(void)
                 }
             }
         } else if (b >= 0 && b < NTRK) {
-            if (ui.view == V_HOME || ui.view == V_MIX) {
+            if ((ui.view == V_HOME && (ui.btn & (1u << B_HOME))) || ui.view == V_MIX) {
                 if (!((seq.mute >> b) & 1))
                     lk |= 1u << i;
             } else if ((ui.view == V_SEQ || ui.view == V_EDIT) && ttype(ui.trk) == TT_DRUM) {
@@ -989,6 +1033,8 @@ static void leds(void)
                 lk |= 1u << i;
         }
     }
+    if ((ui.view == V_HOME && !(ui.btn & (1u << B_HOME))) || ui.view == V_EDIT)
+        lk |= ui.keys;                                    /* playing the keyboard: the keys held */
     for (i = 0; i < NTRK; i++)                            /* the hit lights fade */
         for (int v = 0; v < NDSND; v++)
             if (eng_hit[i][v])

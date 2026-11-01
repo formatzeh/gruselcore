@@ -42,10 +42,14 @@ tapkey w3
 tap HOME
 expect view 0
 shot 05_home
+hold HOME
 tapkey w1
+release HOME
 wait 2500
 expect cur 1
+hold HOME
 tapkey w0
+release HOME
 wait 2500
 expect cur 0
 # the mixer
