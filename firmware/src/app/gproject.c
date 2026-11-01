@@ -287,6 +287,9 @@ static void sound_sanitize(sound_t *s)
         for (i = 0; i < MX_NPARAMS; i++)
             if (s->mix[t][i] > 127)
                 s->mix[t][i] = 127;
+        for (i = 0; i < GDK_N; i++)
+            if (s->dmac[t][i] > 127)
+                s->dmac[t][i] = 64;
     }
 }
 

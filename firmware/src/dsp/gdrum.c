@@ -37,9 +37,24 @@ static float expo(int pot, float lo, float oct) { return lo * fm_exp2f(oct * (fl
 /* per-sample multiplier of an exponential decay to -60 dB in t seconds */
 static float decay_k(float t) { return fm_expf(-6.9077553f / (t * GD_FS)); }
 
-static void voice_calc(gd_voice_t *v)
+/* a pot moved by a kit macro (64 = no change): pot + (mac - 64) * scale, kept in 0..127 */
+static uint8_t mac_pot(int pot, int mac, int num, int den)
 {
-    const uint8_t *p = v->pot;
+    int v = pot + (mac - 64) * num / den;
+    return (uint8_t)(v < 0 ? 0 : v > 127 ? 127 : v);
+}
+
+/* the voice's coefficients from its pots, moved by the kit's macros (gdrum_set_macro) */
+static void voice_calc(const gdrum_t *d, gd_voice_t *v)
+{
+    uint8_t p[GP_N];
+    int i;
+    for (i = 0; i < GP_N; i++)
+        p[i] = v->pot[i];
+    p[GP_TUNE] = mac_pot(p[GP_TUNE], d->mac[GDK_TUNE], 1, 2);    /* +-32 steps: +-24 semitones */
+    p[GP_DECAY] = mac_pot(p[GP_DECAY], d->mac[GDK_DECAY], 1, 2);
+    p[GP_DRIVE] = mac_pot(p[GP_DRIVE], d->mac[GDK_DRIVE], 1, 1);
+    p[GP_TONE] = mac_pot(p[GP_TONE], d->mac[GDK_TONE], 1, 2);
     float pdec, fc, g, k;
     int m = p[GP_MODEL];
     v->note_end = 12.0f + 0.75f * (float)p[GP_TUNE];
@@ -79,7 +94,7 @@ void gdrum_load_kit(gdrum_t *d, const gd_kit_t *k)
     for (s = 0; s < GD_NSND; s++) {
         for (i = 0; i < GP_N; i++)
             d->v[s].pot[i] = k->pot[s][i];
-        voice_calc(&d->v[s]);
+        voice_calc(d, &d->v[s]);
     }
 }
 
@@ -90,8 +105,25 @@ void gdrum_init(gdrum_t *d)
     for (i = 0; i < sizeof *d; i++)
         b[i] = 0;
     d->rng = 0x12345678u;
+    for (i = 0; i < GDK_N; i++)
+        d->mac[i] = 64;
     gdrum_load_kit(d, &gd_kits[0]);
 }
+
+void gdrum_set_macro(gdrum_t *d, int i, int value)
+{
+    int s;
+    if (i < 0 || i >= GDK_N)
+        return;
+    d->mac[i] = (uint8_t)(value < 0 ? 0 : value > 127 ? 127 : value);
+    for (s = 0; s < GD_NSND; s++)
+        voice_calc(d, &d->v[s]);
+}
+
+static const x0x_param_t MACROS[GDK_N] = {
+    {"TUNE", 127, 64, 0}, {"DECAY", 127, 64, 0}, {"DRIVE", 127, 64, 0}, {"TONE", 127, 64, 0},
+};
+const x0x_param_t *gdrum_macro_param(int i) { return (i >= 0 && i < GDK_N) ? &MACROS[i] : 0; }
 
 void gdrum_set(gdrum_t *d, int snd, int i, int value)
 {
@@ -103,7 +135,7 @@ void gdrum_set(gdrum_t *d, int snd, int i, int value)
     if (value > p->max)
         value = p->max;
     d->v[snd].pot[i] = (uint8_t)value;
-    voice_calc(&d->v[snd]);
+    voice_calc(d, &d->v[snd]);
 }
 
 int gdrum_get(const gdrum_t *d, int snd, int i)

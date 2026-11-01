@@ -12,6 +12,7 @@
  *   T_MIX    voice = track, index = MX_*
  *   T_FX     voice 0 / 1: fxbus.h params k = voice * 16 + index (reverb, delay, master drive)
  *   T_MST    voice 0: master.h params (compressor / pump, filter, limiter)
+ *   T_DMAC   voice = track: a drum track's kit macros, index = gdrum.h GDK_* (64 = the kit as it is)
  *   T_TRK    voice = track: index TK_TYPE (value = TT_*) changes the track's type; TK_RELOAD (value
  *            ignored) re-reads every pot of the track from the project's sound (after a kit load)
  *
@@ -23,7 +24,7 @@
 #include "../dsp/gdrum.h"
 #include "../seq/gseq.h"
 
-enum { T_DRUM, T_303, T_MIX, T_FX, T_MST, T_TRK, NTARGETS };
+enum { T_DRUM, T_303, T_MIX, T_FX, T_MST, T_TRK, T_DMAC, NTARGETS };
 enum { TK_TYPE, TK_RELOAD };
 /* T_MIX, per track: level, pan, the two sends, the track's filter (64 = off, under it a low-pass,
  * over it a high-pass), its resonance, its drive (0 = clean) */
@@ -44,6 +45,7 @@ typedef struct {
     uint8_t mix[NTRK][MX_NPARAMS + 1]; /* (+1: aligned) */
     uint8_t fx[FX_NP];
     uint8_t mst[MST_NP];
+    uint8_t dmac[NTRK][GDK_N];         /* a drum track's kit macros (HOME's knobs) */
 } sound_t;
 
 extern seq_t seq;                      /* the sequencer (its pattern pointer is the project's) */

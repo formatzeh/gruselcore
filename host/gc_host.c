@@ -222,6 +222,10 @@ static int value_of(const char *what)
     if (sscanf(what, "pat.%d", &t) == 1) return seq.tpat[t];
     if (!strcmp(what, "mute")) return seq.mute;
     if (!strcmp(what, "dirty")) return ui.dirty;
+    if (!strcmp(what, "bpm")) return (int)(seq.bpm * 10.0f + 0.5f);   /* the tempo x 10 */
+    if (!strcmp(what, "oct")) return ui.oct;
+    if (sscanf(what, "dmac.%d.%d", &t, &s) == 2) return proj.sound.dmac[t][s];
+    if (sscanf(what, "b303.%d.%d", &t, &s) == 2) return proj.sound.b303[t][s];
     if (!strcmp(what, "litkeys")) return (int)lit_keys;          /* the keys lit (bits), 0 = none */
     if (!strcmp(what, "peak_min")) return (int)(peak * 100.0f);
     if (sscanf(what, "type.%d", &t) == 1) return proj.sound.ttype[t] * 10 + seq.ttype[t];

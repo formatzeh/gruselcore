@@ -21,6 +21,7 @@
  * SAVE saves (playing: when it stops, as the flash pauses the sound while it writes). */
 #include "gc.h"
 #include "../dsp/master.h"           /* MST_* (HOME's knobs, the master pages) */
+#include "../dsp/bass303.h"          /* BASS303_* (HOME's knobs on a 303 track) */
 
 /* ------------------------------------------------------------- state --- */
 enum { V_HOME, V_SEQ, V_EDIT, V_FX, V_MIX, V_GLO, NVIEWS };
@@ -35,8 +36,10 @@ static struct {
     uint8_t view, trk, snd, page;      /* screen, selected track, drum sound, 16-step page */
     uint8_t epage, fxpage, glopage;    /* knob pages of EDIT, FX, GLO */
     uint8_t pbank;                     /* HOME: patterns 1-16 or 17-32 */
-    uint8_t rec, oct;                  /* recording; the keyboard's octave (a 303) */
+    uint8_t rec;                       /* recording */
+    int8_t oct;                        /* the keyboard's octave, -3..+3 (0: F2 on the lowest key) */
     uint8_t home_used;                 /* HOME held: a key was used (patterns, mutes) */
+    uint8_t glo_used;                  /* GLO held: SELECT set the tempo (GLO then does not open) */
     int8_t held_step;                  /* SEQ, 303: the step held (-1 none) */
     uint8_t pend_type;                 /* GLO: the type SEL would apply */
     uint8_t dirty, redraw, save_wait;
@@ -102,6 +105,13 @@ static void note_name(char *b, int n)
         scat(b, o);
     }
 }
+static int strlen_(const char *s)
+{
+    int n = 0;
+    while (s[n])
+        n++;
+    return n;
+}
 static void touch(void)
 {
     ui.dirty = 1;
@@ -142,6 +152,7 @@ static void pot_set(int target, int voice, int i, int v)
     case T_MIX: m = &proj.sound.mix[voice][i]; break;
     case T_FX: m = &proj.sound.fx[voice * 16 + i]; break;
     case T_MST: m = &proj.sound.mst[i]; break;
+    case T_DMAC: m = &proj.sound.dmac[voice][i]; break;
     default: return;
     }
     if (*m == v)
@@ -158,6 +169,7 @@ static int pot_get(int target, int voice, int i)
     case T_MIX: return proj.sound.mix[voice][i];
     case T_FX: return proj.sound.fx[voice * 16 + i];
     case T_MST: return proj.sound.mst[i];
+    case T_DMAC: return proj.sound.dmac[voice][i];
     default: return 0;
     }
 }
@@ -186,11 +198,15 @@ static void knobs_of(knob_t *k)
     for (i = 0; i < 4; i++)
         k[i].role = KR_NONE, k[i].target = k[i].voice = k[i].index = 0;
     switch (ui.view) {
-    case V_HOME:
-        k[0].role = KR_TEMPO;
-        k[1].role = KR_SWING;
-        k[2] = (knob_t){KR_POT, T_MST, 0, MST_DJF};
-        k[3] = (knob_t){KR_POT, T_MST, 0, MST_PUMP};
+    case V_HOME:                                       /* the track's four main controls (as Skiff) */
+        if (ttype(t) == TT_DRUM)
+            for (i = 0; i < 4; i++)
+                k[i] = (knob_t){KR_POT, T_DMAC, (uint8_t)t, (uint8_t)i};   /* kit TUNE, DECAY, DRIVE, TONE */
+        else if (ttype(t) == TT_303) {
+            static const uint8_t B[4] = {BASS303_CUTOFF, BASS303_RESO, BASS303_ENVMOD, BASS303_DECAY};
+            for (i = 0; i < 4; i++)
+                k[i] = (knob_t){KR_POT, T_303, (uint8_t)t, B[i]};
+        }
         break;
     case V_SEQ:
         if (ttype(t) == TT_303 && ui.held_step >= 0) {
@@ -241,10 +257,17 @@ static void knobs_of(knob_t *k)
         k[3] = (knob_t){KR_POT, T_MIX, (uint8_t)t, MX_DLY};
         break;
     case V_GLO:
-        k[0].role = KR_TYPE;
-        k[1].role = KR_MCH;
-        k[2].role = KR_CLK;
-        k[3].role = KR_NOTES;
+        if (!ui.glopage) {
+            k[0].role = KR_TYPE;
+            k[1].role = KR_MCH;
+            k[2].role = KR_CLK;
+            k[3].role = KR_NOTES;
+        } else {                                       /* page 2: the global groove and master */
+            k[0].role = KR_SWING;
+            k[1] = (knob_t){KR_POT, T_MST, 0, MST_DJF};
+            k[2] = (knob_t){KR_POT, T_MST, 0, MST_PUMP};
+            k[3].role = KR_TEMPO;
+        }
         break;
     default:
         break;
@@ -268,6 +291,11 @@ static void knob_label(const knob_t *k, char *name, char *val)
             scat(val, p->names[v]);
         else if (k->target == T_MIX && k->index == MX_PAN && v == 64)
             scat(val, "C");
+        else if (k->target == T_DMAC) {                 /* a kit macro: its offset from the kit */
+            if (v > 64)
+                scat(val, "+");
+            put_num(val + (v > 64), v - 64);
+        }
         else if ((k->target == T_MIX && k->index == MX_FILTER) || (k->target == T_MST && k->index == MST_DJF)) {
             if (v >= 62 && v <= 66)
                 scat(val, "OFF");
@@ -556,7 +584,7 @@ static void play_key(int k, int down)
         return;
     }
     {
-        int note = 12 * (ui.oct + 2) + 5 + k;          /* F of the octave + the key */
+        int note = 41 + 12 * ui.oct + k;              /* F2 on the lowest key, an octave a step */
         engine_note_on(t, note, 0, keys_down != 0);
         keys_down++;
         if (ui.rec) {
@@ -601,7 +629,10 @@ static void input(void)
     if (down & (1u << B_EDIT)) open_view(V_EDIT);
     if (down & (1u << B_FX)) open_view(V_FX);
     if (down & (1u << B_LFO)) open_view(V_MIX);
-    if (down & (1u << B_GLO)) open_view(V_GLO);
+    if (down & (1u << B_GLO))
+        ui.glo_used = 0;
+    if ((up & (1u << B_GLO)) && !ui.glo_used)      /* GLO opens on release: held with SELECT, it set the tempo */
+        open_view(V_GLO);
     if (down & (1u << B_ARP))
         ui_say("ARPEGGIATOR", "COMES IN V0.2");
     if (down & (1u << B_SAVE))
@@ -619,14 +650,9 @@ static void input(void)
         if (b & (1u << B_HOME)) {
             ui.pbank = (uint8_t)(dir > 0);
             ui.home_used = 1;
-        } else if (ttype(ui.trk) == TT_303 && (ui.view == V_HOME || ui.view == V_EDIT || ui.rec)) {
+        } else if (ui.view == V_HOME || ui.view == V_EDIT || (ui.rec && ttype(ui.trk) == TT_303)) {
             int o = ui.oct + dir;
-            ui.oct = (uint8_t)(o < 0 ? 0 : o > 4 ? 4 : o);
-            {
-                char n[4];
-                put_num(n, ui.oct + 2);
-                ui_say("OCTAVE", n);
-            }
+            ui.oct = (int8_t)(o < -3 ? -3 : o > 3 ? 3 : o);
         } else if (ui.view == V_SEQ) {
             int pages = (cur_tp()->len + 15) / 16, p = ui.page + dir;
             ui.page = (uint8_t)(p < 0 ? 0 : p >= pages ? pages - 1 : p);
@@ -652,7 +678,15 @@ static void input(void)
         select_track(t < 0 ? 0 : t >= NTRK ? NTRK - 1 : t);
     }
     d = plat_enc(EN_SELECT);
-    if (d) {
+    if (d && (b & (1u << B_GLO))) {                   /* GLO + SELECT: the tempo, on every screen */
+        knob_t kt = {KR_TEMPO, 0, 0, 0};
+        knob_turn(&kt, d);
+        ui.glo_used = 1;
+        d = 0;
+    }
+    if (d && ui.view == V_HOME)
+        ui_say("BPM LOCKED", "GLO + SELECT: TEMPO");
+    else if (d) {
         int s = d > 0 ? 1 : -1;
         if (ui.view == V_EDIT) {
             int n = ttype(ui.trk) == TT_DRUM ? GP_N : engine_nparams(T_303, ui.trk), pages = (n + 3) / 4;
@@ -685,46 +719,69 @@ static void input(void)
 #define BOT_Y 168
 #define BOT_H 72
 
+/* the selected track's bar.beat (as Skiff): its step counted in bars of 16 sixteenths at its rate */
+static void bar_beat(char *b)
+{
+    static const uint8_t SPB[NRATES] = {4, 6, 8, 3, 2};   /* steps a beat: 1/16, 1/16T, 1/32, 1/8T, 1/8 */
+    const tpart_t *tp = cur_tp();
+    int spb = SPB[tp->rate % NRATES], st = seq.playing ? eng_step[ui.trk] : 0, bar = st / (spb * 4) + 1;
+    char n[4];
+    b[0] = 0;
+    put_num(b, bar);
+    scat(b, ".");
+    put_num(n, (st % (spb * 4)) / spb + 1);
+    scat(b, n);
+}
+
 static void draw_top(void)
 {
     char b[40], n[8];
+    int x;
     cv_begin(240, TOP_H, C_BLACK);
-    if (ui.say_t && plat_ms() - ui.say_t < 1500u) {
-        cv_text(4, 4, &FONT_B, ui.say_a, ui.say_warn ? RGB(255, 90, 60) : C_WHITE);
+    if (seq.playing)                                   /* the play state: a triangle, or REC's red */
+        for (x = 0; x < 8; x++)
+            cv_rect(4 + x, 6 + x / 2, 1, 12 - x, ui.rec ? RGB(255, 60, 40) : RGB(80, 220, 90));
+    else
+        cv_rect(4, 7, 9, 9, ui.rec ? RGB(160, 40, 30) : C_DIM);
+    bar_beat(b);
+    x = cv_text(18, 4, &FONT_B, b, seq.playing ? C_WHITE : C_GRAY) + 8;
+    put_num(b, (int)(gseq_tempo(&seq) + 0.5f));
+    scat(b, " BPM");
+    x = cv_text(x, 4, &FONT_S, b, C_AMB) + 8;
+    if (ui.say_t && plat_ms() - ui.say_t < 1500u) {   /* a message takes the title's place */
+        cv_text(x, 4, &FONT_B, ui.say_a, ui.say_warn ? RGB(255, 90, 60) : C_WHITE);
     } else {
+        if (ui.oct) {
+            b[0] = 0;
+            scat(b, "OCT ");
+            if (ui.oct > 0)
+                scat(b, "+");
+            put_num(b + strlen_(b), ui.oct);
+            x = cv_text(x, 4, &FONT_S, b, C_HI) + 8;
+        }
         b[0] = 'T';
         b[1] = (char)('1' + ui.trk);
         b[2] = ' ';
-        b[3] = 0;
-        scat(b, TYPE_N[ttype(ui.trk) % NTT]);
-        cv_text(4, 4, &FONT_B, b, C_HI);
-        cv_text(84, 4, &FONT_S, VIEW_N[ui.view], C_GRAY);
-        b[0] = 'P';
-        put_2(b + 1, seq.tpat[ui.trk] + 1);          /* the selected track's pattern, and its cue */
+        b[3] = 'P';
+        put_2(b + 4, seq.tpat[ui.trk] + 1);
         if (seq.tcue[ui.trk] < NPAT) {
             scat(b, ">");
             put_2(n, seq.tcue[ui.trk] + 1);
             scat(b, n);
         }
-        cv_text(132, 4, &FONT_S, b, seq.tcue[ui.trk] < NPAT ? C_WHITE : C_AMB);
-        put_num(b, (int)(gseq_tempo(&seq) + 0.5f));
-        cv_text(196, 4, &FONT_S, b, C_AMB);
-        if (seq.playing)
-            cv_rect(228, 8, 8, 8, ui.rec ? RGB(255, 60, 40) : RGB(80, 220, 90));
-        else if (ui.rec)
-            cv_rect(228, 8, 8, 8, RGB(160, 40, 30));
-        if (ui.dirty)
-            cv_rect(234, 0, 4, 4, C_GRAY);
+        cv_text(236 - text_w(&FONT_S, b), 4, &FONT_S, b, seq.tcue[ui.trk] < NPAT ? C_WHITE : C_HI);
     }
+    if (ui.dirty)
+        cv_rect(236, 0, 4, 3, C_GRAY);
     cv_rect(0, TOP_H - 1, 240, 1, C_LINE);
     cv_blit(0, 0);
 }
 
 /* the step row of track t at y, 16 cells from the current page, h px tall */
-static void draw_steps(int t, int y, int h, int page, int sound, int hi)
+static void draw_steps(int t, int x0, int w, int y, int h, int page, int sound, int hi)
 {
     const tpart_t *tp = tp_of(t);
-    int i, w = 13, x0 = 32, play = seq.playing ? eng_step[t] : -1;
+    int i, play = seq.playing ? eng_step[t] : -1;
     for (i = 0; i < 16; i++) {
         int s = page * 16 + i, on = 0, acc = 0;
         uint16_t c;
@@ -749,7 +806,7 @@ static void draw_steps(int t, int y, int h, int page, int sound, int hi)
             c = on ? C_WHITE : C_GRAY;
         cv_rect(x0 + i * w + 1, y, w - 2, h, c);
         if (on && acc)
-            cv_rect(x0 + i * w + 3, y + 1, w - 6, 2, C_BLACK);
+            cv_rect(x0 + i * w + 2, y + 1, w - 4, 2, C_BLACK);
         if (i % 4 == 0)
             cv_rect(x0 + i * w, y - 1, 1, h + 2, C_DIM);
     }
@@ -778,17 +835,20 @@ static void draw_home(void)
         }
         return;
     }
-    for (t = 0; t < NTRK; t++) {
-        int y = 2 + t * 17, muted = (seq.mute >> t) & 1;
-        char b[8] = {(char)('1' + t), ' ', 0};
+    for (t = 0; t < NTRK; t++) {                       /* a lane a track: its number and name, its steps */
+        int y = 2 + t * 17, muted = (seq.mute >> t) & 1, len = tp_of(t)->len;
+        char b[20] = {(char)('1' + t), 0};
         uint16_t c = t == ui.trk ? C_WHITE : muted ? C_DIM : C_GRAY;
-        cv_text(2, y, &FONT_T, b, c);
-        cv_text(12, y, &FONT_T, ttype(t) == TT_DRUM ? "D" : ttype(t) == TT_303 ? "B" : "-", c);
-        if (ttype(t) != TT_OFF)
-            draw_steps(t, y + 2, 10, eng_step[t] / 16 < (tp_of(t)->len + 15) / 16 && seq.playing ? eng_step[t] / 16 : 0,
-                       -1, !muted);
+        if (t == ui.trk)
+            cv_rect(0, y - 1, 2, 15, C_HI);                 /* the selected track: a bar at its lane's edge */
+        cv_text(3, y, &FONT_T, b, c);
+        b[0] = 0;
+        scat(b, ttype(t) == TT_DRUM ? gd_kit_names[proj.sound.kit[t] % gd_nkits] : ttype(t) == TT_303 ? "303 BASS" : "OFF");
+        cv_text(14, y, &FONT_T, b, muted ? RGB(255, 90, 60) : ttype(t) == TT_OFF ? C_DIM : c);
         if (muted)
-            cv_text(32 + 16 * 13 - 34, y, &FONT_T, "MUTE", RGB(255, 90, 60));
+            cv_text(14 + text_w(&FONT_T, b) + 4, y, &FONT_T, "M", RGB(255, 90, 60));
+        if (ttype(t) != TT_OFF)                         /* the page with the playhead, 9 px a step */
+            draw_steps(t, 94, 9, y + 2, 10, seq.playing && eng_step[t] < len ? eng_step[t] / 16 : 0, -1, !muted);
     }
 }
 
@@ -825,14 +885,14 @@ static void draw_seq(void)
             char s[6];
             short_name(s, gd_kit_snd_names[proj.sound.kit[t] % gd_nkits][v]);
             cv_text(2, y, &FONT_T, s, c);
-            draw_steps(t, y + 2, 11, ui.page, v, v == ui.snd);
+            draw_steps(t, 32, 13, y + 2, 11, ui.page, v, v == ui.snd);
         }
         b[0] = 0;
         scat(b, gd_kit_names[proj.sound.kit[t] % gd_nkits]);
         cv_text(2, 130, &FONT_T, b, C_AMB);
     } else if (ttype(t) == TT_303) {
         int i;
-        draw_steps(t, 4, 12, ui.page, -1, 1);
+        draw_steps(t, 32, 13, 4, 12, ui.page, -1, 1);
         for (i = 0; i < 16; i++) {                       /* each step's note as a bar in a 2-octave range */
             int s = ui.page * 16 + i, n;
             const bstep_t *st = &tp->u.b.step[s];

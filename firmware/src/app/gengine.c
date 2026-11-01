@@ -85,7 +85,7 @@ int engine_nvoices(int t)
 {
     switch (t) {
     case T_DRUM: return NTRK * NDSND;
-    case T_303: case T_MIX: case T_TRK: return NTRK;
+    case T_303: case T_MIX: case T_TRK: case T_DMAC: return NTRK;
     case T_FX: return (fxbus_nparams() + 15) / 16;
     case T_MST: return 1;
     default: return 0;
@@ -103,6 +103,7 @@ int engine_nparams(int t, int v)
         return n < 0 ? 0 : n > 16 ? 16 : n;
     }
     case T_MST: return MST_NPARAMS;
+    case T_DMAC: return GDK_N;
     default: return 0;
     }
 }
@@ -117,6 +118,7 @@ const x0x_param_t *engine_param(int t, int v, int i)
     case T_MIX: return &MIX_P[i];
     case T_FX: return fxbus_param(v * 16 + i);
     case T_MST: return master_param(i);
+    case T_DMAC: return gdrum_macro_param(i);
     default: return 0;
     }
 }
@@ -169,10 +171,13 @@ static void track_load(int t, int tt)
         k->type = (uint8_t)tt;
         k->ins.ic1[0] = k->ins.ic1[1] = k->ins.ic2[0] = k->ins.ic2[1] = 0.0f;
     }
-    if (tt == TT_DRUM)
+    if (tt == TT_DRUM) {
+        for (i = 0; i < GDK_N; i++)
+            k->u.d.mac[i] = base_snd->dmac[t][i];      /* (set first: the pots below compute with them) */
         for (s = 0; s < NDSND; s++)
             for (i = 0; i < GP_N; i++)
                 gdrum_set(&k->u.d, s, i, base_snd->drum[t][s][i]);
+    }
     else if (tt == TT_303)
         for (i = 0; i < BASS303_NPARAMS; i++)
             bass303_set(&k->u.b, i, base_snd->b303[t][i]);
@@ -200,6 +205,10 @@ static void apply_param(int target, int v, int i, int val)
         break;
     case T_MST:
         master_set(&mst, i, val);
+        break;
+    case T_DMAC:
+        if (v < NTRK && trk[v].type == TT_DRUM)
+            gdrum_set_macro(&trk[v].u.d, i, val);
         break;
     case T_TRK:
         if (v < NTRK)
@@ -589,6 +598,8 @@ void engine_sound_defaults(sound_t *s)
             s->b303[t][i] = bass303_param(i)->def;
         for (i = 0; i < MX_NPARAMS; i++)
             s->mix[t][i] = MIX_P[i].def;
+        for (i = 0; i < GDK_N; i++)
+            s->dmac[t][i] = 64;
     }
     for (i = 0; i < fxbus_nparams() && i < FX_NP; i++)
         s->fx[i] = fxbus_param(i)->def;

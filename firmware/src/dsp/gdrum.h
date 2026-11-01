@@ -62,9 +62,14 @@ typedef struct {
     float crush_h; uint8_t crush_c;
 } gd_voice_t;
 
+/* the kit's macros (HOME's knobs on a drum track): each moves that pot of all 8 sounds from its own
+ * value; 64 = the kit as it is */
+enum { GDK_TUNE, GDK_DECAY, GDK_DRIVE, GDK_TONE, GDK_N };
+
 typedef struct {
     gd_voice_t v[GD_NSND];
     uint32_t rng;
+    uint8_t mac[GDK_N];
 } gdrum_t;
 
 void gdrum_init(gdrum_t *d);                        /* silent, the first factory kit */
@@ -73,6 +78,8 @@ void gdrum_trigger(gdrum_t *d, int snd, float vel); /* vel 0..1 (1 = accent) */
 void gdrum_render_st(gdrum_t *d, float *l, float *r, int n);   /* ADDS n samples to l, r */
 int gdrum_active(const gdrum_t *d);
 void gdrum_set(gdrum_t *d, int snd, int i, int value);
+void gdrum_set_macro(gdrum_t *d, int i, int value);   /* GDK_*: every sound recomputed */
+const x0x_param_t *gdrum_macro_param(int i);
 int gdrum_get(const gdrum_t *d, int snd, int i);
 const x0x_param_t *gdrum_param(int i);
 const char *gdrum_slot_name(int snd);              /* "KICK", "SNARE", ... */

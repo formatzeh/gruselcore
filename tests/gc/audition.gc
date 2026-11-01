@@ -40,5 +40,5 @@ expect view 0
 releasekey w0
 tap REC
 tapkey w5
-expect anynote.2.38 1
+expect anynote.2.50 1
 tap REC

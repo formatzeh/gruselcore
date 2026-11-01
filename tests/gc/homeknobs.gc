@@ -1,0 +1,46 @@
+# HOME as Skiff: the track's four main controls on the knobs, the tempo locked (GLO + SELECT), the octave
+tap HOME
+expect bpm 1450
+turn SELECT 5
+expect bpm 1450
+hold GLO
+turn SELECT 5
+release GLO
+expect bpm 1500
+expect view 0
+# a drum track: the kit's TUNE, DECAY, DRIVE, TONE
+turn K1 -10
+turn K2 6
+expect dmac.0.0 34
+expect dmac.0.1 82
+tap PLAY
+wait 500
+turn K3 20
+wait 300
+shot home_drum
+# a 303 track: CUTOFF, RESO, ENV MOD, DECAY
+turn ALGO 2
+turn K1 6
+expect b303.2.0 82
+shot home_303
+# the octave, -3..+3
+tap OCTUP
+tap OCTUP
+tap OCTUP
+tap OCTUP
+expect oct 3
+tap OCTDN
+tap OCTDN
+tap OCTDN
+tap OCTDN
+tap OCTDN
+tap OCTDN
+tap OCTDN
+expect oct -3
+shot home_oct
+# GLO's second page: the swing, the master filter and pump, the tempo
+tap GLO
+tap GLO
+turn K1 3
+shot glo2
+tap PLAY

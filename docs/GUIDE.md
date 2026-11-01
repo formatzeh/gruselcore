@@ -9,6 +9,7 @@ switched off. Everything can be edited while the sequencer plays.
 | --- | --- |
 | PLAY | Start / stop |
 | ALGORITHM knob | Select the track (1–8) |
+| GLO + SELECT knob | The tempo (locked otherwise, so it can't be changed by accident) |
 | SAVE | Save the project. While playing, it saves the moment you stop (writing to the FM-1's memory pauses the sound for a moment) |
 | REC | On a 303 track: the keys play the 303 and write the notes into the steps |
 | HOME, SEQ, EDIT, FX, LFO, GLO | Open a screen (below) |
@@ -19,8 +20,16 @@ anything for a few seconds.
 
 ## HOME – all 8 tracks, and the keyboard
 
+- **Top line:** play / stop, the selected track's **bar.beat** (running while playing), the tempo,
+  the keyboard's octave (when not 0), the selected track and its pattern.
+- **Each track's lane:** its number, its name (the kit, or 303 BASS; M when muted) and its steps; the
+  selected track has a bar at its edge.
+- **KNOB 1–4 play the selected track's main controls:**
+  - drum track: the kit's **TUNE, DECAY, DRIVE, TONE**. Each moves all 8 sounds from their own
+    settings at once; 0 is the kit as it is.
+  - 303 track: **CUTOFF, RESO, ENV MOD, DECAY**.
 - **The keyboard plays the selected track.** A drum track: its 8 sounds on the black keys 1–8 and on
-  the white keys 1–8 (again on 9–16). A 303: the keys from F, chromatic; **OCT− / OCT+** the octave.
+  the white keys 1–8 (again on 9–16). A 303: chromatic from F. **OCT− / OCT+:** the octave, −3 to +3.
   With **REC** on, what you play is recorded into the steps.
 - **Hold HOME** and press a **white key:** the selected track's next pattern. It switches at the end
   of the bar (at once when stopped) and starts from its first step; the other tracks keep playing.
@@ -28,8 +37,6 @@ anything for a few seconds.
 - **Hold HOME + SEL** and press a **white key:** every track switches to that pattern at the bar.
 - While HOME is held, the screen shows every track's pattern and the change waiting for the bar.
 - **Hold HOME** and press a **black key 1–8:** mute / unmute that track.
-- **Knobs:** TEMPO, SWING (one for all tracks), the master FILTER (low-pass left, high-pass right), PUMP (ducks
-  everything on the kick).
 
 ## SEQ – the steps of the selected track
 
@@ -64,12 +71,14 @@ anything for a few seconds.
 Levels and meters of all 8 tracks. **Black keys** mute. Knobs: the selected track's LEVEL, PAN, REV,
 DLY.
 
-## GLO – track settings
+## GLO – track settings, then global
 
-- **KNOB 1:** the track's type (OFF, DRUM, 303), then **SEL** to apply it. A new type clears that
-  track's steps in every pattern.
-- KNOB 2: its MIDI channel. KNOB 3: MIDI clock out. KNOB 4: notes out.
-- **GLO again:** version, pattern memory used, CPU load.
+GLO opens when you let go of it (held with SELECT, it sets the tempo instead).
+
+- **Page 1:** KNOB 1 the track's type (OFF, DRUM, 303), then **SEL** to apply it (a new type clears
+  that track's steps in every pattern); KNOB 2 its MIDI channel; KNOB 3 MIDI clock out; KNOB 4 notes out.
+- **GLO again, page 2:** SWING (one for all tracks), the master FILTER (low-pass left, high-pass
+  right), PUMP (ducks everything on the kick), TEMPO; version, pattern memory and CPU load.
 
 ## Safety and the way back
 
