@@ -494,8 +494,13 @@ static void black_key(int b, int down)
     }
     if ((ui.view == V_SEQ || ui.view == V_EDIT) && ttype(ui.trk) == TT_DRUM) {
         ui.snd = (uint8_t)b;
-        if (!seq.playing || ui.view == V_EDIT)
-            engine_drum(ui.trk, b, 0.8f);               /* heard: which sound this is */
+        engine_drum(ui.trk, b, 0.8f);                   /* always heard, playing or not */
+        if (ui.rec && seq.playing && ui.view == V_SEQ) {  /* REC while playing: the hit goes into the step */
+            tpart_t *tp = cur_tp();
+            int st = eng_step[ui.trk] % tp->len;
+            sm_set(tp->u.d.hit[b], st);
+            touch();
+        }
         return;
     }
     select_track(b);
@@ -546,7 +551,8 @@ static void input(void)
     if (down & (1u << B_REC)) {
         ui.rec ^= 1u;
         rec_step = 0;
-        ui_say(ui.rec ? "REC ON" : "REC OFF", ui.rec && ttype(ui.trk) == TT_303 ? "THE KEYS PLAY THE 303" : 0);
+        ui_say(ui.rec ? "REC ON" : "REC OFF", !ui.rec ? 0 : ttype(ui.trk) == TT_303 ? "THE KEYS PLAY THE 303" :
+               ttype(ui.trk) == TT_DRUM ? "BLACK KEYS RECORD HITS" : 0);
     }
     if (down & (1u << B_HOME)) open_view(V_HOME);
     if (down & (1u << B_SEQ)) open_view(V_SEQ);

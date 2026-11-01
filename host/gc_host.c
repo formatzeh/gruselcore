@@ -224,6 +224,13 @@ static int value_of(const char *what)
     if (!strcmp(what, "peak_min")) return (int)(peak * 100.0f);
     if (sscanf(what, "type.%d", &t) == 1) return proj.sound.ttype[t] * 10 + seq.ttype[t];
     if (sscanf(what, "kit.%d", &t) == 1) return proj.sound.kit[t];
+    if (sscanf(what, "anyhit.%d.%d", &t, &s) == 2) {          /* any step of that sound set */
+        int n = 0;
+        for (st = 0; st < NSTEPS; st++)
+            n += sm_get(proj.pat[seq.cur].t[t].u.d.hit[s], st);
+        return n;
+    }
+    if (sscanf(what, "heard.%d.%d", &t, &s) == 2) return eng_hit[t][s] > 0;   /* the sound played lately */
     if (sscanf(what, "len.%d", &t) == 1) return proj.pat[seq.cur].t[t].len;
     if (sscanf(what, "hit.%d.%d.%d", &t, &s, &st) == 3) return sm_get(proj.pat[seq.cur].t[t].u.d.hit[s], st);
     if (sscanf(what, "gate.%d.%d", &t, &st) == 2) return bstep_gate(&proj.pat[seq.cur].t[t].u.b.step[st]);

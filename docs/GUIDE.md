@@ -28,7 +28,8 @@ anything for a few seconds.
 ## SEQ – the steps of the selected track
 
 **DRUM track**
-- **Black keys 1–8:** pick the sound (kick, snare, …; a percussion kit has its own sounds).
+- **Black keys 1–8:** pick the sound (kick, snare, …; a percussion kit has its own sounds). You hear it,
+  playing or stopped. With **REC** on while playing, the hit is also written into the step that plays.
 - **White keys 1–16:** set / clear its steps. Hold **ENV** for accents.
 - **OCT− / OCT+:** steps 17–32, 33–48, 49–64.
 - **Knobs:** LENGTH (8, 16, 32, 64), RATE (1/16, 1/16T, 1/32, 1/8T, 1/8), SWING on/off for this track.

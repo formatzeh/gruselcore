@@ -1,0 +1,18 @@
+# Drum sounds are heard from the black keys while playing; with REC on, the hit is recorded
+tapkey w0
+tapkey w8
+tap PLAY
+wait 600
+expect playing 1
+holdkey b5
+expect heard.0.5 1
+expect snd 5
+releasekey b5
+expect anyhit.0.5 0
+tap REC
+wait 300
+tapkey b6
+expect heard.0.6 1
+expect anyhit.0.6 1
+tap REC
+tap PLAY
