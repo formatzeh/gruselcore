@@ -207,7 +207,7 @@ def build_loader():
 
 def build_app():
     flags = [*CFLAGS, *FPU, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
-    if VERSION and os.environ.get("X0X_DEBUG") == "1":
+    if VERSION and not VERSION.startswith("DEV") and os.environ.get("X0X_DEBUG") == "1":
         raise SystemExit("X0X_DEBUG=1 (register peek / poke over USB) is for development builds only")
     for flag in ("X0X_CDC", "X0X_DEBUG"):
         v = os.environ.get(flag)    # unset: the default in firmware/src/x0x.c
@@ -369,6 +369,13 @@ def main():
         PRODUCT = "FM-1_966%02d%02d%02d" % (int(m[1]), int(m[2]), int(m[3] or 0))
         VERSION = a.release.upper() if "BETA" in a.release.upper() else a.release.upper() + " BETA"
         name = f"gruselcore-{a.release}.fwsc"
+    elif os.environ.get("GITHUB_RUN_NUMBER", "").isdigit():
+        # a development build on GitHub: its own identity and version from the run counter, so an
+        # installer or the emulator tells one build from the next (FM-1_9669 + 5 digits; releases use
+        # FM-1_966XXYYZZ with XX = major, so no release before 90.0 can collide)
+        run = int(os.environ["GITHUB_RUN_NUMBER"]) % 100000
+        PRODUCT = "FM-1_9669%05d" % run
+        VERSION = f"DEV {run}"
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
         if hashlib.sha256(fm1pkg_make.sdk_file(rel)).hexdigest() != sha:

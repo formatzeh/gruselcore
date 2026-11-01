@@ -68,8 +68,8 @@ jobs:
           cp build/x0x.bin "build/release-assets/gruselcore-$version-app.bin"
         else
           ./build.sh
-          cp build/x0x.fwsc build/release-assets/gruselcore-dev.fwsc
-          cp build/x0x.bin build/release-assets/gruselcore-dev-app.bin
+          cp build/x0x.fwsc "build/release-assets/gruselcore-dev-${GITHUB_RUN_NUMBER}.fwsc"
+          cp build/x0x.bin "build/release-assets/gruselcore-dev-${GITHUB_RUN_NUMBER}-app.bin"
         fi
       test: |
         set -euo pipefail
