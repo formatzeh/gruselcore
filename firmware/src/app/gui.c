@@ -1020,18 +1020,19 @@ static void leds(void)
                         dk |= 1u << i;
                 }
             }
-        } else if (b >= 0 && b < NTRK) {
-            if ((ui.view == V_HOME && (ui.btn & (1u << B_HOME))) || ui.view == V_MIX) {
+        } else if (b >= 0 && b < NTRK && ui.view != V_HOME && ui.view != V_EDIT) {
+            if (ui.view == V_MIX) {
                 if (!((seq.mute >> b) & 1))
                     lk |= 1u << i;
-            } else if ((ui.view == V_SEQ || ui.view == V_EDIT) && ttype(ui.trk) == TT_DRUM) {
+            } else if (ui.view == V_SEQ && ttype(ui.trk) == TT_DRUM) {
                 if (b == ui.snd)
-                    lk |= 1u << i;
+                    lk |= 1u << i;                         /* the sound whose steps the white keys set */
                 else if (eng_hit[ui.trk][b] > 40)
                     dk |= 1u << i;
-            } else if (b == ui.trk)
-                lk |= 1u << i;
+            }
         }
+        if (ui.view == V_HOME && (ui.btn & (1u << B_HOME)) && b >= 0 && b < NTRK && !((seq.mute >> b) & 1))
+            lk |= 1u << i;                                 /* HOME held: the tracks playing (unmuted) */
     }
     if ((ui.view == V_HOME && !(ui.btn & (1u << B_HOME))) || ui.view == V_EDIT)
         lk |= ui.keys;                                    /* playing the keyboard: the keys held */

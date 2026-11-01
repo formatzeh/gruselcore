@@ -221,6 +221,7 @@ static int value_of(const char *what)
     if (!strcmp(what, "cur")) return seq.cur;
     if (!strcmp(what, "mute")) return seq.mute;
     if (!strcmp(what, "dirty")) return ui.dirty;
+    if (!strcmp(what, "litkeys")) return (int)lit_keys;          /* the keys lit (bits), 0 = none */
     if (!strcmp(what, "peak_min")) return (int)(peak * 100.0f);
     if (sscanf(what, "type.%d", &t) == 1) return proj.sound.ttype[t] * 10 + seq.ttype[t];
     if (sscanf(what, "kit.%d", &t) == 1) return proj.sound.kit[t];

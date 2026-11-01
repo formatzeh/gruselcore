@@ -18,6 +18,8 @@ tap REC
 tap PLAY
 # HOME: the keyboard plays the selected track; HOME held: patterns and mutes
 tap HOME
+wait 100
+expect litkeys 0
 tapkey w2
 expect heard.0.2 1
 expect snd 2
