@@ -1,0 +1,109 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# X0X host tests: the maths, the sequencer + TB-3PO (against schwung-tb3po), each engine
+# against its reference implementation, and the whole firmware app in the simulator
+# (tests/scenarios/*.x0x: UI, patterns, persistence, MIDI clock), with screenshots and
+# audio in build/scenarios/. Needs the reference sources (see tests/host/run_*.sh).
+#   tests/run_tests.sh
+set -u
+cd "$(dirname "$0")/.."
+CC="${CC:-cc}"
+FAIL=0
+OUT=build/host
+mkdir -p "$OUT" build/scenarios
+run() {
+    name="$1"; shift
+    if "$@" > "$OUT/$name.log" 2>&1; then
+        echo "  ok   $name"
+    else
+        echo "  FAIL $name (see $OUT/$name.log)"
+        tail -15 "$OUT/$name.log" | sed 's/^/       /'
+        FAIL=1
+    fi
+}
+W="-O2 -ffp-contract=off -Wall -Wextra -Wdouble-promotion -Werror"
+run fastmath sh -c "$CC -O2 -ffp-contract=off -Wall -Wextra -Werror -o $OUT/fastmath_test tests/host/fastmath_test.c -lm && $OUT/fastmath_test"   # its reference is double on purpose
+TB3PO_REF="${TB3PO_REF:-../schwung-tb3po/src/dsp/tb3po.c}"
+seq_test() {
+    if [ -f "$TB3PO_REF" ]; then
+        ref="$(cd "$(dirname "$TB3PO_REF")" && pwd)/$(basename "$TB3PO_REF")"
+        $CC -O2 -ffp-contract=off -Wall -Wextra "-DREF_TB3PO=\"$ref\"" -o $OUT/seq_test tests/host/seq_test.c \
+            firmware/src/seq/sequencer.c firmware/src/seq/tb3po.c firmware/src/seq/pattern.c || return 1
+    else
+        echo "(no schwung-tb3po checkout at $TB3PO_REF: the TB-3PO comparison is skipped)"
+        $CC -O2 -ffp-contract=off -Wall -Wextra -o $OUT/seq_test tests/host/seq_test.c \
+            firmware/src/seq/sequencer.c firmware/src/seq/tb3po.c firmware/src/seq/pattern.c || return 1
+    fi
+    $OUT/seq_test
+}
+run sequencer seq_test
+run encoder sh -c "$CC -O2 -w -Ifirmware/hal -o $OUT/encoder_test tests/host/encoder_test.c && $OUT/encoder_test"
+run bass303_lite sh -c "$CC -std=c99 -O2 -ffp-contract=off -w -Ifirmware/src/dsp -Ifirmware/src -o $OUT/bass303_lite_test tests/host/bass303_lite_test.c firmware/src/dsp/bass303.c -lm && $OUT/bass303_lite_test"
+run uac sh -c "$CC -O2 -w -Ifirmware/src -Ifirmware/hal -o $OUT/uac_test tests/host/uac_test.c -lm && $OUT/uac_test"
+run trs sh -c "$CC -O2 -w -Ifirmware/src -Ifirmware/hal -o $OUT/trs_test tests/host/trs_test.c && $OUT/trs_test"
+run undo sh -c "$CC -O2 -Wall -Wextra -Wno-unused-function -o $OUT/undo_test tests/host/undo_test.c && $OUT/undo_test"
+run lz sh -c "$CC $W -o $OUT/lz_test tests/host/lz_test.c && $OUT/lz_test"
+run motion sh -c "$CC $W -o $OUT/motion_test tests/host/motion_test.c firmware/src/seq/motion.c && $OUT/motion_test"
+# the drum tables the DSP tests below include (build/gen, as the host build makes them): a fresh checkout has none yet
+[ -f build/gen/x0x_drum_tables.h ] || { mkdir -p build/gen && python3 tools/gen_drum_samples.py build/gen/x0x_drum_samples.h >/dev/null; }
+run drum-pan sh -c "$CC -O2 -ffp-contract=off -w -Ifirmware/src/dsp -Ifirmware/src -Ibuild/gen -o $OUT/drum_pan_test tests/host/drum_pan_test.c firmware/src/dsp/drum909.c firmware/src/dsp/drum808.c -lm && $OUT/drum_pan_test"
+# the 303, 909 and 808 bit for bit as their golden renders (tests/host/dsp_hash.golden): a speed-up changes no sample
+run dsp-hash sh -c "$CC $W -Ifirmware/src/dsp -Ifirmware/src -Ibuild/gen -o $OUT/dsp_hash_test tests/host/dsp_hash_test.c firmware/src/dsp/bass303.c firmware/src/dsp/drum909.c firmware/src/dsp/drum808.c -lm && $OUT/dsp_hash_test tests/host/dsp_hash.golden"
+run drum808-bank sh -c "$CC $W -Ifirmware/src/dsp -Ifirmware/src -Ibuild/gen -o $OUT/drum808_bank_test tests/host/drum808_bank_test.c && $OUT/drum808_bank_test"
+run stereo sh -c "$CC -O2 -ffp-contract=off -w -Ifirmware/src/dsp -Ifirmware/src -Ibuild/gen -o $OUT/stereo_test tests/host/stereo_test.c firmware/src/dsp/master.c firmware/src/dsp/fxbus.c -lm && $OUT/stereo_test"
+run reverb sh -c "$CC $W -Wno-double-promotion -Ifirmware/src/dsp -Ifirmware/src -Ibuild/gen -o $OUT/reverb_test tests/host/reverb_test.c -lm && $OUT/reverb_test"
+run master sh -c "$CC $W -Wno-double-promotion -o $OUT/master_test tests/host/master_test.c firmware/src/dsp/master.c -lm && $OUT/master_test"
+for t in drum909 drum808 bass303 breaks; do
+    [ -f "tests/host/run_$t.sh" ] && run "$t" sh "tests/host/run_$t.sh"
+done
+run storage sh -c "$CC -O2 -o $OUT/storage_test tests/storage_test.c && $OUT/storage_test"
+# backup and restore over USB (firmware/src/backup.c) on storage.c over a simulated flash: the stream's frames, a
+# restore refused, cut or damaged changing nothing, SEL restoring it all, a power cut at each write: the old project
+# or the new, whole. Then tools/x0x_backup.py against a simulated X0X, on that image
+run backup sh -c "$CC -std=c99 -Wall -Wextra -Werror -Wno-unused-function -O2 -o $OUT/backup_test tests/backup_test.c && $OUT/backup_test $OUT/backup.x0b"
+run x0x-backup python3 tests/x0x_backup_test.py $OUT/backup.x0b
+# the web backup page (web/backup/index.html): the same bytes as x0x_backup.py's on that conversation, replayed;
+# then a simulated X0X: a backup and a restore byte for byte, STOP FIRST, HOME, a damaged or another firmware's file
+# not sent
+if command -v node >/dev/null 2>&1; then
+    run backup-page sh -c "python3 tests/x0x_backup_record.py $OUT/backup.x0b $OUT/backup_transcript.json && \
+        node tests/host/backup_page_test.mjs $OUT/backup_transcript.json"
+fi
+# the update path, against the firmware package (Felucca's tests; needs ./build.sh)
+if [ -f build/x0x.fwsc ]; then
+    run ota-entry sh -c "$CC -o $OUT/ota_test tests/ota_test.c && $OUT/ota_test build/x0x.fwsc"
+    if [ -z "${AC79_SDK:-}" ]; then
+        echo "  skip update-loader (needs AC79_SDK, as the build)"
+    else
+    run update-loader sh -c "head -c 200000 build/x0x.bin > $OUT/old_app.bin && \
+        python3 tools/fm1pkg_make.py $OUT/old_app.bin build/loader/ota.bin $OUT/old.fwsc >/dev/null && \
+        $CC -o $OUT/ldr_test tests/ldr_test.c && $OUT/ldr_test $OUT/old.fwsc build/x0x.fwsc"
+    fi
+    run installer python3 tests/install_test.py
+else
+    echo "  skip update-path tests (no build/x0x.fwsc: run ./build.sh)"
+fi
+run upload-images sh -c "python3 tests/host/make_test_loops.py build/test_loops && \
+    python3 tools/upload_breaks.py --dry-run build/test_upload build/test_loops/loop*.wav"
+command -v node >/dev/null 2>&1 && run breaks-web node web/test_breaks.mjs   # the browser uploader: upload_breaks.py's bytes
+run host-build sh host/build_host.sh
+# the MIDI CC map (engine.c): the drum voices' pots by name, every CC its pot's own (or an alias), a value out and
+# back in unchanged (after the host build: the engine needs its generated tables)
+ENG_U="$(echo firmware/src/dsp/drum909.c firmware/src/dsp/drum808.c firmware/src/dsp/bass303.c firmware/src/dsp/breaks.c \
+    firmware/src/dsp/fxbus.c firmware/src/dsp/master.c firmware/src/seq/sequencer.c firmware/src/seq/tb3po.c \
+    firmware/src/seq/pattern.c firmware/src/seq/motion.c firmware/src/app/engine.c)"
+run midicc sh -c "$CC -O2 -ffp-contract=off -std=c99 -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -DX0X_HOST \
+    -Ifirmware/src -Ifirmware/src/dsp -Ibuild/gen -o $OUT/midicc_test tests/host/midicc_test.c $ENG_U -lm && $OUT/midicc_test"
+if command -v emcc >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then   # the browser build, when it can be built
+    printf 'wav emu_ref.wav\nwait 500\ntapkey b0\ntapkey w0\ntapkey w8\ntap PLAY\nwait 2960\nwavstop\n' > build/host/emu_ref.x0x
+    run emu sh -c "sh web/emu/build.sh >/dev/null 2>&1 && build/host/x0x_host build/host/emu_ref.x0x build/host >/dev/null && \
+        node tests/host/emu_test.mjs build/emu/x0x.wasm build/host/emu_ref.wav"
+    run emu-slots node tests/host/emu_slots_test.mjs build/emu/x0x.wasm build/test_loops/loop1.wav
+fi
+for s in tests/scenarios/*.x0x; do
+    n=$(basename "$s" .x0x)
+    mkdir -p "build/scenarios/$n"
+    run "scenario-$n" build/host/x0x_host "$s" "build/scenarios/$n"
+done
+[ $FAIL -eq 0 ] && echo "all tests passed" || echo "TESTS FAILED"
+exit $FAIL
