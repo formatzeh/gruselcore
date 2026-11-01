@@ -28,6 +28,12 @@ tap SEL
 expect type.7 33
 turn K1 1
 tap SEL
+expect type.7 44
+turn K1 1
+tap SEL
+expect type.7 55
+turn K1 1
+tap SEL
 expect type.7 0
 turn ALGO -2
 turn K1 2
@@ -36,6 +42,9 @@ expect type.5 22
 # kits loaded on track 1 through all 13
 turn ALGO -5
 tap EDIT
+turn PRESET 1
+turn PRESET 1
+turn PRESET 1
 turn PRESET 1
 turn PRESET 1
 turn PRESET 1

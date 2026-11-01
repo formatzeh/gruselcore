@@ -7,12 +7,18 @@ tap GLO
 turn K1 3
 tap SEL
 expect type.4 33
-expect kit.4 0
+expect kit.4 20
 tap HOME
 shot va_home
-# a preset (PRESETS knob, also on HOME): TRANCE LEAD (17), a unison
-turn PRESET 16
-expect kit.4 16
+# the list (SEL + PRESETS): only the leads; then PRESETS: the first lead, TRANCE LEAD (a unison)
+hold SEL
+turn PRESET 3
+release SEL
+expect list 3
+turn PRESET 1
+expect kit.4 36
+expect cat.4 2
+expect type.4 33
 expect va.4.20 2
 # HOME: KNOB 1 is the cutoff
 turn K1 -5
@@ -81,13 +87,17 @@ tap SEL
 expect type.4 33
 expect gate.4.4 1
 
-# PRESETS on HOME on a drum and a 303 track too
+# PRESETS on HOME on a drum and a 303 track too (the list back to every kind)
 tap HOME
+hold SEL
+turn PRESET -3
+release SEL
+expect list 0
 turn ALGO -4
 turn PRESET 3
 expect kit.0 3
 turn ALGO 2
 turn PRESET 5
-expect kit.2 5
-expect b303.2.8 70
+expect kit.2 6
+expect b303.2.8 110
 shot presets_home

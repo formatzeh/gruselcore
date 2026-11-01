@@ -1,0 +1,61 @@
+# FM and PHYS tracks: set by type, browsed by kind across the engines (the engine follows the sound,
+# the steps stay), their HOME knobs and EDIT pages, and every synth sounding while playing
+tap HOME
+turn ALGO 5
+tap GLO
+turn K1 4
+tap SEL
+expect type.5 44
+tap HOME
+# a step and a chord on the FM track
+tap SEQ
+tapkey w0
+holdkey w0
+turn K3 4
+releasekey w0
+tapkey w8
+expect gate.5.0 1
+expect chord.5.0 4
+# HOME: FM's knobs (LEVEL 2 first)
+tap HOME
+turn K1 2
+# PERC only: the browse moves this track from FM to PHYS, keeping its steps
+hold SEL
+turn PRESET 7
+release SEL
+expect list 7
+turn PRESET 1
+expect cat.5 6
+turn PRESET -1
+turn PRESET -1
+expect cat.5 6
+shot synths_home
+# EDIT pages on the engine it is now
+tap EDIT
+turn SELECT 1
+shot synths_edit
+tap HOME
+expect gate.5.0 1
+expect chord.5.0 4
+# track 7: PHYS by type
+turn ALGO 1
+tap GLO
+turn K1 5
+tap SEL
+expect type.6 55
+tap SEQ
+tapkey w0
+tapkey w4
+tapkey w8
+tapkey w12
+tap HOME
+# everything sounds
+tap PLAY
+peakreset
+wait 2500
+expect sounds.6 1
+expect peak_min 5
+tap PLAY
+hold SEL
+turn PRESET -7
+release SEL

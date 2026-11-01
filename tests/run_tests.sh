@@ -27,7 +27,8 @@ run fastmath sh -c "$CC -O2 -ffp-contract=off -Wall -Wextra -Werror -o $OUT/fast
 run gdrum sh -c "$CC $W -Wno-double-promotion -Ifirmware/src/dsp -o $OUT/gdrum_test tests/host/gdrum_test.c firmware/src/dsp/gdrum.c firmware/src/dsp/gdrum_kits.c firmware/src/dsp/bass303.c -lm && mkdir -p build/gdrum && $OUT/gdrum_test build/gdrum"
 run gdrum-groove sh -c "$CC $W -o $OUT/gdrum_groove tests/host/gdrum_groove.c firmware/src/dsp/gdrum.c firmware/src/dsp/gdrum_kits.c -lm && $OUT/gdrum_groove build/gdrum"
 run gva sh -c "$CC $W -std=c99 -D_DEFAULT_SOURCE -Wno-double-promotion -Ifirmware/src/dsp -o $OUT/gva_test tests/host/gva_test.c firmware/src/dsp/gva.c firmware/src/dsp/gva_presets.c -lm && mkdir -p build/gva && $OUT/gva_test build/gva"
-run presets sh -c "$CC $W -std=c99 -D_DEFAULT_SOURCE -Wno-double-promotion -DX0X_HOST -Ifirmware/src -Ifirmware/src/dsp -Ibuild/gen -o $OUT/presets_test tests/host/presets_test.c firmware/src/dsp/gva.c firmware/src/dsp/gva_presets.c firmware/src/dsp/bass303.c firmware/src/dsp/b303_presets.c -lm && $OUT/presets_test > $OUT/presets_out.txt || (grep FAIL $OUT/presets_out.txt; false)"
+run synth sh -c "$CC $W -std=c99 -D_DEFAULT_SOURCE -Wno-double-promotion -Ifirmware/src/dsp -o $OUT/synth_test tests/host/synth_test.c firmware/src/dsp/gfm.c firmware/src/dsp/gfm_presets.c firmware/src/dsp/gphys.c firmware/src/dsp/gphys_presets.c -lm && $OUT/synth_test"
+run presets sh -c "$CC $W -std=c99 -D_DEFAULT_SOURCE -Wno-double-promotion -DX0X_HOST -Ifirmware/src -Ifirmware/src/dsp -Ibuild/gen -o $OUT/presets_test tests/host/presets_test.c firmware/src/dsp/gva.c firmware/src/dsp/gva_presets.c firmware/src/dsp/gfm.c firmware/src/dsp/gfm_presets.c firmware/src/dsp/gphys.c firmware/src/dsp/gphys_presets.c firmware/src/dsp/bass303.c firmware/src/dsp/b303_presets.c -lm && $OUT/presets_test > $OUT/presets_out.txt || (grep FAIL $OUT/presets_out.txt; false)"
 run gseq sh -c "$CC $W -o $OUT/gseq_test tests/host/gseq_test.c firmware/src/seq/gseq.c firmware/src/seq/gpat.c && $OUT/gseq_test"
 run encoder sh -c "$CC -O2 -w -Ifirmware/hal -o $OUT/encoder_test tests/host/encoder_test.c && $OUT/encoder_test"
 run uac sh -c "$CC -O2 -w -Ifirmware/src -Ifirmware/hal -o $OUT/uac_test tests/host/uac_test.c -lm && $OUT/uac_test"
@@ -42,7 +43,9 @@ run master sh -c "$CC $W -Wno-double-promotion -o $OUT/master_test tests/host/ma
 [ -f tests/host/run_bass303.sh ] && run bass303 sh tests/host/run_bass303.sh
 ENG="firmware/src/app/gengine.c firmware/src/seq/gseq.c firmware/src/seq/gpat.c firmware/src/dsp/gdrum.c \
     firmware/src/dsp/gdrum_kits.c firmware/src/dsp/bass303.c firmware/src/dsp/fxbus.c firmware/src/dsp/master.c \
-    firmware/src/dsp/x0x_tables.c firmware/src/dsp/gva.c firmware/src/dsp/gva_presets.c firmware/src/dsp/b303_presets.c"
+    firmware/src/dsp/x0x_tables.c firmware/src/dsp/gva.c firmware/src/dsp/gva_presets.c firmware/src/dsp/b303_presets.c \
+    firmware/src/dsp/gfm.c firmware/src/dsp/gfm_presets.c firmware/src/dsp/gphys.c firmware/src/dsp/gphys_presets.c \
+    firmware/src/app/gsounds.c"
 run gengine sh -c "$CC -O2 -ffp-contract=off -std=c99 -D_DEFAULT_SOURCE -Wall -Wextra -Wno-unused-function -DX0X_HOST \
     -Ifirmware/src -Ifirmware/src/dsp -Ibuild/gen -o $OUT/gengine_test tests/host/gengine_test.c $ENG -lm && \
     mkdir -p build/gengine && $OUT/gengine_test build/gengine"

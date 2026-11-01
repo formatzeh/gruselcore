@@ -3,7 +3,7 @@
 A lean 8-track groovebox firmware for the M-VAVE FM-1, made for Hardtek, Techno, Dark Techno,
 Trance, Psytrance, Psychill, Darkpsy, Forest Psy, Dark Prog, Mentaltek and Tribetek.
 
-> **Status: v0.2 in progress (DRUM, 303, VA; chords and the arpeggiator).** It has run in the simulator and passed every test, but
+> **Status: v0.2 in progress: DRUM (16 kits), 303, VA, FM, PHYS (188 synth sounds), chords, arpeggiator.** It has run in the simulator and passed every test, but
 > not yet on a real FM-1. Install it only if you are ready to use the rescue (below). Controls:
 > [docs/GUIDE.md](docs/GUIDE.md).
 
@@ -27,7 +27,7 @@ The full spec, with the roadmap, is kept with the project owner.
 | Version | Content |
 | --- | --- |
 | v0.1 | Foundation: 8 tracks (DRUM, 303), lengths, tempo, swing, mutes, pattern queue, filter and drive per track, delay, reverb, pump, OCT− USB rescue |
-| v0.2 | VA synth (done), chords and arpeggiator (done), FM engine, gate and chorus per track, genre presets |
+| v0.2 | VA, FM, PHYS engines, 188 synth sounds, 16 kits, chords, arpeggiator (done); gate and chorus per track |
 | v0.3 | Live polish: controls, copy, undo, save, MIDI clock in, drum rolls |
 | Later | Knob recording, song mode, free lengths 1–64, acid line generator, web editor and backup |
 

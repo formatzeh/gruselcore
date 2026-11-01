@@ -1,12 +1,15 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Every VA and 303 preset at the drum kits' loudness (-16 dB, K-weighted, the loudest 100 ms; within
- * 1.5 dB), finite and with sane peaks. The VA as gva_test plays it (a note, a minor triad in CHORD
- * mode, held 1.5 s); the 303 as gdrum_test does (eighth notes over a fifth, through B303_GAIN).
- *   presets_test [measure]   measure: print "va:NAME dB" / "303:NAME dB" lines, no checks */
+/* Every synth preset (303, VA, FM, PHYS) at the drum kits' loudness (-16 dB, K-weighted, the loudest
+ * 100 ms; within 1.5 dB), finite, with sane peaks, and silent again after its release. The VA, FM and
+ * PHYS: a note (a minor triad in CHORD mode) held 1.5 s, at a pitch for its kind (basses low); the 303
+ * as gdrum_test plays it (eighth notes over a fifth, through B303_GAIN).
+ *   presets_test [measure]   measure: print the "engine:NAME dB peak" lines only, no checks */
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include "../../firmware/src/dsp/gva.h"
+#include "../../firmware/src/dsp/gfm.h"
+#include "../../firmware/src/dsp/gphys.h"
 #include "../../firmware/src/dsp/bass303.h"
 #include "../../firmware/src/app/gengine.h"   /* B303_GAIN */
 #include "loudness.h"
@@ -14,47 +17,77 @@
 #undef FS
 #define FS 44100
 #define TARGET_DB (-16.0)
-static int fails;
+static int fails, measure;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
 static float a[FS * 4];
 static gva_t va;
+static gfm_t fm;
+static gphys_t ph;
 static bass303_t bs;
 
-static int va_note(const char *n) { return strstr(n, "BASS") || strstr(n, " BS") || strstr(n, "RUMBL") || strstr(n, "ROLLER") ? 36 : strstr(n, "ACID") ? 43 : 57; }
+static int note_of(int cat) { return cat == CAT_BASS ? 36 : cat == CAT_ACID ? 43 : cat == CAT_PERC ? 50 : 57; }
+
+static void judge(const char *eng, const char *name, int n, float maxpk, int idle)
+{
+    int bad = 0;
+    float pk = 0.0f;
+    double lu;
+    for (int i = 0; i < n; i++) {
+        if (!isfinite(a[i])) bad++;
+        else if (fabsf(a[i]) > pk) pk = fabsf(a[i]);
+    }
+    lu = loudness_db(a, a, n);
+    printf("%s:%s %.2f %.2f\n", eng, name, lu, pk);
+    if (measure)
+        return;
+    CHECK(!bad && pk < maxpk, "%s %s: peak %.2f, %d not finite", eng, name, pk, bad);
+    CHECK(fabs(lu - TARGET_DB) <= 1.5, "%s %s: loudness %.1f dB, want %.1f", eng, name, lu, TARGET_DB);
+    CHECK(idle, "%s %s: still sounding 2.5 s after its release", eng, name);
+}
 
 int main(int argc, char **argv)
 {
-    int measure = argc > 1;
     (void)argv;
+    measure = argc > 1;
     for (int k = 0; k < gva_npresets; k++) {
-        uint8_t nt[3];
-        int n = va_note(gva_presets[k].name), bad = 0;
-        float pk = 0.0f;
-        double lu;
+        int n = note_of(gva_presets[k].cat);
+        uint8_t nt[3] = {(uint8_t)n, (uint8_t)(n + 3), (uint8_t)(n + 7)};
         gva_init(&va);
         for (int i = 0; i < VA_N; i++)
             gva_set(&va, i, gva_presets[k].pot[i]);
-        nt[0] = (uint8_t)n, nt[1] = (uint8_t)(n + 3), nt[2] = (uint8_t)(n + 7);
         gva_note_on(&va, nt, va.pot[VA_MODE] == VAM_CHORD ? 3 : 1, 0, 0);
         gva_render(&va, a, FS * 3 / 2);
         gva_note_off(&va);
         gva_render(&va, a + FS * 3 / 2, FS * 5 / 2);
-        for (int i = 0; i < FS * 4; i++) {
-            if (!isfinite(a[i])) bad++;
-            else if (fabsf(a[i]) > pk) pk = fabsf(a[i]);
-        }
-        lu = loudness_db(a, a, FS * 4);
-        printf("va:%s %.2f %.2f\n", gva_presets[k].name, lu, pk);
-        if (!measure) {
-            CHECK(!bad && pk < 1.9f, "VA %s: peak %.2f, %d not finite", gva_presets[k].name, pk, bad);
-            CHECK(fabs(lu - TARGET_DB) <= 1.5, "VA %s: loudness %.1f dB, want %.1f", gva_presets[k].name, lu, TARGET_DB);
-            CHECK(va.idle, "VA %s: still sounding 2.5 s after its release", gva_presets[k].name);
-        }
+        judge("va", gva_presets[k].name, FS * 4, 1.9f, va.idle);
+    }
+    for (int k = 0; k < gfm_npresets; k++) {
+        int n = note_of(gfm_presets[k].cat);
+        uint8_t nt[3] = {(uint8_t)n, (uint8_t)(n + 3), (uint8_t)(n + 7)};
+        gfm_init(&fm);
+        for (int i = 0; i < FM_N; i++)
+            gfm_set(&fm, i, gfm_presets[k].pot[i]);
+        gfm_note_on(&fm, nt, fm.pot[FM_MODE] == FMM_CHORD ? 3 : 1, 0, 0);
+        gfm_render(&fm, a, FS * 3 / 2);
+        gfm_note_off(&fm);
+        gfm_render(&fm, a + FS * 3 / 2, FS * 5 / 2);
+        judge("fm", gfm_presets[k].name, FS * 4, 1.9f, fm.idle);
+    }
+    for (int k = 0; k < gphys_npresets; k++) {
+        int n = note_of(gphys_presets[k].cat);
+        uint8_t nt[3] = {(uint8_t)n, (uint8_t)(n + 3), (uint8_t)(n + 7)};
+        gphys_init(&ph);
+        for (int i = 0; i < PH_N; i++)
+            gphys_set(&ph, i, gphys_presets[k].pot[i]);
+        gphys_note_on(&ph, nt, ph.pot[PH_MODE] == PHV_CHORD ? 3 : 1, 0, 0);
+        for (int j = 0; j < FS * 3 / 2; j += 256)
+            gphys_render(&ph, a + j, FS * 3 / 2 - j < 256 ? FS * 3 / 2 - j : 256);
+        gphys_note_off(&ph);
+        for (int j = FS * 3 / 2; j < FS * 4; j += 256)
+            gphys_render(&ph, a + j, FS * 4 - j < 256 ? FS * 4 - j : 256);
+        judge("ph", gphys_presets[k].name, FS * 4, 1.9f, 1);   /* (a gong rings on: idle not required) */
     }
     for (int k = 0; k < b303_npresets; k++) {
-        int bad = 0;
-        float pk = 0.0f;
-        double lu;
         memset(a, 0, sizeof a);
         bass303_init(&bs);
         for (int i = 0; i < bass303_nparams(); i++)
@@ -65,17 +98,9 @@ int main(int argc, char **argv)
             bass303_note_off(&bs);
             bass303_render(&bs, a + j * 5512 + 2756, 2756);
         }
-        for (int i = 0; i < FS; i++) {
+        for (int i = 0; i < FS; i++)
             a[i] *= B303_GAIN;
-            if (!isfinite(a[i])) bad++;
-            else if (fabsf(a[i]) > pk) pk = fabsf(a[i]);
-        }
-        lu = loudness_db(a, a, FS);
-        printf("303:%s %.2f %.2f\n", b303_presets[k].name, lu, pk);
-        if (!measure) {
-            CHECK(!bad && pk < 2.5f, "303 %s: peak %.2f, %d not finite", b303_presets[k].name, pk, bad);
-            CHECK(fabs(lu - TARGET_DB) <= 1.5, "303 %s: loudness %.1f dB, want %.1f", b303_presets[k].name, lu, TARGET_DB);
-        }
+        judge("303", b303_presets[k].name, FS, 2.5f, 1);
     }
     printf(fails ? "presets: %d FAILED\n" : "presets: ok\n", fails);
     return fails != 0;

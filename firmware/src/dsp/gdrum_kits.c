@@ -160,12 +160,42 @@ const gd_kit_t gd_kits[] = {
         {C, 124, 64,  0,  0,  0, 34,  0, 20,  96, 127,  25, TUBE,  0,  0, 30},
         {R, 114, 66, 10, 30,  0, 26,  0, 35,  85,   5,  30, TUBE,  0,  0, 64},
     }},
+    {{ /* FOREST PSY: a tight, clicky kick, snappy snare, crushed hats, zaps and ticks */
+        {K,   70, 27, 85, 40, 50, 66, 10, 90, 110,   0,  70, HARD, 30, 0, 64},
+        {S,  80, 62, 35, 45, 10, 45,  0, 70, 105,  85,  70, HARD,  5, 0, 64},
+        {C,   64, 64,  0,  0,  0, 48,  0, 30, 100, 127,  60, HARD,  0, 0, 64},
+        {H,  80, 90,  0,  0,  0, 20,  0, 25, 122,  40,  60, CRSH,  0, 0, 70},
+        {H,   53, 90,  0,  0,  0, 50,  0, 25, 120,  40,  60, CRSH,  0, 0, 58},
+        {Z,   92, 50,110, 55, 20, 40,  0, 30, 105,   0,  60, HARD,  0, 0, 44},
+        {R,  80, 84, 18, 22,  0, 18,  0, 60, 115,  20,  80, HARD,  0, 0, 80},
+        {M,  80, 76, 15, 35,  0, 40,  0, 20, 110,  10,  70, FOLD,  0, 0, 30},
+    }},
+    {{ /* FOREST PERC: clicks, wood, ticks, a bug, shakers, a drop, a creak (for Forest Psy) */
+        {R,   94, 90, 10, 15,  0, 14,  0, 90, 120,   0,  40, HARD,  0,  0, 64},
+        {T,  127, 70, 14, 30,  4, 30,  0, 60, 100,   5,  40, SOFT,  0,  0, 40},
+        {R,   93, 95,  8, 18,  0, 12,  0, 70, 122,  10,  60, CRSH,  0,  0, 88},
+        {H,  80, 92,  0,  0,  0, 22,  0,  0, 118, 127,  10, SOFT,  0, 12, 70},
+        {H,   64, 92,  0,  0,  0, 42,  0,  0, 116, 127,  10, SOFT,  0, 20, 56},
+        {Z,  102, 70, 90, 30, 40, 35,  0, 20, 110,  20,  50, FOLD,  0,  0, 76},
+        {T,  127, 64, 60, 40, 40, 34,  0, 30,  95,   5,  30, SOFT,  0,  0, 50},
+        {M,   55, 58, 20, 50, 30, 60,  0, 10,  80,  30,  50, FOLD,  0, 10, 84},
+    }},
+    {{ /* PSY PERC: a rolling tom, zaps, a laser, glitch hats, snap, tick, a ring (psytrance, darkpsy) */
+        {T,  80, 44, 45, 55, 20, 52,  0, 40,  80,  10,  60, HARD, 10,  0, 52},
+        {Z,   88, 46,115, 65, 30, 46,  0, 20, 100,   0,  55, HARD,  0,  0, 40},
+        {Z,  80, 70,127, 80, 50, 40,  0, 10, 115,   0,  70, FOLD,  0,  0, 86},
+        {H,   71, 94,  0,  0,  0, 18,  0, 25, 124,  35,  75, CRSH,  0,  0, 72},
+        {H,   49, 94,  0,  0,  0, 46,  0, 25, 122,  35,  75, CRSH,  0,  0, 56},
+        {C,   65, 72,  0,  0,  0, 36,  0, 45, 112, 127,  75, HARD,  0,  0, 88},
+        {R,  80, 86, 16, 20,  0, 18,  0, 70, 118,  15,  80, HARD,  0,  0, 30},
+        {M,   59, 70, 10, 40,  0, 70, 10, 10, 104,   5,  55, FOLD,  0,  0, 64},
+    }},
 };
 
 const char *const gd_kit_names[] = {
     "HARDTEK", "TRIBETEK", "MENTALTEK", "TECHNO", "DARK TECHNO",
     "TRANCE", "PSYTRANCE", "DARKPSY", "DARK PROG", "PSYCHILL",
-    "TRIBE PERC", "MENTAL PERC", "DARK PROG PERC",
+    "TRIBE PERC", "MENTAL PERC", "DARK PROG PERC", "FOREST PSY", "FOREST PERC", "PSY PERC",
 };
 
 /* each kit's names for its 8 sounds (a percussion kit's slots are not kick, snare, ...) */
@@ -175,6 +205,9 @@ const char *const gd_kit_snd_names[][GD_NSND] = {
     {"DJEMBE", "CONGA L", "CONGA H", "SHAKE S", "SHAKE L", "BONGO", "WOOD", "SURDO"},
     {"ZAP", "CLANG", "CR.TOM", "GLT.HAT", "GLT.OPN", "RATTLE", "SNAP", "F.BELL"},
     {"TOM LO", "TOM HI", "SHAKE S", "SHAKE L", "CLAVE", "BELL", "SNAP", "KNOCK"},
+    DRUMS,
+    {"CLICK", "WOOD", "TICK", "SHAKE S", "SHAKE L", "BUG", "DROP", "CREAK"},
+    {"ROLL TOM", "ZAP", "LASER", "GLT.HAT", "GLT.OPN", "SNAP", "TICK", "RING"},
 };
 
 const int gd_nkits = (int)(sizeof gd_kits / sizeof gd_kits[0]);

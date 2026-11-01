@@ -6,7 +6,7 @@
 #define FS 44100.0f
 
 static const char *const WAVE_N[VAW_N] = {"SAW", "SQR", "TRI", "SINE"};
-static const char *const MODE_N[VAM_N] = {"MONO", "CHORD", "UNISN"};
+static const char *const MODE_N[VAM_N] = {"MONO", "CHORD", "UNISN", "HYPER"};
 static const char *const FTYPE_N[VAF_N] = {"LP24", "LP12", "BP", "HP"};
 static const char *const LSHAPE_N[VAL_N] = {"TRI", "SAW", "SQR", "S&H"};
 #define NLRATES 12
@@ -112,7 +112,8 @@ void gva_note_on(gva_t *va, const uint8_t *notes, int n, int accent, int slide)
         return;
     if (va->lite)
         mode = VAM_MONO;
-    nv = mode == VAM_CHORD ? (n > GVA_NV ? GVA_NV : n) : mode == VAM_UNISON ? GVA_NV : 1;
+    nv = mode == VAM_CHORD ? (n > GVA_NCHORD ? GVA_NCHORD : n) : mode == VAM_UNISON ? GVA_NCHORD :
+         mode == VAM_HYPER ? GVA_NV : 1;
     tau = slide && sounding ? (va->glide_t > 0.04f ? va->glide_t : 0.04f) : va->aenv_st ? va->glide_t : 0.0f;
     va->glide_k = tau > 0.0f ? 1.0f - fm_expf(-(float)GVA_CR / (tau * FS)) : 0.0f;
     for (i = 0; i < GVA_NV; i++) {
@@ -122,7 +123,8 @@ void gva_note_on(gva_t *va, const uint8_t *notes, int n, int accent, int slide)
             continue;
         }
         v->target = (float)notes[mode == VAM_CHORD ? i : 0];
-        v->off = mode == VAM_UNISON ? va->det * (-1.0f + (float)i * (2.0f / 3.0f)) : 0.0f;
+        v->off = mode == VAM_UNISON ? va->det * (-1.0f + (float)i * (2.0f / 3.0f)) :
+                 mode == VAM_HYPER ? va->det * 2.0f * (float)(i - 3) * (1.0f / 3.0f) : 0.0f;
         if (!v->on || va->glide_k == 0.0f)
             v->note = v->target;
         if (!v->on) {                                 /* a fresh slot starts its phases apart */
@@ -145,7 +147,7 @@ void gva_note_on(gva_t *va, const uint8_t *notes, int n, int accent, int slide)
 void gva_note_add(gva_t *va, int note)
 {
     uint8_t nt = (uint8_t)note;
-    if (va->pot[VA_MODE] == VAM_CHORD && !va->lite && va->gate && va->nv < GVA_NV) {
+    if (va->pot[VA_MODE] == VAM_CHORD && !va->lite && va->gate && va->nv < GVA_NCHORD) {
         gva_voice_t *v = &va->v[va->nv++];
         v->target = v->note = (float)note;
         v->off = 0.0f;
@@ -280,7 +282,7 @@ static void control(gva_t *va)
     }
     /* the amp: the envelope, the accent, VOLUME, the voices' sum normalised */
     {
-        static const float NORM[GVA_NV + 1] = {0.0f, 1.0f, 0.72f, 0.6f, 0.52f};
+        static const float NORM[GVA_NV + 1] = {0.0f, 1.0f, 0.72f, 0.6f, 0.52f, 0.47f, 0.43f, 0.4f};
         tgt = va->aenv * va->gain * NORM[va->nv] * (1.0f + 0.8f * va->accent * va->accamt);
         va->amp_step = (tgt - va->amp) * (1.0f / (float)GVA_CR);
     }

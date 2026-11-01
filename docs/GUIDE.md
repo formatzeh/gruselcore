@@ -1,7 +1,7 @@
 # GruselCore – quick guide
 
-An 8-track groovebox for the M-VAVE FM-1. Every track is a **DRUM** kit, a **303** or a **VA** synth;
-tracks can be switched off. Everything can be edited while the sequencer plays.
+An 8-track groovebox for the M-VAVE FM-1. Every track is a **DRUM** kit or a synth (**303**, **VA**, **FM**,
+**PHYS**); tracks can be switched off. Everything can be edited while the sequencer plays.
 
 ## Always
 
@@ -10,10 +10,10 @@ tracks can be switched off. Everything can be edited while the sequencer plays.
 | PLAY | Start / stop |
 | ALGORITHM knob | Select the track (1–8) |
 | GLO + SELECT knob | The tempo, 1 BPM a step (locked otherwise, so it can't be changed by accident) |
-| PRESETS knob | The selected track's kit (DRUM) or preset (303, VA), on every screen, while playing |
+| PRESETS knob | The selected track's kit or synth sound, on every screen, while playing; SEL + PRESETS: the list (ALL, BASS, ACID, LEAD, …) |
 | SAVE | Save the project. While playing, it saves the moment you stop (writing to the FM-1's memory pauses the sound for a moment) |
-| REC | On a 303 or VA track: the keys play it and write the notes into the steps |
-| ARP | The selected 303 or VA track's arpeggiator (SEQ's second page); again: back |
+| REC | On a synth track: the keys play it and write the notes into the steps |
+| ARP | The selected synth track's arpeggiator (SEQ's second page); again: back |
 | HOME, SEQ, EDIT, FX, LFO, GLO | Open a screen (below) |
 | KNOB 1–4 | The four values at the bottom of the screen |
 
@@ -32,10 +32,11 @@ anything for a few seconds.
     settings at once; 0 is the kit as it is.
   - 303 track: **CUTOFF, RESO, ENV MOD, DECAY**.
   - VA track: **CUTOFF, RESO, ENV** (the filter envelope's amount), **F.DEC** (its decay).
+  - FM track: **LEVEL2, DECAY2** (how bright, and for how long), **FEEDBK, RELEAS**.
+  - PHYS track: **DECAY, TONE, HARD, CUTOFF**.
 - **The keyboard plays the selected track.** A drum track: its 8 sounds on the black keys 1–8 and on
-  the white keys 1–8 (again on 9–16). A 303 or VA: chromatic from F; a VA in CHORD mode plays the keys
-  held together as a chord. **OCT− / OCT+:** the octave, −3 to +3. On a VA track, **PRESETS** loads a
-  preset here too.
+  the white keys 1–8 (again on 9–16). A synth: chromatic from F; in CHORD mode the keys held sound
+  together as a chord. **OCT− / OCT+:** the octave, −3 to +3.
   With **REC** on, what you play is recorded into the steps.
 - **Hold HOME** and press a **white key:** the selected track's next pattern. It switches at the end
   of the bar (at once when stopped) and starts from its first step; the other tracks keep playing.
@@ -53,11 +54,11 @@ anything for a few seconds.
 - **OCT− / OCT+:** steps 17–32, 33–48, 49–64.
 - **Knobs:** LENGTH (8, 16, 32, 64), RATE (1/16, 1/16T, 1/32, 1/8T, 1/8), SWING on/off for this track.
 
-**303 and VA tracks** (the same steps: changing a track between 303 and VA keeps them)
+**Synth tracks: 303, VA, FM, PHYS** (the same steps: changing a track between them keeps them)
 - **White key:** switches a step on / off. **Hold it** and turn the knobs: NOTE, GATE (rest, note,
   tie), **CHORD**, SLIDE. **ENV + white key:** the step's accent.
 - **CHORD:** – (the note alone), OCT, 5TH, 5+8, MIN, MAJ, SUS2, SUS4, MIN7, MAJ7, DOM7, MIN9, ADD9,
-  DIM, AUG, PHRYG (root, minor second, fifth: dark psy). A VA plays the chord; a 303 plays its root
+  DIM, AUG, PHRYG (root, minor second, fifth: dark psy). VA, FM and PHYS play the chord; a 303 plays its root
   (or, with the arpeggiator, the chord's notes one after another).
 - Not holding a step, the knobs are LENGTH, RATE, SWING and TRANSPOSE.
 - **SELECT knob, or ARP:** the arpeggiator's page: **ARP** (OFF, UP, DOWN, UP-DN, RAND), **NOTES** a
@@ -71,22 +72,27 @@ anything for a few seconds.
   **PRESETS** loads a kit. Each sound has MODEL, LEVEL, TUNE,
   PITCH, P.DEC, BODY, DECAY, TAIL, CLICK, TONE, NOISE, DRIVE, CURVE, PUNCH, ATTACK, PAN.
 
-**303** – 20 presets: CLASSIC 303, ACID SQUEAL, DEEP ACID, RUBBER BASS, SQUARE ACID, DIST ACID, FUZZ ACID,
-HARDTEK 303, MENTAL 303, TRIBE 303, DARK 303, PSY ROLL 303, SOFT ACID, SLIDE MONSTR, SHORT BLIP, LONG SWEEP,
-FOREST 303, DUB 303, SCREAM 303, TRANCE 303.
+## Sounds
 
-**VA** – 52 presets, every one as loud as the drum kits:
-- basses: ROLLING BASS, OFFBEAT BASS, SUB BASS, PSY ROLLER, FOREST BASS, DARKPSY BASS, DARK PROG BS,
-  TRIBE BASS, HARDTEK BASS, TECHNO RUMBL, REESE BASS, GROWL BASS, SQUARE BASS, TRANCE BASS, MENTAL ACID,
-  ACID SAW
-- leads: TRANCE LEAD, HOOVER, PSY LEAD, GOA LEAD, SCREAMER, ACID LEAD, MENTAL SAW, SINE LEAD, BRASS LEAD,
-  WHISTLE
-- plucks and stabs: PSY PLUCK, DARK STAB, TRANCE PLUCK, CHORD STAB, DUB CHORD, HARD STAB, BELL PLUCK,
-  MARIMBA, TRIBE PLUCK, PSYCHILL KEY
-- pads: SUPERSAW PAD, DARK DRONE, WARM PAD, DARK PAD, STRINGS, ATMO SWEEP, CHOIR, PSYCHILL PAD
-- effects: FOREST ZAP, LASER ZAP, NOISE SWEEP, RISER, BLIP, ALIEN TALK, DRIP, WOBBLE
+**Drum kits (16):** HARDTEK, TRIBETEK, MENTALTEK, TECHNO, DARK TECHNO, TRANCE, PSYTRANCE, DARKPSY, DARK PROG,
+PSYCHILL, FOREST PSY, and the percussion kits TRIBE PERC, MENTAL PERC, DARK PROG PERC, FOREST PERC, PSY PERC.
+**PRESETS** on a drum track steps through them.
 
-The VA's seven pages:
+**Synth sounds (188), one list as on Skiff.** On a 303, VA, FM or PHYS track, **PRESETS** steps through
+every synth sound, grouped by kind: BASS, ACID, LEAD, PLUCK, STAB, PAD, PERC, FX. **SEL + PRESETS** picks
+the list: ALL or one kind (it stays after a power-off). A sound of another engine switches the track to
+that engine; its steps stay. The top line shows e.g. "BASS 3/30 FM" and the sound's name.
+
+| Engine | Sounds | What it is |
+| --- | --- | --- |
+| 303 | 20 | The TB-303: acid lines, from soft to screaming |
+| VA | 78 | Two oscillators, sub, noise, a filter with its envelope; MONO, CHORD, UNISN, HYPER (seven saws) |
+| FM | 50 | Four operators, eight algorithms: psy basses, metallic leads, bells, keys, stabs, zaps |
+| PHYS | 40 | Physical models: plucked strings, mallets, bells, hand drums (tuned, with a pitch drop) |
+
+Every sound is as loud as the drum kits.
+
+**VA pages**
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
@@ -95,12 +101,37 @@ The VA's seven pages:
 | Filter | CUTOFF | RESO | ENV (the envelope's amount) | FILTER (LP24, LP12, BP, HP) |
 | Filter envelope | F.ATT | F.DEC | F.SUS | KEYTRK |
 | Amp envelope | ATTACK | DECAY | SUSTN | RELEAS |
-| Voice | MODE (MONO, CHORD, UNISN) | GLIDE | ACCENT | VOLUME |
+| Voice | MODE (MONO, CHORD, UNISN, HYPER) | GLIDE | ACCENT | VOLUME |
 | LFO | LFO (8 BAR … 1/32, with the tempo) | SHAPE (TRI, SAW, SQR, S&H) | L>PTCH | L>CUT |
 
 MONO plays one note (a slide, or a key pressed while another is held, glides); CHORD up to four notes;
-UNISN four detuned voices on one note (DETUNE spreads them: a supersaw). If the CPU runs short, CHORD
-and UNISN play one voice until it recovers.
+UNISN four detuned voices on one note; HYPER seven, spread twice as wide (DETUNE: how far).
+HOME's knobs: CUTOFF, RESO, ENV, F.DEC.
+
+**FM pages**
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| Algorithm | ALGO (1–8) | FEEDBK (operator 4) | MODE (MONO, CHORD) | GLIDE |
+| Operator 1–4 (4 pages) | RATIO (0.25 … 16) | LEVEL | DECAY | SUSTN |
+| Envelope | ATTACK | RELEAS | ACCENT | VOLUME |
+| LFO | LFO (with the tempo) | L>PTCH | L>MOD (the modulation depth) | DETUNE |
+
+Algorithms: 1 4>3>2>1 · 2 (3+4)>2>1 · 3 4>3>1 and 2>1 · 4 4>2>1 and 3>1 · 5 two stacks 4>3, 2>1 ·
+6 4 modulates 1, 2, 3 · 7 4>3 with 1 and 2 · 8 all four heard (additive). A carrier's LEVEL is its
+loudness, a modulator's is how bright it makes the sound. HOME's knobs: LEVEL2, DECAY2, FEEDBK, RELEAS.
+
+**PHYS pages**
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| Model | MODEL (PLUCK, MALLT, BELL, DRUM) | DECAY | TONE | POS (where it is struck) |
+| Strike | HARD | INHARM | BODY (a wooden body) | STRUM (CHORD: the notes apart) |
+| Drop | DROP (the drum's pitch drop) | DROPT (its time) | DAMP (on release) | VOLUME |
+| Voice | MODE (MONO, CHORD) | ACCENT | CUTOFF | RESO |
+
+HOME's knobs: DECAY, TONE, HARD, CUTOFF. If the CPU runs short, CHORD, UNISN and HYPER play one voice
+until it recovers.
 
 ## FX
 
@@ -117,8 +148,8 @@ DLY.
 
 GLO opens when you let go of it (held with SELECT, it sets the tempo instead).
 
-- **Page 1:** KNOB 1 the track's type (OFF, DRUM, 303, VA), then **SEL** to apply it (a new type clears
-  that track's steps in every pattern, except between 303 and VA); KNOB 2 its MIDI channel; KNOB 3 MIDI
+- **Page 1:** KNOB 1 the track's type (OFF, DRUM, 303, VA, FM, PHYS), then **SEL** to apply it (a new type
+  clears that track's steps in every pattern, except between the synths); KNOB 2 its MIDI channel; KNOB 3 MIDI
   clock out; KNOB 4 notes out.
 - **GLO again, page 2:** SWING (one for all tracks), the master FILTER (low-pass left, high-pass
   right), PUMP (ducks everything on the kick), TEMPO; version, pattern memory and CPU load.

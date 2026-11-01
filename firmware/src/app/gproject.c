@@ -278,11 +278,16 @@ static void sound_sanitize(sound_t *s)
     for (t = 0; t < NTRK; t++) {
         if (s->ttype[t] >= NTT)
             s->ttype[t] = TT_OFF;
-        if (s->kit[t] >= engine_npresets(s->ttype[t] ? s->ttype[t] : TT_DRUM))
-            s->kit[t] = 0;
-        for (i = 0; i < VA_N; i++)
-            if (s->va[t][i] > gva_param(i)->max)
-                s->va[t][i] = gva_param(i)->max;
+        if (s->kit[t] >= engine_npresets(s->ttype[t] ? s->ttype[t] : TT_DRUM) ||
+            (tt_notes(s->ttype[t]) && gs_type(s->kit[t]) != s->ttype[t]))
+            s->kit[t] = (uint8_t)(tt_notes(s->ttype[t]) ? gs_first(s->ttype[t]) : 0);
+        for (i = 0; i < SYN_NP; i++) {
+            const x0x_param_t *p = s->ttype[t] == TT_FM ? gfm_param(i) : s->ttype[t] == TT_PHYS ? gphys_param(i) : gva_param(i);
+            if (!p)
+                s->syn[t][i] = 0;
+            else if (s->syn[t][i] > p->max)
+                s->syn[t][i] = p->max;
+        }
         for (v = 0; v < NDSND; v++)
             for (i = 0; i < GP_N; i++)
                 if (s->drum[t][v][i] > gdrum_param(i)->max)
@@ -356,6 +361,8 @@ int project_load(void)
             proj.set.tpat[n] = 0;
     if (proj.set.swing > 100)
         proj.set.swing = 0;
+    if (proj.set.list > NCAT)
+        proj.set.list = 0;
     return bad ? -1 : 0;
 }
 
@@ -408,11 +415,22 @@ void project_set_type(int t, int tt)
     keep = tt_notes(tt) && tt_notes(proj.sound.ttype[t]);   /* 303 <-> VA: the same steps, kept */
     proj.sound.ttype[t] = (uint8_t)tt;
     engine_set(T_TRK, t, TK_TYPE, tt);
-    if (tt == TT_VA || tt == TT_303)
-        engine_track_preset(&proj.sound, t, 0);           /* a 303 or VA starts from its first preset */
+    if (tt_notes(tt))
+        engine_track_preset(&proj.sound, t, gs_first(tt));   /* a synth starts from its engine's first sound */
     else if (proj.sound.kit[t] >= gd_nkits)
         proj.sound.kit[t] = 0;
     if (!keep)
         for (p = 0; p < NPAT; p++)
             gpat_track_clear(&proj.pat[p].t[t], tt);
+}
+
+/* a sound of the list (gsounds.h) onto a synth track: its engine first if it is another (the steps
+ * stay), then its pots */
+void project_load_sound(int t, int id)
+{
+    if (t < 0 || t >= NTRK || !tt_notes(proj.sound.ttype[t]) || id < 0 || id >= gs_count())
+        return;
+    if (gs_type(id) != proj.sound.ttype[t])
+        project_set_type(t, gs_type(id));
+    engine_track_preset(&proj.sound, t, id);
 }

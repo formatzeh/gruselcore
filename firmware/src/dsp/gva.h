@@ -1,13 +1,14 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* GruselCore VA synth: a virtual-analog voice for leads, basses, plucks, stabs and pads.
  *
- * Four voice slots, each with two oscillators (SAW, SQUARE with pulse width, TRIANGLE, SINE;
+ * Seven voice slots, each with two oscillators (SAW, SQUARE with pulse width, TRIANGLE, SINE;
  * band-limited with PolyBLEP) and a sub square an octave under oscillator 1, plus noise. All slots
  * go through one filter (LP 24 dB, LP 12 dB, BP, HP; resonant) with its own envelope, then one amp
  * envelope. MODE:
  *   MONO    one slot; a note played while one is held (slide) glides and does not retrigger
  *   CHORD   up to four slots, one per note of the chord (the envelopes are shared: paraphonic)
- *   UNISON  all four slots on the note, detuned against each other (DETUNE): a supersaw
+ *   UNISON  four slots on the note, detuned against each other (DETUNE)
+ *   HYPER   all seven slots on the note, spread twice as wide: a trance supersaw
  * GLIDE glides every note (portamento); a slide glides even at GLIDE 0. The LFO is synced to the
  * tempo (8 bars .. 1/32) and moves the pitch and / or the cutoff.
  *
@@ -17,10 +18,11 @@
 #include <stdint.h>
 #include "x0x_param.h"
 
-#define GVA_NV 4                                    /* voice slots */
+#define GVA_NV 7                                    /* voice slots (HYPER) */
+#define GVA_NCHORD 4                                /* notes in CHORD, voices in UNISON */
 #define GVA_CR 16                                   /* control rate: samples a step */
 enum { VAW_SAW, VAW_SQR, VAW_TRI, VAW_SINE, VAW_N };
-enum { VAM_MONO, VAM_CHORD, VAM_UNISON, VAM_N };
+enum { VAM_MONO, VAM_CHORD, VAM_UNISON, VAM_HYPER, VAM_N };
 enum { VAF_LP24, VAF_LP12, VAF_BP, VAF_HP, VAF_N };
 enum { VAL_TRI, VAL_SAW, VAL_SQR, VAL_SH, VAL_N };
 enum {
@@ -76,6 +78,7 @@ int gva_get(const gva_t *va, int i);
 const x0x_param_t *gva_param(int i);
 
 /* factory presets (gva_presets.c) */
-typedef struct { const char *name; uint8_t pot[VA_N]; } gva_preset_t;
+#include "gcat.h"
+typedef struct { const char *name; uint8_t cat; uint8_t pot[VA_N]; } gva_preset_t;   /* cat: CAT_* */
 extern const gva_preset_t gva_presets[];
 extern const int gva_npresets;

@@ -255,7 +255,10 @@ static int value_of(const char *what)
     if (sscanf(what, "acc.%d.%d", &t, &st) == 2) return (proj.pat[seq.tpat[t]].t[t].u.b.step[st].flags & BS_ACCENT) != 0;
     if (sscanf(what, "arp.%d", &t) == 1) return proj.pat[seq.tpat[t]].t[t].u.b.arp;
     if (sscanf(what, "arpdiv.%d", &t) == 1) return proj.pat[seq.tpat[t]].t[t].u.b.arp_div;
-    if (sscanf(what, "va.%d.%d", &t, &s) == 2) return proj.sound.va[t][s];
+    if (sscanf(what, "va.%d.%d", &t, &s) == 2) return proj.sound.syn[t][s];
+    if (sscanf(what, "syn.%d.%d", &t, &s) == 2) return proj.sound.syn[t][s];
+    if (sscanf(what, "cat.%d", &t) == 1) return gs_cat(proj.sound.kit[t]);
+    if (!strcmp(what, "list")) return proj.set.list;
     if (sscanf(what, "sounds.%d", &t) == 1) return eng_peak[t] > 300;   /* the track's meter moves */
     if (!strcmp(what, "spage")) return ui.spage;
     fprintf(stderr, "unknown expect %s\n", what);

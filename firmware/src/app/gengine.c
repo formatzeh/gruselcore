@@ -6,6 +6,9 @@
 #include "../dsp/gdrum.h"
 #include "../dsp/bass303.h"
 #include "../dsp/gva.h"
+#include "../dsp/gfm.h"
+#include "../dsp/gphys.h"
+#include "gsounds.h"
 #include "../dsp/fxbus.h"
 #include "../dsp/master.h"
 #include "../dsp/fastmath.h"
@@ -34,7 +37,7 @@ typedef struct {                       /* one track's filter and drive (stereo) 
 } insert_t;
 
 typedef struct {
-    union { gdrum_t d; bass303_t b; gva_t v; } u;
+    union { gdrum_t d; bass303_t b; gva_t v; gfm_t f; gphys_t p; } u;
     uint8_t type;                      /* TT_*: what u holds */
     uint8_t active;                    /* rendered something this stretch (else nothing to mix) */
     insert_t ins;
@@ -85,11 +88,72 @@ static const x0x_param_t MIX_P[MX_NPARAMS] = {
 };
 static float mix_level[NTRK], mix_pl[NTRK], mix_pr[NTRK], mix_rev[NTRK], mix_dly[NTRK];
 
+/* ------------------------------------------------- the synth engines --- */
+/* VA, FM and PHYS through one door (the track's type picks the engine in its union) */
+static int syn_np(int tt) { return tt == TT_VA ? VA_N : tt == TT_FM ? FM_N : tt == TT_PHYS ? PH_N : 0; }
+static const x0x_param_t *syn_param(int tt, int i)
+{
+    return tt == TT_VA ? gva_param(i) : tt == TT_FM ? gfm_param(i) : tt == TT_PHYS ? gphys_param(i) : 0;
+}
+static void syn_init(track_t *k, int tt)
+{
+    if (tt == TT_VA) gva_init(&k->u.v);
+    else if (tt == TT_FM) gfm_init(&k->u.f);
+    else gphys_init(&k->u.p);
+}
+static void syn_set(track_t *k, int i, int v)
+{
+    if (k->type == TT_VA) gva_set(&k->u.v, i, v);
+    else if (k->type == TT_FM) gfm_set(&k->u.f, i, v);
+    else if (k->type == TT_PHYS) gphys_set(&k->u.p, i, v);
+}
+static void syn_on(track_t *k, const uint8_t *nt, int n, int acc, int slide)
+{
+    if (k->type == TT_VA) gva_note_on(&k->u.v, nt, n, acc, slide);
+    else if (k->type == TT_FM) gfm_note_on(&k->u.f, nt, n, acc, slide);
+    else if (k->type == TT_PHYS) gphys_note_on(&k->u.p, nt, n, acc, slide);
+}
+static void syn_add(track_t *k, int note)
+{
+    if (k->type == TT_VA) gva_note_add(&k->u.v, note);
+    else if (k->type == TT_FM) gfm_note_add(&k->u.f, note);
+    else if (k->type == TT_PHYS) gphys_note_add(&k->u.p, note);
+}
+static void syn_off(track_t *k)
+{
+    if (k->type == TT_VA) gva_note_off(&k->u.v);
+    else if (k->type == TT_FM) gfm_note_off(&k->u.f);
+    else if (k->type == TT_PHYS) gphys_note_off(&k->u.p);
+}
+static void syn_lite(track_t *k, int on)
+{
+    if (k->type == TT_VA) gva_set_lite(&k->u.v, on);
+    else if (k->type == TT_FM) gfm_set_lite(&k->u.f, on);
+    else if (k->type == TT_PHYS) gphys_set_lite(&k->u.p, on);
+}
+static int syn_idle(const track_t *k)
+{
+    return k->type == TT_VA ? k->u.v.idle : k->type == TT_FM ? k->u.f.idle : k->type == TT_PHYS ? k->u.p.idle : 1;
+}
+static void syn_render(track_t *k, float *out, uint32_t n)
+{
+    float bpm = gseq_tempo(&seq);
+    if (k->type == TT_VA) {
+        gva_set_bpm(&k->u.v, bpm);
+        gva_render(&k->u.v, out, (int)n);
+    } else if (k->type == TT_FM) {
+        gfm_set_bpm(&k->u.f, bpm);
+        gfm_render(&k->u.f, out, (int)n);
+    } else {
+        gphys_render(&k->u.p, out, (int)n);
+    }
+}
+
 int engine_nvoices(int t)
 {
     switch (t) {
     case T_DRUM: return NTRK * NDSND;
-    case T_303: case T_MIX: case T_TRK: case T_DMAC: case T_VA: return NTRK;
+    case T_303: case T_MIX: case T_TRK: case T_DMAC: case T_SYN: return NTRK;
     case T_FX: return (fxbus_nparams() + 15) / 16;
     case T_MST: return 1;
     default: return 0;
@@ -108,7 +172,7 @@ int engine_nparams(int t, int v)
     }
     case T_MST: return MST_NPARAMS;
     case T_DMAC: return GDK_N;
-    case T_VA: return VA_N;
+    case T_SYN: return v >= 0 && v < NTRK && base_snd ? syn_np(base_snd->ttype[v]) : 0;
     default: return 0;
     }
 }
@@ -124,7 +188,7 @@ const x0x_param_t *engine_param(int t, int v, int i)
     case T_FX: return fxbus_param(v * 16 + i);
     case T_MST: return master_param(i);
     case T_DMAC: return gdrum_macro_param(i);
-    case T_VA: return gva_param(i);
+    case T_SYN: return syn_param(base_snd->ttype[v], i);
     default: return 0;
     }
 }
@@ -176,8 +240,8 @@ static void track_load(int t, int tt)
             gdrum_init(&k->u.d);
         else if (tt == TT_303)
             bass303_init(&k->u.b);
-        else if (tt == TT_VA)
-            gva_init(&k->u.v);
+        else if (tt >= TT_VA)
+            syn_init(k, tt);
         k->type = (uint8_t)tt;
         k->ins.ic1[0] = k->ins.ic1[1] = k->ins.ic2[0] = k->ins.ic2[1] = 0.0f;
     }
@@ -191,10 +255,10 @@ static void track_load(int t, int tt)
     else if (tt == TT_303)
         for (i = 0; i < BASS303_NPARAMS; i++)
             bass303_set(&k->u.b, i, base_snd->b303[t][i]);
-    else if (tt == TT_VA) {
-        for (i = 0; i < VA_N; i++)
-            gva_set(&k->u.v, i, base_snd->va[t][i]);
-        gva_set_lite(&k->u.v, guard_on);
+    else if (tt >= TT_VA) {
+        for (i = 0; i < syn_np(tt); i++)
+            syn_set(k, i, base_snd->syn[t][i]);
+        syn_lite(k, guard_on);
     }
     seq.ttype[t] = (uint8_t)tt;
     mix_calc(t);
@@ -225,9 +289,9 @@ static void apply_param(int target, int v, int i, int val)
         if (v < NTRK && trk[v].type == TT_DRUM)
             gdrum_set_macro(&trk[v].u.d, i, val);
         break;
-    case T_VA:
-        if (v < NTRK && trk[v].type == TT_VA)
-            gva_set(&trk[v].u.v, i, val);
+    case T_SYN:
+        if (v < NTRK && trk[v].type >= TT_VA)
+            syn_set(&trk[v], i, val);
         break;
     case T_TRK:
         if (v < NTRK)
@@ -257,10 +321,10 @@ static void s_note_on(void *ctx, int t, int note, int chord, int accent, int sli
         return;
     if (trk[t].type == TT_303) {
         bass303_note_on(&trk[t].u.b, note, accent, slide);   /* a chord's root */
-    } else if (trk[t].type == TT_VA) {
+    } else if (trk[t].type >= TT_VA) {
         uint8_t nt[CHORD_NMAX];
         int n = gp_chord_notes(note, chord, nt);
-        gva_note_on(&trk[t].u.v, nt, n, accent, slide);
+        syn_on(&trk[t], nt, n, accent, slide);
     }
 }
 static void s_note_off(void *ctx, int t)
@@ -268,8 +332,8 @@ static void s_note_off(void *ctx, int t)
     (void)ctx;
     if (t >= 0 && t < NTRK && trk[t].type == TT_303)
         bass303_note_off(&trk[t].u.b);
-    else if (t >= 0 && t < NTRK && trk[t].type == TT_VA)
-        gva_note_off(&trk[t].u.v);
+    else if (t >= 0 && t < NTRK && trk[t].type >= TT_VA)
+        syn_off(&trk[t]);
 }
 static void s_midi(void *ctx, uint8_t st, uint8_t d1, uint8_t d2)
 {
@@ -311,8 +375,8 @@ static void midi_in(uint32_t pkt)
                     s_drum(0, t, v, (float)d2 / 127.0f);
         } else if (tt_notes(trk[t].type)) {
             if (ty == 0x90) {
-                if (note_held[t] && trk[t].type == TT_VA && trk[t].u.v.pot[VA_MODE] == VAM_CHORD)
-                    gva_note_add(&trk[t].u.v, d1);
+                if (note_held[t] && engine_chord_mode(base_snd, t))
+                    syn_add(&trk[t], d1);
                 else
                     s_note_on(0, t, d1, 0, d2 >= 100, note_held[t] != 0);
                 note_held[t] = d1;
@@ -336,8 +400,8 @@ static void drain(void)
         else if (type == C_DRUM)
             s_drum(0, (int)a, (int)b, (float)v / 4095.0f);
         else if (type == C_NON && (v & 64u)) {
-            if (a < NTRK && trk[a].type == TT_VA)
-                gva_note_add(&trk[a].u.v, (int)b);
+            if (a < NTRK && trk[a].type >= TT_VA)
+                syn_add(&trk[a], (int)b);
             else
                 s_note_on(0, (int)a, (int)b, 0, 0, 1);
         } else if (type == C_NON)
@@ -384,8 +448,8 @@ static void guard_apply(void)
     for (t = 0; t < NTRK; t++)
         if (trk[t].type == TT_303)
             bass303_set_lite(&trk[t].u.b, guard_on);
-        else if (trk[t].type == TT_VA)
-            gva_set_lite(&trk[t].u.v, guard_on);
+        else if (trk[t].type >= TT_VA)
+            syn_lite(&trk[t], guard_on);
 }
 
 /* ------------------------------------------------------------ mixing --- */
@@ -445,11 +509,10 @@ static int track_render(int t, float *l, float *r, uint32_t n)
             r[i] = l[i] = l[i] * B303_GAIN;               /* (gengine.h: the same loudness at LEVEL 100) */
         return 1;
     }
-    if (k->type == TT_VA) {
-        if (k->u.v.idle)
+    if (k->type >= TT_VA) {
+        if (syn_idle(k))
             return 0;
-        gva_set_bpm(&k->u.v, gseq_tempo(&seq));
-        gva_render(&k->u.v, l, (int)n);
+        syn_render(k, l, n);
         for (i = 0; i < n; i++)
             r[i] = l[i];
         return 1;
@@ -648,7 +711,7 @@ void engine_sound_defaults(sound_t *s)
         for (i = 0; i < GDK_N; i++)
             s->dmac[t][i] = 64;
         for (i = 0; i < VA_N; i++)
-            s->va[t][i] = gva_presets[0].pot[i];
+            s->syn[t][i] = gva_presets[0].pot[i];
     }
     for (i = 0; i < fxbus_nparams() && i < FX_NP; i++)
         s->fx[i] = fxbus_param(i)->def;
@@ -677,7 +740,8 @@ void engine_track_kit(sound_t *s, int t, int kit)
 
 void engine_track_preset(sound_t *s, int t, int k)
 {
-    int i, tt;
+    int i, tt, n;
+    const uint8_t *pots;
     if (t < 0 || t >= NTRK)
         return;
     tt = s->ttype[t];
@@ -687,19 +751,22 @@ void engine_track_preset(sound_t *s, int t, int k)
         engine_track_kit(s, t, k);
         return;
     }
-    if (tt == TT_VA)
-        for (i = 0; i < VA_N; i++)
-            s->va[t][i] = gva_presets[k].pot[i];
-    else if (tt == TT_303)
-        for (i = 0; i < BASS303_NPARAMS; i++)
-            s->b303[t][i] = b303_presets[k].pot[i];
+    if (gs_type(k) != tt)                             /* a sound of another engine: the caller switches first */
+        return;
+    pots = gs_pots(k, &n);
+    for (i = 0; i < n; i++) {
+        if (tt == TT_303)
+            s->b303[t][i] = pots[i];
+        else
+            s->syn[t][i] = pots[i];
+    }
     s->kit[t] = (uint8_t)k;
     engine_set(T_TRK, t, TK_RELOAD, 0);
 }
 
 int engine_npresets(int tt)
 {
-    return tt == TT_DRUM ? gd_nkits : tt == TT_303 ? b303_npresets : tt == TT_VA ? gva_npresets : 0;
+    return tt == TT_DRUM ? gd_nkits : tt_notes(tt) ? gs_count() : 0;
 }
 const char *engine_preset_name(int tt, int k)
 {
@@ -707,7 +774,16 @@ const char *engine_preset_name(int tt, int k)
     if (n <= 0)
         return "OFF";
     k = ((k % n) + n) % n;
-    return tt == TT_DRUM ? gd_kit_names[k] : tt == TT_303 ? b303_presets[k].name : gva_presets[k].name;
+    return tt == TT_DRUM ? gd_kit_names[k] : gs_name(k);
+}
+int engine_chord_mode(const sound_t *s, int t)
+{
+    switch (s->ttype[t]) {
+    case TT_VA: return s->syn[t][VA_MODE] == VAM_CHORD;
+    case TT_FM: return s->syn[t][FM_MODE] == FMM_CHORD;
+    case TT_PHYS: return s->syn[t][PH_MODE] == PHV_CHORD;
+    default: return 0;
+    }
 }
 
 void engine_apply_sound(const sound_t *s)

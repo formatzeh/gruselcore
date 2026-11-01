@@ -177,6 +177,7 @@ int bass303_get(const bass303_t *b, int i);
 
 /* GruselCore's 303 presets (b303_presets.c): the pots above, each at the drum kits' loudness through
  * the engine's B303_GAIN (tests/host/presets_test.c) */
-typedef struct { const char *name; uint8_t pot[BASS303_NPARAMS]; } b303_preset_t;
+#include "gcat.h"
+typedef struct { const char *name; uint8_t cat; uint8_t pot[BASS303_NPARAMS]; } b303_preset_t;   /* cat: CAT_* */
 extern const b303_preset_t b303_presets[];
 extern const int b303_npresets;

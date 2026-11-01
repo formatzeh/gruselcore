@@ -23,12 +23,14 @@
 #include "gc.h"
 #include "../dsp/master.h"           /* MST_* (HOME's knobs, the master pages) */
 #include "../dsp/bass303.h"          /* BASS303_* (HOME's knobs on a 303 track) */
-#include "../dsp/gva.h"              /* VA_* (HOME's knobs on a VA track), the presets */
+#include "../dsp/gva.h"              /* VA_*, FM_*, PH_*: HOME's knobs on a synth track */
+#include "../dsp/gfm.h"
+#include "../dsp/gphys.h"
 
 /* ------------------------------------------------------------- state --- */
 enum { V_HOME, V_SEQ, V_EDIT, V_FX, V_MIX, V_GLO, NVIEWS };
 static const char *const VIEW_N[NVIEWS] = {"HOME", "SEQ", "EDIT", "FX", "MIX", "GLO"};
-static const char *const TYPE_N[NTT] = {"OFF", "DRUM", "303", "VA"};
+static const char *const TYPE_N[NTT] = {"OFF", "DRUM", "303", "VA", "FM", "PHYS"};
 static const char *const ARP_N[NARPS] = {"OFF", "UP", "DOWN", "UP-DN", "RAND"};
 static const char *const RATE_N[NRATES] = {"1/16", "1/16T", "1/32", "1/8T", "1/8"};
 static const char *const DIR_N[NDIRS] = {"FWD", "REV", "PING", "RAND"};
@@ -159,7 +161,7 @@ static void pot_set(int target, int voice, int i, int v)
     case T_FX: m = &proj.sound.fx[voice * 16 + i]; break;
     case T_MST: m = &proj.sound.mst[i]; break;
     case T_DMAC: m = &proj.sound.dmac[voice][i]; break;
-    case T_VA: m = &proj.sound.va[voice][i]; break;
+    case T_SYN: m = &proj.sound.syn[voice][i]; break;
     default: return;
     }
     if (*m == v)
@@ -177,7 +179,7 @@ static int pot_get(int target, int voice, int i)
     case T_FX: return proj.sound.fx[voice * 16 + i];
     case T_MST: return proj.sound.mst[i];
     case T_DMAC: return proj.sound.dmac[voice][i];
-    case T_VA: return proj.sound.va[voice][i];
+    case T_SYN: return proj.sound.syn[voice][i];
     default: return 0;
     }
 }
@@ -214,10 +216,13 @@ static void knobs_of(knob_t *k)
             static const uint8_t B[4] = {BASS303_CUTOFF, BASS303_RESO, BASS303_ENVMOD, BASS303_DECAY};
             for (i = 0; i < 4; i++)
                 k[i] = (knob_t){KR_POT, T_303, (uint8_t)t, B[i]};
-        } else if (ttype(t) == TT_VA) {
+        } else if (ttype(t) >= TT_VA) {
             static const uint8_t V[4] = {VA_CUTOFF, VA_RESO, VA_ENV, VA_FDEC};
+            static const uint8_t F[4] = {FM_L2, FM_D2, FM_FEEDBK, FM_REL};
+            static const uint8_t H[4] = {PH_DECAY, PH_TONE, PH_HARD, PH_CUTOFF};
+            const uint8_t *m = ttype(t) == TT_VA ? V : ttype(t) == TT_FM ? F : H;
             for (i = 0; i < 4; i++)
-                k[i] = (knob_t){KR_POT, T_VA, (uint8_t)t, V[i]};
+                k[i] = (knob_t){KR_POT, T_SYN, (uint8_t)t, m[i]};
         }
         break;
     case V_SEQ:
@@ -245,9 +250,9 @@ static void knobs_of(knob_t *k)
         else if (ttype(t) == TT_303)
             for (i = 0; i < 4 && ui.epage * 4 + i < engine_nparams(T_303, t); i++)
                 k[i] = (knob_t){KR_POT, T_303, (uint8_t)t, (uint8_t)(ui.epage * 4 + i)};
-        else if (ttype(t) == TT_VA)
-            for (i = 0; i < 4 && ui.epage * 4 + i < VA_N; i++)
-                k[i] = (knob_t){KR_POT, T_VA, (uint8_t)t, (uint8_t)(ui.epage * 4 + i)};
+        else if (ttype(t) >= TT_VA)
+            for (i = 0; i < 4 && ui.epage * 4 + i < engine_nparams(T_SYN, t); i++)
+                k[i] = (knob_t){KR_POT, T_SYN, (uint8_t)t, (uint8_t)(ui.epage * 4 + i)};
         break;
     case V_FX:
         if (ui.fxpage == 0) {
@@ -311,7 +316,7 @@ static void knob_label(const knob_t *k, char *name, char *val)
             scat(val, p->names[v]);
         else if (k->target == T_MIX && k->index == MX_PAN && v == 64)
             scat(val, "C");
-        else if (k->target == T_VA && k->index == VA_TUNE2) {   /* semitones from oscillator 1 */
+        else if (k->target == T_SYN && ttype(k->voice) == TT_VA && k->index == VA_TUNE2) {   /* semitones from osc 1 */
             if (v > 24)
                 scat(val, "+");
             put_num(val + (v > 24), v - 24);
@@ -643,8 +648,8 @@ static void play_key(int k, int down)
     }
     {
         int note = 41 + 12 * ui.oct + k;              /* F2 on the lowest key, an octave a step */
-        if (keys_down && ttype(t) == TT_VA && proj.sound.va[t][VA_MODE] == VAM_CHORD)
-            engine_note_add(t, note);                   /* a VA in CHORD: the keys held sound together */
+        if (keys_down && engine_chord_mode(&proj.sound, t))
+            engine_note_add(t, note);                   /* a synth in CHORD: the keys held sound together */
         else
             engine_note_on(t, note, 0, 0, keys_down != 0);
         keys_down++;
@@ -758,7 +763,8 @@ static void input(void)
     else if (d) {
         int s = d > 0 ? 1 : -1;
         if (ui.view == V_EDIT) {
-            int n = ttype(ui.trk) == TT_DRUM ? GP_N : ttype(ui.trk) == TT_VA ? VA_N : engine_nparams(T_303, ui.trk);
+            int n = ttype(ui.trk) == TT_DRUM ? GP_N : ttype(ui.trk) >= TT_VA ? engine_nparams(T_SYN, ui.trk) :
+                    engine_nparams(T_303, ui.trk);
             int pages = (n + 3) / 4;
             int p = ui.epage + s;
             ui.epage = (uint8_t)(p < 0 ? 0 : p >= pages ? pages - 1 : p);
@@ -772,20 +778,41 @@ static void input(void)
         }
     }
     d = plat_enc(EN_PRESET);                          /* PRESETS: the track's kit or preset, on every screen */
+    if (d && (b & (1u << B_SEL))) {                   /* SEL + PRESETS: the list, every kind or one */
+        int l = (proj.set.list + d) % (NCAT + 1);
+        proj.set.list = (uint8_t)(l < 0 ? l + NCAT + 1 : l);
+        ui_say("LIST", gs_cat_name((int)proj.set.list - 1));
+        touch();
+        d = 0;
+    }
     if (d && engine_npresets(ttype(ui.trk))) {
-        int n = engine_npresets(ttype(ui.trk)), k = (int)proj.sound.kit[ui.trk] + d;
-        k = ((k % n) + n) % n;
-        engine_track_preset(&proj.sound, ui.trk, k);   /* loads while playing */
-        {
-            char t[24] = "", nb[4];
-            scat(t, ttype(ui.trk) == TT_DRUM ? "KIT " : "PRESET ");
-            put_num(nb, k + 1);
-            scat(t, nb);
-            scat(t, "/");
-            put_num(nb, n);
-            scat(t, nb);
-            ui_say(t, engine_preset_name(ttype(ui.trk), k));
+        char t[24] = "", nb[4];
+        int k, pos, n;
+        if (ttype(ui.trk) == TT_DRUM) {
+            n = gd_nkits;
+            k = (((int)proj.sound.kit[ui.trk] + d) % n + n) % n;
+            engine_track_preset(&proj.sound, ui.trk, k);   /* loads while playing */
+            pos = k;
+            scat(t, "KIT ");
+        } else {                                      /* a sound from the list; another engine switches it */
+            int cat = (int)proj.set.list - 1;
+            k = gs_step(proj.sound.kit[ui.trk], d, cat);
+            project_load_sound(ui.trk, k);
+            pos = gs_pos(k, cat, &n);
+            scat(t, gs_cat_name(cat >= 0 ? cat : gs_cat(k)));
+            scat(t, " ");
         }
+        put_num(nb, pos + 1);
+        scat(t, nb);
+        scat(t, "/");
+        put_num(nb, n);
+        scat(t, nb);
+        if (ttype(ui.trk) != TT_DRUM) {
+            scat(t, " ");
+            scat(t, gs_engine_name(ttype(ui.trk)));
+        }
+        ui_say(t, engine_preset_name(ttype(ui.trk), k));
+        ui.epage = 0;
         touch();
     }
     knobs_of(kn);
@@ -1099,12 +1126,21 @@ static void draw_edit(void)
         cv_text(4, 6, &FONT_B, engine_preset_name(TT_303, proj.sound.kit[t]), C_WHITE);
         cv_text(4, 30, &FONT_S, "303", C_AMB);
         cv_text(4, 100, &FONT_T, "SELECT: PAGE   PRESETS: PRESET", C_DIM);
-    } else if (ttype(t) == TT_VA) {
-        static const char *const PG[] = {"OSCILLATORS", "MIX", "FILTER", "FILTER ENVELOPE", "AMP ENVELOPE",
+    } else if (ttype(t) >= TT_VA) {
+        static const char *const PV[] = {"OSCILLATORS", "MIX", "FILTER", "FILTER ENVELOPE", "AMP ENVELOPE",
                                          "VOICE", "LFO"};
-        cv_text(4, 6, &FONT_B, engine_preset_name(TT_VA, proj.sound.kit[t]), C_WHITE);
-        cv_text(4, 30, &FONT_S, ui.epage < 7 ? PG[ui.epage] : "", C_AMB);
-        cv_text(4, 100, &FONT_T, "SELECT: PAGE   PRESETS: PRESET", C_DIM);
+        static const char *const PF[] = {"ALGORITHM", "OPERATOR 1", "OPERATOR 2", "OPERATOR 3", "OPERATOR 4",
+                                         "ENVELOPE", "LFO"};
+        static const char *const PH[] = {"MODEL", "STRIKE", "DROP", "VOICE"};
+        const char *pg = ttype(t) == TT_VA ? (ui.epage < 7 ? PV[ui.epage] : "") :
+                         ttype(t) == TT_FM ? (ui.epage < 7 ? PF[ui.epage] : "") : (ui.epage < 4 ? PH[ui.epage] : "");
+        cv_text(4, 6, &FONT_B, engine_preset_name(ttype(t), proj.sound.kit[t]), C_WHITE);
+        b[0] = 0;
+        scat(b, gs_engine_name(ttype(t)));
+        scat(b, ": ");
+        scat(b, pg);
+        cv_text(4, 30, &FONT_S, b, C_AMB);
+        cv_text(4, 100, &FONT_T, "SELECT: PAGE   PRESETS: SOUND", C_DIM);
     } else {
         cv_text(20, 60, &FONT_S, "TRACK OFF: GLO SETS ITS TYPE", C_GRAY);
         return;

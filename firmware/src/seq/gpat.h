@@ -18,10 +18,10 @@
 #define NSW (NSTEPS / 32)            /* 32-bit words in a row of steps */
 #define NDSND 8                      /* sounds in a drum kit (gdrum.h GD_NSND) */
 
-enum { TT_OFF, TT_DRUM, TT_303, TT_VA, NTT };                /* track types */
-/* a note track (303, VA): the same steps (u.b), chords and arpeggiator; a change between the two
- * keeps the steps */
-static inline int tt_notes(int tt) { return tt == TT_303 || tt == TT_VA; }
+enum { TT_OFF, TT_DRUM, TT_303, TT_VA, TT_FM, TT_PHYS, NTT };   /* track types */
+/* a note track (303, VA, FM, PHYS): the same steps (u.b), chords and arpeggiator; a change between
+ * them keeps the steps */
+static inline int tt_notes(int tt) { return tt >= TT_303 && tt < NTT; }
 enum { RATE_16, RATE_16T, RATE_32, RATE_8T, RATE_8, NRATES };  /* step length */
 enum { DIR_FWD, DIR_REV, DIR_PINGPONG, DIR_RANDOM, NDIRS };    /* playback direction (303 tracks) */
 enum { G_REST, G_NOTE, G_TIE };                              /* a 303 step's gate */

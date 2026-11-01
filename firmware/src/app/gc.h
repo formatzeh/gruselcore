@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "plat.h"
 #include "gengine.h"
+#include "gsounds.h"
 #include "../seq/gpat.h"
 #include "../seq/gseq.h"
 
@@ -30,7 +31,8 @@ typedef struct {
     uint8_t one_core;                    /* 1: the second core stays off (after it crashed beside it) */
     uint8_t swing;                       /* the global swing, 0..100 */
     uint8_t tpat[NTRK];                  /* the pattern each track was playing */
-    uint8_t rsv[4];
+    uint8_t list;                        /* the PRESETS list: 0 every kind, 1 + CAT_* one kind */
+    uint8_t rsv[3];
 } settings_t;
 
 typedef struct {
@@ -49,6 +51,7 @@ void project_apply_io(void);             /* the settings into the sequencer and 
 int project_mem_pct(void);               /* how full the room for patterns is, % */
 void project_flash_changed(void);        /* a restore wrote the flash: the next save writes every object */
 void project_set_type(int trk, int tt);  /* a track's new type: its steps in every pattern cleared, the engine told */
+void project_load_sound(int trk, int id); /* a synth sound (gsounds.h) onto a synth track, its engine switched if need be */
 
 void ui_init(void);
 void ui_frame(void);
