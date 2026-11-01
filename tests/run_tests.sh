@@ -24,7 +24,7 @@ run() {
 W="-O2 -ffp-contract=off -Wall -Wextra -Wdouble-promotion -Werror"
 run loader-guard sh tests/loader_guard.sh   # the update loader must stay X0X's / Felucca's (the way to any other firmware)
 run fastmath sh -c "$CC -O2 -ffp-contract=off -Wall -Wextra -Werror -o $OUT/fastmath_test tests/host/fastmath_test.c -lm && $OUT/fastmath_test"
-run gdrum sh -c "$CC $W -o $OUT/gdrum_test tests/host/gdrum_test.c firmware/src/dsp/gdrum.c firmware/src/dsp/gdrum_kits.c -lm && mkdir -p build/gdrum && $OUT/gdrum_test build/gdrum"
+run gdrum sh -c "$CC $W -Wno-double-promotion -Ifirmware/src/dsp -o $OUT/gdrum_test tests/host/gdrum_test.c firmware/src/dsp/gdrum.c firmware/src/dsp/gdrum_kits.c firmware/src/dsp/bass303.c -lm && mkdir -p build/gdrum && $OUT/gdrum_test build/gdrum"
 run gdrum-groove sh -c "$CC $W -o $OUT/gdrum_groove tests/host/gdrum_groove.c firmware/src/dsp/gdrum.c firmware/src/dsp/gdrum_kits.c -lm && $OUT/gdrum_groove build/gdrum"
 run gseq sh -c "$CC $W -o $OUT/gseq_test tests/host/gseq_test.c firmware/src/seq/gseq.c firmware/src/seq/gpat.c && $OUT/gseq_test"
 run encoder sh -c "$CC -O2 -w -Ifirmware/hal -o $OUT/encoder_test tests/host/encoder_test.c && $OUT/encoder_test"

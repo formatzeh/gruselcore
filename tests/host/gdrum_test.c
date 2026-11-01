@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* GruselCore drum engine on the host: every factory kit's 8 sounds rendered, checked and measured.
- *   checks: finite output, peak within headroom, every sound ends (goes inactive) within 5 s,
+ *   checks: finite output, peak within headroom (an accented short hit up to 1.75: the master has 6 dB
+ *           above full scale and a limiter), every sound ends (goes inactive) within 5 s,
  *           a closed hat chokes a ringing open hat, pots clamp
  *   report: per sound the peak, the length to -60 dB, and for kicks the pitch at 1, 5, 20, 60 ms
  *   WAVs:   argv[1] (a directory), one file per kit: the 8 sounds one after another, 0.6 s apart */
@@ -9,7 +10,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../../firmware/src/dsp/gdrum.h"
+#include "../../firmware/src/dsp/bass303.h"
+#include "../../firmware/src/app/gengine.h"   /* B303_GAIN */
+#include "loudness.h"
+#define TARGET_DB -16.0
 
+#undef FS                                         /* gseq.h's is unsigned; this test counts in int */
 #define FS 44100
 #define MAXN (FS * 5)
 
@@ -91,14 +97,14 @@ int main(int argc, char **argv)
         memset(wl, 0, sizeof wl);
         memset(wr, 0, sizeof wr);
         for (int s = 0; s < GD_NSND; s++) {
-            int len60, n;
+            int len60 = 0, n;
             float peak;
             gdrum_init(&d);
             gdrum_load_kit(&d, &gd_kits[k]);
             n = render_one(&d, s, 1.0f, &len60, &peak);
             CHECK(n >= 0, "%s %s: not finite", gd_kit_names[k], gdrum_slot_name(s));
             CHECK(n < MAXN, "%s %s: still sounding after 5 s", gd_kit_names[k], gdrum_slot_name(s));
-            CHECK(peak < 1.0f, "%s %s: peak %.2f", gd_kit_names[k], gdrum_slot_name(s), (double)peak);
+            CHECK(peak < 1.75f, "%s %s: peak %.2f", gd_kit_names[k], gdrum_slot_name(s), (double)peak);
             CHECK(peak > 0.05f, "%s %s: too quiet, peak %.3f", gd_kit_names[k], gdrum_slot_name(s), (double)peak);
             printf(" %s %.2f/%dms", gd_kit_snd_names[k][s], (double)peak, len60 * 1000 / FS);
             for (int i = 0; i < FS * 6 / 10 && i < n; i++) {
@@ -121,6 +127,42 @@ int main(int argc, char **argv)
             snprintf(path, sizeof path, "%s/kit_%02d_%s.wav", dir, k + 1, name);
             wav_write(path, wl, wr, wn);
         }
+    }
+    /* one loudness: every sound of every kit at its default LEVEL within 1 dB of the target, and the
+     * 303's default sound through the engine's gain within 1.5 dB (all heard at the same level) */
+    for (int k = 0; k < gd_nkits; k++)
+        for (int s = 0; s < GD_NSND; s++) {
+            static float a[FS * 2], b[FS * 2];
+            double lu;
+            gdrum_init(&d);
+            gdrum_load_kit(&d, &gd_kits[k]);
+            memset(a, 0, sizeof a);
+            memset(b, 0, sizeof b);
+            gdrum_trigger(&d, s, 0.75f);
+            gdrum_render_st(&d, a, b, FS * 2);
+            lu = loudness_db(a, b, FS * 2);
+            CHECK(fabs(lu - TARGET_DB) <= 1.0, "%s %s: loudness %.1f dB, want %.1f", gd_kit_names[k],
+                  gd_kit_snd_names[k][s], lu, TARGET_DB);
+        }
+    {
+        static bass303_t bs;
+        static float a[FS], b[FS];
+        double lu;
+        bass303_init(&bs);
+        for (int i = 0; i < bass303_nparams(); i++)
+            bass303_set(&bs, i, bass303_param(i)->def);
+        memset(a, 0, sizeof a);
+        for (int k = 0; k < 8; k++) {                   /* eighth notes, half gated, as a line plays */
+            bass303_note_on(&bs, 36 + (k % 3) * 7, 0, 0);
+            bass303_render(&bs, a + k * 5512, 2756);
+            bass303_note_off(&bs);
+            bass303_render(&bs, a + k * 5512 + 2756, 2756);
+        }
+        for (int i = 0; i < FS; i++)
+            b[i] = a[i] = a[i] * B303_GAIN;
+        lu = loudness_db(a, b, FS);
+        printf("303 (default sound, engine gain): %.1f dB\n", lu);
+        CHECK(fabs(lu - TARGET_DB) <= 1.5, "303: loudness %.1f dB, want %.1f", lu, TARGET_DB);
     }
     /* the closed hat chokes the open one */
     {

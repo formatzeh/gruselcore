@@ -11,7 +11,6 @@
 
 #define POOL X0X_POOL
 #define TRK_SPLIT 4                    /* tracks 0..3 on the first core, 4..7 on the second */
-#define B303_GAIN 3.0f                 /* a 303 track's output gain (track_render) */
 #define DLY_LEN 44100                  /* the shared delay: 1 s (X0X had 2 s; the RAM goes to the tracks) */
 
 volatile uint32_t eng_prof[ENG_PROF_N], eng_prof_frames;
@@ -396,8 +395,8 @@ static int track_render(int t, float *l, float *r, uint32_t n)
         if (k->u.b.idle)
             return 0;
         bass303_render(&k->u.b, l, (int)n);
-        for (i = 0; i < n; i++)                         /* +9.5 dB: Open303's output sits ~15 dB under */
-            r[i] = l[i] = l[i] * B303_GAIN;               /* the drum kits; at LEVEL 100 they now match */
+        for (i = 0; i < n; i++)                         /* Open303 sits ~17 dB under the drum kits */
+            r[i] = l[i] = l[i] * B303_GAIN;               /* (gengine.h: the same loudness at LEVEL 100) */
         return 1;
     }
     return 0;

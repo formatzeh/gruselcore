@@ -28,6 +28,9 @@ enum { TK_TYPE, TK_RELOAD };
 /* T_MIX, per track: level, pan, the two sends, the track's filter (64 = off, under it a low-pass,
  * over it a high-pass), its resonance, its drive (0 = clean) */
 enum { MX_LEVEL, MX_PAN, MX_REV, MX_DLY, MX_FILTER, MX_RESO, MX_DRIVE, MX_NPARAMS };
+/* a 303 track's output gain: its default sound at LEVEL 100 as loud as a drum kit's sounds (-16 dB,
+ * tests/host/gdrum_test.c) */
+#define B303_GAIN 3.6f
 #define B303_NP 16                     /* room for the 303's pots in the sound */
 #define FX_NP 32                       /* room for fxbus's pots */
 #define MST_NP 16                      /* room for master's pots */

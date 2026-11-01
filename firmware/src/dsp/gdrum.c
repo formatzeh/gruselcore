@@ -58,9 +58,11 @@ static void voice_calc(gd_voice_t *v)
     v->drive_comp = 1.0f;
     v->hold_n = (uint32_t)(0.05f * GD_FS * (float)p[GP_PUNCH] * (1.0f / 127.0f));
     v->att_inc = p[GP_ATTACK] ? 1.0f / (0.03f * GD_FS * (float)p[GP_ATTACK] * (1.0f / 127.0f)) : 2.0f;
-    {
+    {   /* LEVEL, and each model's makeup: hats, metal and rims come out of the engine 6-12 dB under a
+         * kick, so the kits' LEVEL pots (normalised to one loudness, tests/host/gdrum_test.c) stay in range */
+        static const float MAKEUP[GDM_N] = {1.0f, 1.0f, 1.0f, 4.0f, 1.0f, 2.0f, 2.5f, 1.0f};
         float lv = (float)p[GP_LEVEL] * (1.0f / 100.0f);
-        v->gain = 0.6f * lv * lv;                   /* headroom for the DC blocker after a hard clip */
+        v->gain = 0.6f * lv * lv * MAKEUP[m < GDM_N ? m : 0];   /* 0.6: headroom for the DC blocker */
     }
     /* the noise / metal filter: TPT state-variable, resonance by model */
     fc = fm_minf(expo(p[GP_TONE], 100.0f, 7.32f), 18000.0f);    /* 100 Hz .. 16 kHz */
