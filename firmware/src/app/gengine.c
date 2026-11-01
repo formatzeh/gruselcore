@@ -677,13 +677,37 @@ void engine_track_kit(sound_t *s, int t, int kit)
 
 void engine_track_preset(sound_t *s, int t, int k)
 {
-    int i;
-    if (t < 0 || t >= NTRK || k < 0 || k >= gva_npresets)
+    int i, tt;
+    if (t < 0 || t >= NTRK)
         return;
-    for (i = 0; i < VA_N; i++)
-        s->va[t][i] = gva_presets[k].pot[i];
+    tt = s->ttype[t];
+    if (k < 0 || k >= engine_npresets(tt))
+        return;
+    if (tt == TT_DRUM) {
+        engine_track_kit(s, t, k);
+        return;
+    }
+    if (tt == TT_VA)
+        for (i = 0; i < VA_N; i++)
+            s->va[t][i] = gva_presets[k].pot[i];
+    else if (tt == TT_303)
+        for (i = 0; i < BASS303_NPARAMS; i++)
+            s->b303[t][i] = b303_presets[k].pot[i];
     s->kit[t] = (uint8_t)k;
     engine_set(T_TRK, t, TK_RELOAD, 0);
+}
+
+int engine_npresets(int tt)
+{
+    return tt == TT_DRUM ? gd_nkits : tt == TT_303 ? b303_npresets : tt == TT_VA ? gva_npresets : 0;
+}
+const char *engine_preset_name(int tt, int k)
+{
+    int n = engine_npresets(tt);
+    if (n <= 0)
+        return "OFF";
+    k = ((k % n) + n) % n;
+    return tt == TT_DRUM ? gd_kit_names[k] : tt == TT_303 ? b303_presets[k].name : gva_presets[k].name;
 }
 
 void engine_apply_sound(const sound_t *s)

@@ -42,7 +42,7 @@ enum { MX_LEVEL, MX_PAN, MX_REV, MX_DLY, MX_FILTER, MX_RESO, MX_DRIVE, MX_NPARAM
 /* the sound of a project: every pot of every engine, mirrored here by the main loop */
 typedef struct {
     uint8_t ttype[NTRK];               /* TT_* */
-    uint8_t kit[NTRK];                 /* the factory kit (DRUM) or preset (VA) last loaded (shown) */
+    uint8_t kit[NTRK];                 /* the factory kit (DRUM) or preset (303, VA) last loaded (shown) */
     uint8_t drum[NTRK][NDSND][GP_N];   /* a drum track's 8 sounds */
     uint8_t b303[NTRK][B303_NP];       /* a 303 track's pots */
     uint8_t mix[NTRK][MX_NPARAMS + 1]; /* (+1: aligned) */
@@ -80,7 +80,10 @@ void engine_apply_sound(const sound_t *s);                  /* queue every value
 void engine_sound_defaults(sound_t *s);                     /* the power-on sound: see gengine.c */
 void engine_track_kit(sound_t *s, int trk, int kit);        /* a factory kit into a drum track's mirror,
                                                              * then TK_RELOAD queued */
-void engine_track_preset(sound_t *s, int trk, int preset);  /* the same for a VA preset */
+void engine_track_preset(sound_t *s, int trk, int preset);  /* the same for a preset of the track's type
+                                                             * (VA or 303) */
+int engine_npresets(int tt);                                /* kits / presets of a type (0: none) */
+const char *engine_preset_name(int tt, int k);
 void engine_drum(int trk, int snd, float vel);              /* play now (keys) */
 void engine_note_on(int trk, int note, int chord, int accent, int slide);   /* chord: gp_chords (VA) */
 void engine_note_add(int trk, int note);                    /* a VA in CHORD: one more note sounding */

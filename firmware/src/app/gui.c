@@ -387,8 +387,8 @@ static void knob_turn(const knob_t *k, int d)
         return;
     switch (k->role) {
     case KR_POT: pot_turn(k->target, k->voice, k->index, d); return;
-    case KR_TEMPO: {
-        float b = seq.bpm + (float)d * ((d > 2 || d < -2) ? 1.0f : 0.1f);
+    case KR_TEMPO: {                                  /* 1 BPM a detent */
+        float b = (float)(int)(seq.bpm + 0.5f) + (float)d;
         seq.bpm = b < 40.0f ? 40.0f : b > 300.0f ? 300.0f : b;
         break;
     }
@@ -771,18 +771,21 @@ static void input(void)
             ui.spage = (uint8_t)(s > 0);
         }
     }
-    d = plat_enc(EN_PRESET);
-    if (d && ttype(ui.trk) == TT_DRUM && (ui.view == V_EDIT || ui.view == V_SEQ)) {
-        int kit = (int)proj.sound.kit[ui.trk] + d;
-        kit = ((kit % gd_nkits) + gd_nkits) % gd_nkits;
-        engine_track_kit(&proj.sound, ui.trk, kit);   /* loads while playing */
-        ui_say("KIT", gd_kit_names[kit]);
-        touch();
-    } else if (d && ttype(ui.trk) == TT_VA && (ui.view == V_EDIT || ui.view == V_SEQ || ui.view == V_HOME)) {
-        int k = (int)proj.sound.kit[ui.trk] + d;
-        k = ((k % gva_npresets) + gva_npresets) % gva_npresets;
-        engine_track_preset(&proj.sound, ui.trk, k);
-        ui_say("PRESET", gva_presets[k].name);
+    d = plat_enc(EN_PRESET);                          /* PRESETS: the track's kit or preset, on every screen */
+    if (d && engine_npresets(ttype(ui.trk))) {
+        int n = engine_npresets(ttype(ui.trk)), k = (int)proj.sound.kit[ui.trk] + d;
+        k = ((k % n) + n) % n;
+        engine_track_preset(&proj.sound, ui.trk, k);   /* loads while playing */
+        {
+            char t[24] = "", nb[4];
+            scat(t, ttype(ui.trk) == TT_DRUM ? "KIT " : "PRESET ");
+            put_num(nb, k + 1);
+            scat(t, nb);
+            scat(t, "/");
+            put_num(nb, n);
+            scat(t, nb);
+            ui_say(t, engine_preset_name(ttype(ui.trk), k));
+        }
         touch();
     }
     knobs_of(kn);
@@ -797,11 +800,17 @@ static void input(void)
 #define BOT_Y 168
 #define BOT_H 72
 
-/* bar.beat (as Skiff): the bars since PLAY, counted by the sequencer's bar clock, and the beat in the
- * bar; 1.1 when stopped */
+/* bar.beat (as Skiff): where the selected track is in its pattern, in bars of 4 beats at its rate; a
+ * 16-step pattern of 1/16 runs 1.1 .. 1.4, a 32-step one 1.1 .. 2.4, then again. 1.1 when stopped */
 static int bar_key(void)
 {
-    return seq.playing ? (int)(seq.bars % 1000u) * 4 + (seq.t[TRK_BAR].pos & 15) / 4 : 0;
+    static const uint8_t SPB[NRATES] = {4, 6, 8, 3, 2};   /* steps a beat: 1/16, 1/16T, 1/32, 1/8T, 1/8 */
+    int spb, st;
+    if (!seq.playing)
+        return 0;
+    spb = SPB[cur_tp()->rate % NRATES];
+    st = eng_step[ui.trk] % NSTEPS;
+    return st / spb;                                    /* beats from the pattern's start */
 }
 static void bar_beat(char *b)
 {
@@ -924,8 +933,7 @@ static void draw_home(void)
             cv_rect(0, y - 1, 2, 15, C_HI);                 /* the selected track: a bar at its lane's edge */
         cv_text(3, y, &FONT_T, b, c);
         b[0] = 0;
-        scat(b, ttype(t) == TT_DRUM ? gd_kit_names[proj.sound.kit[t] % gd_nkits] : ttype(t) == TT_303 ? "303 BASS" :
-                ttype(t) == TT_VA ? gva_presets[proj.sound.kit[t] % gva_npresets].name : "OFF");
+        scat(b, engine_preset_name(ttype(t), proj.sound.kit[t]));
         cv_text(14, y, &FONT_T, b, muted ? RGB(255, 90, 60) : ttype(t) == TT_OFF ? C_DIM : c);
         if (muted)
             cv_text(14 + text_w(&FONT_T, b) + 4, y, &FONT_T, "M", RGB(255, 90, 60));
@@ -1088,11 +1096,13 @@ static void draw_edit(void)
         cv_text(4, 30, &FONT_S, gd_kit_names[proj.sound.kit[t] % gd_nkits], C_AMB);
         cv_text(4, 100, &FONT_T, "BLACK KEYS: SOUND   PRESETS: KIT", C_DIM);
     } else if (ttype(t) == TT_303) {
-        cv_text(4, 6, &FONT_B, "303", C_WHITE);
+        cv_text(4, 6, &FONT_B, engine_preset_name(TT_303, proj.sound.kit[t]), C_WHITE);
+        cv_text(4, 30, &FONT_S, "303", C_AMB);
+        cv_text(4, 100, &FONT_T, "SELECT: PAGE   PRESETS: PRESET", C_DIM);
     } else if (ttype(t) == TT_VA) {
         static const char *const PG[] = {"OSCILLATORS", "MIX", "FILTER", "FILTER ENVELOPE", "AMP ENVELOPE",
                                          "VOICE", "LFO"};
-        cv_text(4, 6, &FONT_B, gva_presets[proj.sound.kit[t] % gva_npresets].name, C_WHITE);
+        cv_text(4, 6, &FONT_B, engine_preset_name(TT_VA, proj.sound.kit[t]), C_WHITE);
         cv_text(4, 30, &FONT_S, ui.epage < 7 ? PG[ui.epage] : "", C_AMB);
         cv_text(4, 100, &FONT_T, "SELECT: PAGE   PRESETS: PRESET", C_DIM);
     } else {

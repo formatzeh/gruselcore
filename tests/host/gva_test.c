@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The VA synth: finite and bounded for every preset and every pot at its extremes; a note ends after
- * its release; MONO slides glide, CHORD plays its notes, UNISON detunes; every preset at the drum kits'
- * loudness (-16 dB, within 1.5 dB). Writes each preset to OUT/va_NN.wav. */
+ * its release; MONO slides glide, CHORD plays its notes, UNISON detunes (the presets' loudness:
+ * presets_test.c). Writes each preset to OUT/va_NN.wav. */
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -90,8 +90,6 @@ int main(int argc, char **argv)
         printf("%-13s %6.1f dB  peak %.2f%s\n", gva_presets[k].name, lu, pk, measure ? "" : "");
         CHECK(!bad, "%s: not finite", gva_presets[k].name);
         CHECK(pk < 1.8f, "%s: peak %.2f", gva_presets[k].name, pk);
-        if (!measure)
-            CHECK(fabs(lu - TARGET_DB) <= 1.5, "%s: loudness %.1f dB, want %.1f", gva_presets[k].name, lu, TARGET_DB);
         CHECK(va.idle, "%s: still sounding 2.5 s after its release", gva_presets[k].name);
         if (out) {
             snprintf(path, sizeof path, "%s/va_%02d.wav", out, k + 1);

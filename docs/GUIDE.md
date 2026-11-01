@@ -9,7 +9,8 @@ tracks can be switched off. Everything can be edited while the sequencer plays.
 | --- | --- |
 | PLAY | Start / stop |
 | ALGORITHM knob | Select the track (1–8) |
-| GLO + SELECT knob | The tempo (locked otherwise, so it can't be changed by accident) |
+| GLO + SELECT knob | The tempo, 1 BPM a step (locked otherwise, so it can't be changed by accident) |
+| PRESETS knob | The selected track's kit (DRUM) or preset (303, VA), on every screen, while playing |
 | SAVE | Save the project. While playing, it saves the moment you stop (writing to the FM-1's memory pauses the sound for a moment) |
 | REC | On a 303 or VA track: the keys play it and write the notes into the steps |
 | ARP | The selected 303 or VA track's arpeggiator (SEQ's second page); again: back |
@@ -21,7 +22,8 @@ anything for a few seconds.
 
 ## HOME – all 8 tracks, and the keyboard
 
-- **Top line:** play / stop, **bar.beat** (the bars since PLAY, and the beat), the tempo,
+- **Top line:** play / stop, **bar.beat** (where the selected track is in its pattern: 16 steps run
+  1.1–1.4, 32 steps 1.1–2.4, then again), the tempo,
   the keyboard's octave (when not 0), the selected track and its pattern.
 - **Each track's lane:** its number, its name (the kit, or 303 BASS; M when muted) and its steps; the
   selected track has a bar at its edge.
@@ -50,7 +52,6 @@ anything for a few seconds.
 - **White keys 1–16:** set / clear its steps. Hold **ENV** for accents.
 - **OCT− / OCT+:** steps 17–32, 33–48, 49–64.
 - **Knobs:** LENGTH (8, 16, 32, 64), RATE (1/16, 1/16T, 1/32, 1/8T, 1/8), SWING on/off for this track.
-- **PRESETS knob:** load another kit, while playing.
 
 **303 and VA tracks** (the same steps: changing a track between 303 and VA keeps them)
 - **White key:** switches a step on / off. **Hold it** and turn the knobs: NOTE, GATE (rest, note,
@@ -70,8 +71,22 @@ anything for a few seconds.
   **PRESETS** loads a kit. Each sound has MODEL, LEVEL, TUNE,
   PITCH, P.DEC, BODY, DECAY, TAIL, CLICK, TONE, NOISE, DRIVE, CURVE, PUNCH, ATTACK, PAN.
 
-**VA** – **PRESETS** loads a preset: ROLLING BASS, OFFBEAT BASS, TRANCE LEAD, SUPERSAW PAD, PSY PLUCK,
-DARK STAB, FOREST ZAP, DARK DRONE, HOOVER, MENTAL ACID, PSYCHILL KEY, SUB BASS. Seven pages:
+**303** – 20 presets: CLASSIC 303, ACID SQUEAL, DEEP ACID, RUBBER BASS, SQUARE ACID, DIST ACID, FUZZ ACID,
+HARDTEK 303, MENTAL 303, TRIBE 303, DARK 303, PSY ROLL 303, SOFT ACID, SLIDE MONSTR, SHORT BLIP, LONG SWEEP,
+FOREST 303, DUB 303, SCREAM 303, TRANCE 303.
+
+**VA** – 52 presets, every one as loud as the drum kits:
+- basses: ROLLING BASS, OFFBEAT BASS, SUB BASS, PSY ROLLER, FOREST BASS, DARKPSY BASS, DARK PROG BS,
+  TRIBE BASS, HARDTEK BASS, TECHNO RUMBL, REESE BASS, GROWL BASS, SQUARE BASS, TRANCE BASS, MENTAL ACID,
+  ACID SAW
+- leads: TRANCE LEAD, HOOVER, PSY LEAD, GOA LEAD, SCREAMER, ACID LEAD, MENTAL SAW, SINE LEAD, BRASS LEAD,
+  WHISTLE
+- plucks and stabs: PSY PLUCK, DARK STAB, TRANCE PLUCK, CHORD STAB, DUB CHORD, HARD STAB, BELL PLUCK,
+  MARIMBA, TRIBE PLUCK, PSYCHILL KEY
+- pads: SUPERSAW PAD, DARK DRONE, WARM PAD, DARK PAD, STRINGS, ATMO SWEEP, CHOIR, PSYCHILL PAD
+- effects: FOREST ZAP, LASER ZAP, NOISE SWEEP, RISER, BLIP, ALIEN TALK, DRIP, WOBBLE
+
+The VA's seven pages:
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |

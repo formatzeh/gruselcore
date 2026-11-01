@@ -278,7 +278,7 @@ static void sound_sanitize(sound_t *s)
     for (t = 0; t < NTRK; t++) {
         if (s->ttype[t] >= NTT)
             s->ttype[t] = TT_OFF;
-        if (s->kit[t] >= (s->ttype[t] == TT_VA ? gva_npresets : gd_nkits))
+        if (s->kit[t] >= engine_npresets(s->ttype[t] ? s->ttype[t] : TT_DRUM))
             s->kit[t] = 0;
         for (i = 0; i < VA_N; i++)
             if (s->va[t][i] > gva_param(i)->max)
@@ -408,8 +408,8 @@ void project_set_type(int t, int tt)
     keep = tt_notes(tt) && tt_notes(proj.sound.ttype[t]);   /* 303 <-> VA: the same steps, kept */
     proj.sound.ttype[t] = (uint8_t)tt;
     engine_set(T_TRK, t, TK_TYPE, tt);
-    if (tt == TT_VA)
-        engine_track_preset(&proj.sound, t, 0);           /* a VA starts from its first preset */
+    if (tt == TT_VA || tt == TT_303)
+        engine_track_preset(&proj.sound, t, 0);           /* a 303 or VA starts from its first preset */
     else if (proj.sound.kit[t] >= gd_nkits)
         proj.sound.kit[t] = 0;
     if (!keep)
