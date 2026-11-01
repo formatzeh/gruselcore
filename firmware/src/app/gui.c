@@ -341,13 +341,13 @@ static void knob_turn(const knob_t *k, int d)
     case KR_LEN:
         for (i = 0; i < 4 && LENS[i] != tp->len; i++)
             ;
-        i = (i == 4 ? 1 : i) + (d > 0 ? 1 : -1);
+        i = (i == 4 ? 1 : i) + d;
         tp->len = LENS[i < 0 ? 0 : i > 3 ? 3 : i];
         if (ui.page * 16 >= tp->len)
             ui.page = 0;
         break;
     case KR_RATE: {
-        int r = tp->rate + (d > 0 ? 1 : -1);
+        int r = tp->rate + d;
         tp->rate = (uint8_t)(r < 0 ? 0 : r >= NRATES ? NRATES - 1 : r);
         break;
     }
@@ -376,7 +376,7 @@ static void knob_turn(const knob_t *k, int d)
     }
     case KR_SACC: tp->u.b.step[ui.held_step].flags = (uint8_t)(d > 0 ? tp->u.b.step[ui.held_step].flags | BS_ACCENT : tp->u.b.step[ui.held_step].flags & ~BS_ACCENT); break;
     case KR_SSLIDE: tp->u.b.step[ui.held_step].flags = (uint8_t)(d > 0 ? tp->u.b.step[ui.held_step].flags | BS_SLIDE : tp->u.b.step[ui.held_step].flags & ~BS_SLIDE); break;
-    case KR_TYPE: ui.pend_type = (uint8_t)((ui.pend_type + (d > 0 ? 1 : NTT - 1)) % NTT); break;
+    case KR_TYPE: ui.pend_type = (uint8_t)(((ui.pend_type + d) % NTT + NTT) % NTT); break;
     case KR_MCH: {
         int c = seq.ch[ui.trk] == SEQ_CH_OFF ? 16 : seq.ch[ui.trk];
         c += d > 0 ? 1 : -1;
