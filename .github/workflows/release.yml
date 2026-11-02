@@ -9,6 +9,11 @@ on:
     tags: ['v[0-9]*']
     branches: [main]
   workflow_dispatch:
+    inputs:
+      full:
+        description: 'Run the full test suite (~13 min) instead of the quick one (~3 min)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -72,7 +77,13 @@ jobs:
       test: |
         set -euo pipefail
         sh tests/loader_guard.sh          # (GruselCore) the update loader is Skiff 2.1.1's, unchanged
-        SANITIZE=0 sh tests/run_tests.sh
+        # (GruselCore) development builds: the quick suite (the way back, storage, UI, sounds, cost); release tags
+        # and a hand-started run with "full" ticked: the whole suite
+        if [[ "$GITHUB_REF" == refs/tags/* || "${{ inputs.full || false }}" == true ]]; then
+          SANITIZE=0 sh tests/run_tests.sh
+        else
+          sh tests/quick_tests.sh
+        fi
       packages: build/release-assets/*
 
   verify:
