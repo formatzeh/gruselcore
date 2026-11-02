@@ -395,6 +395,16 @@ static const preset_t FM6_PRESETS[] = {
     /* (Skiff phase 9) more for every engine: basses, kits */
     {"PICK BASS", {0, 2, 12, 0, 16, 2, 0, 7}, {0, 0, 127, 0}, 0, 1, FX(0, 0, 5, 10), TAG(PT_BASS)},
     {"GROWL BASS", {0, 5, 8, 0, 20, 0, 8, 3}, {0, 0, 127, 0}, 20, 1, FX(30, 0, 5, 5), MORE({P_LD_FLT, 36}, {P_LRATE, 80}, {P_DTYPE, 2}), TAG(PT_BASS)},
+    /* (GruselCore) 2026-11-02: dark, hypnotic sounds for the genres; jungle / DnB basses */
+    {"FM PSYBASS", {0, 3, 10, 0, -30, 0, 0, 2}, {0, 0, 127, 0}, 0, 1, FX(10, 0, 0, 0), TAG(PT_BASS)},
+    {"FM HYPNO", {0, 3, 8, 2, -20, 0, 10, 7}, {0, 0, 127, 0}, 0, 0, FX(0, 20, 70, 50), TAG(PT_PLUCK)},
+    {"METAL PERC", {0, 7, 20, 5, -30, 0, 0, 5}, {0, 0, 127, 0}, 0, 0, FX(0, 0, 40, 30), TAG(PT_DRUM)},
+    {"DARK BELL", {0, 2, 10, 3, 10, 0, 30, 1}, {0, 0, 127, 0}, 0, 0, FX(0, 30, 60, 80), TAG(PT_KEYS)},
+    {"FM DRONE", {0, 4, 4, 0, 30, 0, 60, 4}, {0, 0, 127, 0}, 0, 0, FX(0, 50, 30, 90), MORE({P_LSYNC, 1}, {P_LD_FLT, 30}), TAG(PT_PAD)},
+    {"FM DNB BASS", {0, 6, 14, 1, 0, 0, 0, 2}, {0, 0, 127, 0}, 0, 1, FX(30, 0, 0, 5), MORE({P_DTYPE, 1}), TAG(PT_BASS)},
+    {"FM WOBBLE", {0, 5, 6, 0, 0, 0, 10, 2}, {0, 0, 127, 0}, 0, 1, FX(30, 0, 0, 5), MORE({P_LSYNC, 6}, {P_LD_FLT, 50}, {P_DTYPE, 2}), TAG(PT_BASS)},
+    {"FM WOB 8T", {0, 4, 4, 1, 0, 0, 20, 3}, {0, 0, 127, 0}, 0, 1, FX(35, 0, 0, 5), MORE({P_LSYNC, 7}, {P_LD_FLT, 55}, {P_LWAVE, 1}), TAG(PT_BASS)},
+    {"FM NEURO", {0, 7, 20, 2, 0, 0, 20, 2}, {0, 0, 127, 0}, 0, 1, FX(40, 0, 0, 5), MORE({P_LSYNC, 9}, {P_LD_FLT, 40}, {P_LD_SHP, 20}, {P_DTYPE, 2}), TAG(PT_BASS)},
 };
 
 static const engine_t ENG_FM6 = {

@@ -80,7 +80,7 @@ static int settings_import_per(persist_t *p, int n)
     }
     if ((p->favorites.factory[15][27] ^ 3u) > 4u)  /* SCREEN OFF (1.1.5, ui.c ui_scr): stored ^ 3, unknown = 0 (30 MIN) */
         p->favorites.factory[15][27] = 0;
-    if (p->favorites.factory[15][21] >= 8u)        /* (Skiff phase 9) PRESETS' LIST type (ui.c ui_ptag, below PT_N) */
+    if (p->favorites.factory[15][21] >= PT_N)       /* (Skiff phase 9) PRESETS' LIST type (ui.c ui_ptag, below PT_N) */
         p->favorites.factory[15][21] = 0;
     if (p->favorites.factory[15][24] != 0xA5u) {   /* (no Skiff mark: Felucca's or JIANT's settings) [15][18..26]
                                                     * and bit 7 of [28] are theirs (Felucca 1.4's FX keys, LEDS INV, HOME

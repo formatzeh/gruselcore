@@ -1449,24 +1449,26 @@ static int test_preset_tags(void)
                 }
         bad += check("  every one its own name, across the engines", ok && n > 60u && n < 256u);
     }
-    {   /* (GruselCore) the factory sounds kept (2026-11-02), in the PRESETS list's order: nothing else listed */
+    {   /* (GruselCore) the factory sounds kept (2026-11-02; the genre sounds of the same day), in the PRESETS list's order: nothing else listed */
         static const char *const KEEP[] = {
             "SAW LEAD", "SOFT PAD", "SQR BASS", "PWM STR", "ACID", "RAVE", "SYNTH BRASS", "WIND SWEEP", "STRINGS",
-            "WAR HORN", "NEON LEAD", "SUNSET PAD", "HERO BRASS", "QUANTA", "REESE", "DRIVE BASS", "HARD SYNC", "SUB SAW",
-            "FM MARIMBA", "NYLON PICK", "GLASS KEYS", "ISOTOPE", "DARK MATTER", "PICK BASS", "GROWL BASS",
-            "PD BRASS", "PD ORGAN", "PD STRINGS", "WIRE", "NEUTRINO",
-            "ARP 8BIT", "WAVE LEAD", "STEP LEAD", "TRI BASS", "CHIP BELL",
-            "CHOIR AAH", "VOX LEAD", "WOW BASS", "WHISPER", "CRYPT CHOIR", "MONK CHANT", "DREAM CHOIR",
-            "FAT BASS", "ARP LEAD", "SYNC LEAD", "NEON ARP", "DIRTY BASS",
+            "WAR HORN", "NEON LEAD", "SUNSET PAD", "HERO BRASS", "QUANTA", "REESE", "DRIVE BASS", "HARD SYNC", "SUB SAW", "PROG BASS", "HARDTEK BAS", "MENTAL ACID", "MENTAL STAB", "TRIBE PLUCK", "RUMBLE", "DUB STAB", "DARK DRONE", "INDUS LEAD", "HYPNO SEQ", "TRANCE SAW", "SAW PLUCK", "GATE PAD", "SQUELCH", "ZAP", "DEEP SPACE", "CHILL PAD", "DNB REESE", "WOBBLE 8", "WOBBLE 8T", "WOBBLE 16", "WUB SLOW", "JUNGLE SUB", "BOOM SUB", "PUNCH BASS", "KNOCK BASS",
+            "FM MARIMBA", "NYLON PICK", "GLASS KEYS", "ISOTOPE", "DARK MATTER", "PICK BASS", "GROWL BASS", "FM PSYBASS", "FM HYPNO", "METAL PERC", "DARK BELL", "FM DRONE", "FM DNB BASS", "FM WOBBLE", "FM WOB 8T", "FM NEURO",
+            "PD BRASS", "PD ORGAN", "PD STRINGS", "WIRE", "NEUTRINO", "PD PSY BASS", "PD ACID", "PD MENTAL", "PD DARK BEL", "PD DRONE", "PD FOLD BAS", "PD WOBBLE",
+            "ARP 8BIT", "WAVE LEAD", "STEP LEAD", "TRI BASS", "CHIP BELL", "CRUSH BASS", "1BIT DRONE",
+            "CHOIR AAH", "VOX LEAD", "WOW BASS", "WHISPER", "CRYPT CHOIR", "MONK CHANT", "DREAM CHOIR", "TALK WOBBLE", "DARK CHANT",
+            "FAT BASS", "ARP LEAD", "SYNC LEAD", "NEON ARP", "DIRTY BASS", "TRIBE BASS", "MENTAL SAW", "SYNC SCREAM", "RING DARK", "DARK FIFTH", "TRIO SUPER", "HOOVER", "TRIO REESE", "TRIO WOBBLE", "BP WOBBLE", "PWM WOBBLE",
             "FULL ORGAN",
-            "CLOUD PAD", "FROZEN", "SHIMMER", "PIANO HAZE", "SAX DRONE", "SCATTER",
-            "PLUCK", "BOWED METAL", "UPRIGHT",
-            "ARCADE", "CAVE WIND", "PLASMA", "OCEAN"};
+            "CLOUD PAD", "FROZEN", "SHIMMER", "PIANO HAZE", "SAX DRONE", "SCATTER", "GHOST CLOUD", "FOREST AIR", "ABYSS", "MIST VEIL", "SPORE DRIFT", "DEAD PIANO", "MOSS BED", "WRAITH", "STAR DUST",
+            "PLUCK", "BOWED METAL", "UPRIGHT", "TRIBE DRUM", "KALIMBA DRK", "DARK PLUCK", "SITAR DRONE",
+            "ARCADE", "CAVE WIND", "PLASMA", "OCEAN", "RISER", "VOID WIND", "DUST", "STORM HOWL", "SPECTRE", "TUNNEL"};
         uint32_t all2, n = 0;
         preset_all_pos(&all2);
         for (i = 0, ok = 1; i < all2; i++) {
             e = preset_all_at(i, &k);
             if (e >= NENGINES || e == ENGI_DRUM || e == ENGI_DIGITAL)   /* (DIGITAL: a FELUCCA_FM4 build's) */
+                continue;
+            if (ENGINES[e]->presets[k].tag == PT_TEST)          /* (GruselCore) the sounds on trial (LIST TESTING) */
                 continue;
             ok &= n < NELEM(KEEP) && str_eq(ENGINES[e]->presets[k].name, KEEP[n]);
             if (n < NELEM(KEEP) && !str_eq(ENGINES[e]->presets[k].name, KEEP[n]))
@@ -1486,7 +1488,7 @@ static int test_preset_tags(void)
     ok = TSEL->eng_req == ENGI_DRUM && TSEL->preset == 0u;
     set_engine_of(TSEL, ENGI_SLICE);
     turn(EN_PRESET, -1);
-    ok &= str_eq(ENGINES[TSEL->eng_req]->name, "NOISE") && str_eq(ENGINES[TSEL->eng_req]->presets[TSEL->preset].name, "OCEAN");
+    ok &= str_eq(ENGINES[TSEL->eng_req]->name, "NOISE") && TSEL->preset == ENGINES[TSEL->eng_req]->npresets - 1u;   /* (its last) */
     set_engine_of(TSEL, 0);
     bad += check("  PRESETS from SLICE's hidden CHOP: right DRUM's first kit, left NOISE's last (OCEAN)", ok);
     up_store(30, "Mine");
@@ -1508,13 +1510,13 @@ static int test_preset_tags(void)
     bad += check("the PRESETS knob browses the basses, every one in turn", ok);
     for (i = 0; i < 10u; i++)
         turn(EN_K4, 1);
-    bad += check("LIST stops at its last type, FX", list_mode() == PT_N && ui_ptag == PT_FX && !favorites.filter);
+    bad += check("LIST stops at its last type, (GruselCore) TESTING", list_mode() == PT_N && ui_ptag == PT_TEST && !favorites.filter);
     {
         sks_t p;
         settings_export(&p);
         ui_ptag = 0;
         settings_import(&p, (int)sizeof p);
-        bad += check("the LIST type survives the settings' save and load", ui_ptag == PT_FX);
+        bad += check("the LIST type survives the settings' save and load", ui_ptag == PT_TEST);
         p.s.ptag = 0x7F;
         settings_import(&p, (int)sizeof p);
         bad += check("an unknown stored type reads as none (LIST ALL)", !ui_ptag && !list_mode());

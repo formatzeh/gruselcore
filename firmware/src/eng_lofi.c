@@ -212,6 +212,9 @@ static const preset_t LOFI_PRESETS[] = {
     /* (Skiff phase 9) more for every engine: basses, kits */
     {"TRI BASS", {0, 1, 64, 0, 0, 0, 0, 100}, {0, 60, 90, 20}, 0, 1, FX(0, 0, 5, 5), TAG(PT_BASS)},
     {"CHIP BELL", {2, 0, 20, 0, 30, 0, 0, 110}, {0, 70, 0, 50}, 0, 0, FX(0, 0, 40, 40), TAG(PT_PLUCK)},
+    /* (GruselCore) 2026-11-02: dark, hypnotic sounds for the genres; jungle / DnB basses */
+    {"CRUSH BASS", {2, 2, 64, 40, 0, 0, 0, 90}, {0, 60, 60, 20}, 0, 1, FX(30, 0, 0, 5), TAG(PT_BASS)},
+    {"1BIT DRONE", {3, 0, 64, 0, 0, 30, 0, 60}, {80, 90, 120, 95}, 0, 0, FX(0, 40, 40, 90), TAG(PT_PAD)},
 };
 
 static const engine_t ENG_LOFI = {

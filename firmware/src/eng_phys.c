@@ -226,6 +226,11 @@ static const preset_t PHYS_PRESETS[] = {
     {"BOWED METAL", {PM_MODAL, 98, 70, 112, 10, 80, 90, 0}, {60, 90, 127, 90}, 0, 0, FX(0, 40, 20, 70), TAG(PT_PAD)},
     /* (Skiff phase 9) more for every engine: basses, kits */
     {"UPRIGHT", {PM_STRING, 60, 60, 90, 20, 127, 0, 60}, {0, 100, 127, 40}, 0, 1, FX(20, 0, 5, 20), TAG(PT_BASS)},
+    /* (GruselCore) 2026-11-02: dark, hypnotic sounds for the genres; jungle / DnB basses */
+    {"TRIBE DRUM", {PM_MEMB, 60, 60, 60, 30, 110, 0, 0}, {0, 80, 0, 40}, 0, 0, FX(0, 0, 30, 40), TAG(PT_DRUM)},
+    {"KALIMBA DRK", {PM_MODAL, 40, 50, 70, 30, 90, 0, 0}, {0, 90, 0, 60}, 0, 0, FX(0, 20, 60, 60), TAG(PT_PLUCK)},
+    {"DARK PLUCK", {PM_STRING, 50, 40, 70, 30, 100, 0, 0}, {0, 90, 0, 50}, 0, 0, FX(0, 10, 60, 50), TAG(PT_PLUCK)},
+    {"SITAR DRONE", {PM_SYMP, 64, 70, 100, 20, 90, 0, 0}, {0, 100, 127, 80}, 0, 0, FX(0, 30, 30, 80), TAG(PT_PAD)},
 };
 
 static const engine_t ENG_PHYS = {

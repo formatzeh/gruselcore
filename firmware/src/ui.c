@@ -187,7 +187,7 @@ static int unit_g_id(uint32_t id) { return id == G_CLOCK || id == G_ROUTE || id 
  * engine uses (0 in every older setting: none, so ALL or FAV, favorites.filter, as before; settings_persist.c keeps it
  * below PT_N). favorites.filter stays 0 / 1: firmware before refuses a backup of any other (editor_backup.c) */
 #define ui_ptag (favorites.factory[15][21])
-_Static_assert(PT_N == 8, "settings_persist.c keeps ui_ptag below 8");
+_Static_assert(PT_N == 9, "settings_persist.c keeps ui_ptag below PT_N");
 /* MENU > AUDIO CLICK, CLICK LEVEL, COUNT-IN (1.1, Discussion #131; click.c, seq.c): two bits each in another byte no
  * engine uses, saved with the settings: bits 0-1 CLICK (OFF REC ON), 2-3 CLICK LEVEL (stored 0 MID, 1 LOW, 2 HIGH),
  * 4-5 COUNT-IN (OFF, 1 BAR, 2 BARS); 0 in older settings = OFF / MID / OFF, so nothing clicks or counts in that did
@@ -2116,7 +2116,7 @@ static uint32_t preset_all_at(uint32_t n, uint32_t *k)
 
 /* (Skiff phase 9) the LIST (PRESETS KNOB 4): 0 ALL, 1 FAV (favorites.filter), 2.. a type (ui_ptag + 1) */
 static uint32_t list_mode(void) { return ui_ptag ? ui_ptag + 1u : favorites.filter; }
-static const char *const LIST_NAME[PT_N + 1] = {"ALL", "FAV", "BASS", "LEAD", "PAD", "KEYS", "PLUCK", "DRUM", "FX"};
+static const char *const LIST_NAME[PT_N + 1] = {"ALL", "FAV", "BASS", "LEAD", "PAD", "KEYS", "PLUCK", "DRUM", "FX", "TESTING"};
 static int preset_in_list(uint32_t e, uint32_t k)     /* a LIST but ALL: the sound is in it (user presets: FAV only) */
 {
     if (ui_ptag)
