@@ -1,16 +1,17 @@
-# Building X0X
+# Building Skiff
 
 The build makes three files in `build/`:
 
 | File | What |
 | --- | --- |
-| `x0x.bin` | the firmware app |
+| `felucca.bin` | the firmware app |
 | `loader/ota.bin` | the update loader |
-| `x0x.fwsc` | the installable package (app + loader) |
+| `felucca.fwsc` | the installable package (app + loader) |
 
 ## Prerequisites (macOS)
 
-- Python 3 with Pillow: `pip3 install Pillow`
+- Python 3 with Pillow and fontTools: `pip3 install Pillow fonttools` (the UI font and icons are
+  rasterised at build time)
 - Docker Desktop. The JieLi toolchain is Linux x86-64 only; the build runs each tool in a
   `linux/amd64` `debian:bookworm-slim` container (Rosetta on Apple silicon). Keep the source
   tree in a folder Docker can share, e.g. under `/Users`.
@@ -29,6 +30,7 @@ The build makes three files in `build/`:
   ```
 
 - Node.js (optional, for the web tests).
+- Emscripten (optional, `emcc`: the browser emulator, `web/emu/`).
 
 On Linux x86-64 the toolchain runs natively and Docker is not needed.
 
@@ -41,21 +43,62 @@ On Linux x86-64 the toolchain runs natively and Docker is not needed.
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
-`./build.sh --release 0.1-beta` makes a release build; the package is `build/x0x-0.1-beta.fwsc`.
+`./build.sh --release 1.2` makes a release build: the package identity becomes `FM-1_712`
+(Skiff's 7XY; Felucca's are 9XY) and the version string `v1.2`; the package is `build/skiff-1.2.fwsc`, and
+`build/release-1.2/` holds what a release ships: the package, the app
+(`skiff-1.2-app.bin`), `SHA256SUMS`, the samples' attributions (`ATTRIBUTION.txt` for the CC0 sets,
+`ATTRIBUTION-BREAKS.txt` for SLICE's BREAK and FUNK), `LICENSE`, `LICENSING.md` and
+`LICENSES/` (the package contains Apache-2.0 SDK files, so the licence texts travel with it).
+`web/make_site.py build/skiff-1.2.fwsc 1.2 OUT` makes the GitHub Pages site from it: the browser installer, the
+editor and the package with its licences.
 
-On macOS with podman instead of Docker, put a `docker` script that runs `exec podman "$@"` first
-on your PATH. `X0X_JOBS` (default 4) limits parallel compiles: a podman machine drops
-connections when many containers start at once.
+`BOARD=smk37 ./build.sh` builds for the M-VAVE SMK-37 Pro instead ([SMK37.md](SMK37.md)): `build/skiff-smk37.fwsc`,
+identity `SMK-37 Pro_700` (a release `SMK-37 Pro_7XY`, `skiff-smk37-X.Y.fwsc`). `MODEL=elite` or `MODEL=mke` makes the
+same firmware under the SMK-37 Elite's or the MKE-P37's model name (`skiff-smk37-elite.fwsc`, `skiff-smk37-mke.fwsc`),
+so each unit's stock updater still takes its factory package later. The FM-1 build is unchanged by it, byte for byte.
+Both boards write the same files in `build/`: build the SMK first, copy its package out, build the FM-1 last, then
+run the tests (they read the FM-1's binaries; the SMK packages left in `build/` are checked too).
 
-Build option: `X0X_CDC=1` adds Felucca's USB serial function (off by default: one plain
-MIDI interface).
+Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`, `core.h` and `icons.c`):
 
-The build also generates `build/gen/`: the font, the 909's samples and tables
-(`tools/gen_drum_samples.py`), and the built-in break loops, rendered by the 909 port on the
-host (`tools/gen_builtin_break.sh`, needs a host `cc`). Opt-in, `X0X_BREAK_BANK=DIR` builds
-the break bank from one-bar WAVs instead (`tools/import_breaks.py` makes such a folder from
-BB Gen's samples, in `build/breaks/`); see README.md, Breaks. It fails if a soft-double routine is
-linked (a `double` crept in) and checks the image, RAM and pool sizes.
+| Flag | Default | |
+| --- | --- | --- |
+| `FELUCCA_FLASH` | 1 | settings, presets and projects in flash |
+| `FELUCCA_OTA` | 1 | update entry (needs `FELUCCA_FLASH`) |
+| `FELUCCA_CDC` | 1 | USB serial console and MENU > SYSTEM > USB SERIAL (a `--release` build: 0, unless set to 1) |
+| `FELUCCA_CDC_DEFAULT` | 1 | `0`: the console is built in but left out of USB from boot (as MENU > USB SERIAL OFF) |
+| `FELUCCA_UAC` | 1 | USB audio input (the master output, stereo, 44.1 or 48 kHz) |
+| `FELUCCA_UAC_48K` | 1 | `0`: the USB audio input at 44.1 kHz only, as up to 1.0.5.2 (`firmware/src/usb.c`) |
+| `FELUCCA_UART` | 1 | TRS MIDI IN |
+| `FELUCCA_SLICE` | 1 | the SLICE engine |
+| `FELUCCA_ICONS` | 1 | parameter icons on the knob cards |
+| `FELUCCA_FM4` | 0 | the retired DIGITAL engine (4-operator FM) instead of its FM6 conversion |
+
+`FELUCCA_USB_LAYOUT` (`0` to `3`, default `0`) picks other USB descriptor layouts for testing; see
+`firmware/src/usb.c`.
+
+## Samples
+
+The CC0 instrument samples that the SAMPLE engine uses are in `assets/samples-cc0/`
+(Versilian Studios, see `ATTRIBUTION.txt` there). `tools/fetch_cc0.py` downloads them
+again from the source repositories. Without that folder the build still works, with no
+instrument sets in the SAMPLE engine and no PIANO in SLICE (the PIANO set's middle C): they play a plain sine
+at the note's pitch instead, and the screen says NO SAMPLE.
+
+## Browser emulator
+
+```
+./build.sh
+web/emu/build.sh
+python3 -m http.server -d build 8790        # open http://localhost:8790/emu/ (the page loads ../panel.js)
+```
+
+`web/emu/felucca_web.c` builds the firmware's sources as the host tests do, against a simulated FM-1, and
+Emscripten compiles it to WebAssembly (`build/emu/felucca.wasm`, with `index.html`, `worklet.js` and the font in `fonts/`). The page
+keeps the flash's storage sectors (projects, user presets, settings) in the browser. Not emulated: USB (audio,
+MIDI out, the editor, updates), TRS MIDI and the user sample slots. The site has it at
+<https://illuminus5.github.io/skiff/try/> (`web/make_site.py` copies `build/emu` there: build it with `EMU_PREVIEW=0` after
+the release build). It is Felucca's, after X0X's: <https://hugelton.github.io/Felucca/webapp/try/> runs Felucca.
 
 ## Tests
 
@@ -63,26 +106,36 @@ linked (a `double` crept in) and checks the image, RAM and pool sizes.
 tests/run_tests.sh
 ```
 
-Runs, on the build machine: the maths library against libm; the sequencer and TB-3PO
-(against schwung-tb3po, from `../schwung-tb3po` or `TB3PO_REF`); each engine against its
-original (9W9, 8W8, schwung-303, BB Gen — the scripts in `tests/host/` say where they look
-for those sources); flash storage; Felucca's update-path tests against `build/x0x.fwsc`
-(the loader test needs `AC79_SDK`); and the whole app in the simulator
-(`tests/scenarios/*.x0x`), with its screenshots and audio in `build/scenarios/`.
+Runs the host tests and, with Node.js, the web page tests (and, with Emscripten too, the browser emulator's). Run it after `./build.sh`
+(it uses `build/` and needs `AC79_SDK` set as for the build). The suites cover flash storage,
+user presets, projects of every format, backup, the keys and knobs, MIDI (USB, TRS, clock,
+control), USB audio, the update entry and loader, the command-line installer, the UI (the real
+drawing code against stubs: every screen in every palette is rendered and checked for clipped or
+overlapping text; PNGs land in `build/ui_new/`), every engine (DRUM, NOISE, PHYS, FM6, SLICE, the
+DIGITAL conversion), the chord keys, the modulation matrix, the FX layer, the reverbs, the SLICER
+and swing. With `DAISYSP` pointing at a DaisySP checkout, the PHYS models are also compared with
+their floating-point originals; without it that test is skipped.
 
-`host/build_host.sh` builds the simulator alone; `build/host/x0x_host SCRIPT OUTDIR` runs one
-script (the command list is at the top of `host/x0x_host.c`).
+The regression suite (`tests/regress.c`) renders every engine and preset and compares a
+hash of each render with `tests/golden.txt`; it also checks levels, voices and the CPU
+cost (`tests/cpu_baseline.txt`, `tests/target_budget.txt`). After an intended change of
+the sound, `GOLDEN_UPDATE=1 sh tests/run_tests.sh` rewrites the hashes; `BUDGET_UPDATE=1`
+does the same for the cost files. The UI renders (`tests/ui_render.c`) do the same for the screen: a hash of every
+picture in `tests/ui_golden.txt`, rewritten by `UI_GOLDEN_UPDATE=1` after an intended change of the look.
+
+What a change costs in flash and RAM: build the commit before it in a folder of its own (`git archive`), then
+`python3 tools/size_diff.py OLD/build/felucca.elf build/felucca.elf` lists the sections, symbols and source files
+that grew or shrank.
 
 ## Install
 
-X0X's web installer is <https://charlesvestal.github.io/fm1-x0x/install/> (Felucca's, at
-hugelton.github.io, installs Felucca). To install your own build, use the command line, or a local
-copy of the site (below).
+Use the web installer in Chrome or Edge:
+<https://hugelton.github.io/Felucca/webapp/installer/>. It installs the released package.
 
 From the command line (needs `pip3 install mido python-rtmidi`):
 
 ```
-python3 tools/fm1_install.py build/x0x.fwsc
+python3 tools/fm1_install.py build/felucca.fwsc
 python3 tools/fm1_install.py --info          # identity of the connected FM-1
 ```
 
@@ -90,49 +143,10 @@ Or, to install your own build from the web installer, make a local copy of the s
 (Web MIDI needs a secure context):
 
 ```
-./build.sh --release 0.1-beta                     # the site wants a release build (identity FM-1_9XY)
-python3 tools/make_pages.py build/x0x-0.1-beta.fwsc 0.1-beta build/pages
-cd build/pages && python3 -m http.server 8000
-# open http://localhost:8000/install/
+python3 web/make_site.py build/felucca.fwsc dev /tmp/felucca-site
+cd /tmp/felucca-site && python3 -m http.server 8000
+# open http://localhost:8000/webapp/installer/
 ```
 
-Installing firmware is at your own risk. If the FM-1 no longer starts but reaches the chip's
-update mode (4C4A:8057 on USB), `tools/fm1_rescue.sh` puts stock back from a Mac (V15 or V16, whichever bootloader the FM-1 has) (docs/MANUAL.md,
-Troubleshooting); otherwise recovery needs [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).
-
-## Publishing a release
-
-Push a version tag (for example `v1.1.1`) to run `.github/workflows/release.yml`. It calls
-[`zvenson/fm1-build` at `v1`](https://github.com/zvenson/fm1-build/tree/v1), the same reviewed
-builder used by [Melodee](https://github.com/keremimo/melodee/commit/4f5fb6df7cb5573bd4694df78f81a0a416c0dfd2).
-The builder runs X0X's `./build.sh --release VERSION` and `tests/run_tests.sh`, then signs
-GitHub build provenance for both `x0x-VERSION.fwsc` and `x0x-VERSION-app.bin`. The reference
-engines used by the host tests are fetched at fixed commits. Test failures block attestation
-and publication.
-
-The workflow prepares a draft, verifies the packages' SHA-256 checksums and attestations
-against the shared builder, source tag and commit, then publishes the release. Tags with a
-suffix (such as `v1.2-beta`) become prereleases. An existing public release is never rebuilt;
-use a new tag. Reruns can resume a draft. A manual run on a branch builds and attests a
-development package, available in the run's `packages` artifact, without creating a release.
-
-To verify a downloaded release package yourself (requires GitHub CLI authentication):
-
-```sh
-tag=v1.1.1
-repo=charlesvestal/fm1-x0x
-gh release download "$tag" --repo "$repo" --dir build/verify --pattern '*.fwsc'
-git fetch origin "refs/tags/$tag:refs/tags/$tag"
-gh attestation verify "build/verify/x0x-${tag#v}.fwsc" --repo "$repo" \
-  --signer-workflow zvenson/fm1-build/.github/workflows/build.yml \
-  --source-ref "refs/tags/$tag" --source-digest "$(git rev-parse "$tag^{commit}")"
-```
-
-The same command verifies the release's `*-app.bin`. `SHA256SUMS` accompanies the downloads;
-checksums alone do not establish signed build provenance. The Firmware Hub recognises the
-shared builder's signed attestations as evidence that a package was built from source.
-
-GitHub Pages remains a separate publication step. Download the attested `.fwsc` from the
-release into `build/`, then run `tools/publish_pages.sh VERSION`. This builds the landing page,
-web installer, manual and emulator with `tools/make_pages.py` and pushes the site, including
-that exact firmware package, to `gh-pages` at <https://charlesvestal.github.io/fm1-x0x/>.
+Installing firmware is at your own risk. If an install fails and the FM-1 no longer
+starts, recovery needs [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).

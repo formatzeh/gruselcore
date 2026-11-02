@@ -1,16 +1,72 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 //
-// The FM-1 USB-MIDI update protocol (M-UPGRADE compatible) over WebMIDI.
-// Step 1: the running firmware reads parts of the package and stages the update
-// loader. Step 2: the loader reads the whole image and writes it. In both steps
-// the device sends cmd 0x30 read requests on the logical image and we answer.
+// The FM-1 USB-MIDI update protocol over WebMIDI (after tools/fm1_install.py).
+// Step 1: the running firmware (official
+// or Felucca) reads parts of the package and stages the update loader. Step 2:
+// the loader reads the whole image and writes it. Both steps are "the device
+// asks, we answer": cmd 0x30 read requests on the logical image.
+
+import { flashSpan } from "./fm1pkg.js";
 
 const HS_QUERY = [0xF0, 0x00, 0x32, 0x45, 0x00, 0x00, 0x00, 0x40, 0x7F, 0xF7];
 const UPGRADE = [0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7];
 const MAXDATA = 512;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const IS_OTA = (id) => /^ota-/i.test(id.model);
+export const IS_OTA = (id) => /^ota-/i.test(id.model);
+// two models ("ota-" aside) are exactly the same: a package installs only on its own model (the SMK-37 Pro,
+// SMK-37 Elite and MKE-P37 builds each on their own model, never an FM-1 and an SMK)
+export const sameModel = (a, b) => a.replace(/^ota-/i, "") === b.replace(/^ota-/i, "");
+// the site's package for a device's model, from [{ product, pkg }], or null (no build for that model)
+export const packageFor = (packages, model) => packages.find((p) => sameModel(model, p.product.split("_")[0])) || null;
+// a stock SMK-37 Pro / Elite / MKE-P37 older than V016 (identity _011.._015) is updated with M-VAVE's tool first:
+// the SMK port's install was verified from V016. FM-1s, Skiff (7xx), other ports (9xx) and recovery (000) pass
+export const SMK_MODELS = ["SMK-37 Pro", "SMK-37 Elite", "MKE-P37"];
+export const needsStockUpdate = (id) => SMK_MODELS.includes(id.model) && id.version > 0 && id.version < 16;
+// (2.0.2, #64) why a running Skiff turned an official FM-1 file away, from where its reads stopped (firmware/src/ota.c
+// ota_stage, the counts pinned by tests/ota_test.c): after the header's 2, flash.bin's size (V16's file, a Skiff before
+// 2.0.2); within the boot area's 32 after the 3 before them, the head (the unit started on the other version). (2.0.3,
+// #64) An SMK-37's head there is not V016's, the only SMK file the page takes: no version to name. The message's key
+// (index_pkg.html), or null
+export function stockRefusal(product, e) {
+  const smk = SMK_MODELS.includes(product.split("_")[0]);
+  if (!e || e.code !== "stopped" || (!smk && !/^FM-1_/.test(product))) return null;
+  if (e.served === 2 && !smk) return "stockSkiffOld";
+  if (e.served >= 4 && e.served <= 35) return smk ? "stockSmkHead" : product === "FM-1_016" ? "stockNeedsV15" : "stockNeedsV16";
+  return null;
+}
+
+// step 2's percentage, forward only, from the flash.bin bytes served (as tools/fm1_install.py WriteMeter).
+// Felucca's and Skiff's loaders read flash.bin twice, upward: a check pass, then the write pass without the
+// 16 KiB head, the app's header sector last. M-VAVE's reads it once, downward. The first reads past the head
+// tell which; until then it shows 0
+export class WriteMeter {
+  constructor(image) {
+    this.span = flashSpan(image); this.len = image.length;
+    this.done = 0; this.total = 0; this.pct = 0; this.seen = [];
+  }
+  add(addr, n) {
+    let p;
+    if (!this.span) p = Math.floor((addr + n) * 100 / this.len);     // no file list: how far up the image
+    else {
+      const { off: lo, size } = this.span;
+      if (addr < lo || addr >= lo + size) return this.pct;
+      this.done += n;
+      const o = addr - lo;
+      if (!this.total && o >= 0x4000 && (!this.seen.length || o !== this.seen[this.seen.length - 1])) {
+        this.seen.push(o);
+        if (this.seen.length > 8) {
+          let up = 0;
+          for (let i = 1; i < this.seen.length; i++) if (this.seen[i] > this.seen[i - 1]) up++;
+          this.total = up * 2 > 8 ? 2 * size - 0x4000 : size;
+        }
+      }
+      p = this.total ? Math.floor(this.done * 100 / this.total) : 0;
+    }
+    this.pct = Math.max(this.pct, Math.min(99, p));
+    return this.pct;
+  }
+}
 
 // errors carry a code the pages translate: notfound, model, stopped, noloader, lost, noreturn,
 // mismatch (detail: the identity the device reports), badreq
@@ -108,9 +164,13 @@ async function handshake(link, tries = 3) {
 }
 
 export class Updater {
-  constructor(access, log) {
+  // opts.resumeWaitMs / opts.resumeMax: a write cut off (cable, power, a loader that resets or stalls) waits that
+  // long for the same model's loader to answer again, and is tried that many times in all
+  constructor(access, log, opts = {}) {
     this.access = access;
     this.log = log || (() => {});
+    this.resumeWaitMs = opts.resumeWaitMs ?? 120000;
+    this.resumeMax = opts.resumeMax ?? 5;
   }
 
   // every in/out pair with the same port name that answers the handshake
@@ -118,8 +178,8 @@ export class Updater {
     const outs = [...this.access.outputs.values()];
     for (const input of this.access.inputs.values()) {
       if (input.state === "disconnected") continue;
-      if (!/fm-1|felucca|ota|composite|sinco|usb-midi/i.test(input.name || "")) continue;   // never probe other gear
-      const output = outs.find((o) => o.name === input.name) || (outs.length === 1 ? outs[0] : null);
+      if (!/fm-1|smk|elite|mke-p37|starry|felucca|ota|composite|sinco|usb-midi/i.test(input.name || "")) continue;   // never probe other gear
+      const output = outs.find((o) => o.name === input.name && o.state !== "disconnected");
       if (!output) continue;
       try { await input.open(); await output.open(); } catch (_) { continue; }
       const link = new Link(input, output);
@@ -165,32 +225,36 @@ export class Updater {
         return { served, finished: false, lost: true };
       }
       served++;
-      if (onProgress) onProgress(served, r.addr);
+      if (onProgress) onProgress(served, r.addr, r.len);
     }
   }
 
   // full install: running firmware -> loader -> new firmware
   async install(image, product, onStep) {
     const step = onStep || (() => {});
-    const dev = await this.find((id) => !IS_OTA(id));
-    if (!dev) throw fail("notfound", "FM-1 not found (USB cable, and no other app using it?)");
-    const [model] = product.split("_");
-    if (dev.id.model !== model) { dev.link.close(); throw fail("model", `the device is ${dev.id.text}, the package is for ${product}`); }
+    const [model] = product.split("_");   // the package's model first: an FM-1 and an SMK can share a computer
+    const dev = await this.find((id) => !IS_OTA(id) && sameModel(id.model, model)) || await this.find((id) => !IS_OTA(id));
+    if (!dev) throw fail("notfound", "FM-1 or SMK-37 not found (USB cable, and no other app using it?)");
+    if (!sameModel(dev.id.model, model)) { dev.link.close(); throw fail("model", `the device is ${dev.id.text}, the package is for ${product}`); }
     step("start", dev.id.text);
     dev.link.send(UPGRADE);
     await sleep(2000);
     const s1 = await this.serve(dev.link, image, 0xE0000000, 8000, (n) => step("verify", n));
     dev.link.close();
-    if (!s1.finished) throw Object.assign(fail(s1.lost ? "lost" : "stopped", `the device ${s1.lost ? "was disconnected" : "stopped"} after ${s1.served} requests: nothing was written`), { step: 1 });
+    if (!s1.finished) {
+      const e = fail(s1.lost ? "lost" : "stopped", `the device ${s1.lost ? "was disconnected" : "stopped"} after ${s1.served} requests: nothing was written`);
+      e.served = s1.served;                             // ((2.0.2) where it stopped: stockRefusal)
+      throw e;
+    }
     step("loader");
     await sleep(3000);
-    const ota = await this.waitFor(IS_OTA, 30000);
+    const ota = await this.waitFor((id) => id.model === "ota-" + model, 30000);
     if (!ota) throw fail("noloader", "the update loader did not appear. Replug the USB cable and press Install again: the device stays in update mode until it is finished.");
-    const s2 = await this.write(ota, image, step);
+    const s2 = await this.writeResuming(ota, image, model, step);
     if (!s2.finished) throw fail(s2.lost ? "lost" : "stopped", `the loader ${s2.lost ? "was disconnected" : "stopped"} after ${s2.served} requests. Replug and press Install again to resume.`);
     step("reboot");
     await sleep(3000);
-    const back = await this.waitFor((id) => !IS_OTA(id), 40000);
+    const back = await this.waitFor((id) => !IS_OTA(id) && sameModel(id.model, model), 40000);
     if (!back) throw fail("noreturn", "the device did not come back: power-cycle it");
     back.link.close();
     if (back.id.text !== product) throw fail("mismatch", `installed, but the device reports ${back.id.text}`, back.id.text);
@@ -198,19 +262,54 @@ export class Updater {
     return back.id.text;
   }
 
-  // step 2 with the loader found by find()/waitFor()
+  // step 2 with the loader found by find()/waitFor(); step("write", percent), forward only
   async write(ota, image, step) {
     ota.link.send(UPGRADE);
     await sleep(2000);
-    const s2 = await this.serve(ota.link, image, 0xF0000000, 180000, (n) => step("write", n));
+    const meter = new WriteMeter(image);
+    const s2 = await this.serve(ota.link, image, 0xF0000000, 180000, (n, addr, len) => step("write", meter.add(addr, len)));
     ota.link.close();
     return s2;
   }
 
-  // resume: the device is already in update mode (loader) -> true when the write finished
-  async resume(image, onStep) {
+  // step 2, resumed after a drop: the update record keeps the device in update mode and the loader writes the
+  // app's header last, so writing again once the same model's loader answers is always safe.
+  // step("dropped") while it waits, step("resume", try) when it goes on
+  async writeResuming(ota, image, model, step) {
+    let s = await this.write(ota, image, step);
+    for (let t = 2; !s.finished && t <= this.resumeMax; t++) {
+      step("dropped");
+      const back = await this.waitFor((id) => IS_OTA(id) && sameModel(id.model, model), this.resumeWaitMs);
+      if (!back) break;
+      step("resume", t);
+      s = await this.write(back, image, step);
+    }
+    return s;
+  }
+
+  // resume: the device is already in update mode (loader) -> true when the write finished. product: the
+  // package's identity; the loader's model must be exactly the package's (sameModel, as install()): an SMK's
+  // loader never gets an FM-1 image nor another model's, and without the identity nothing is written
+  async resume(image, onStep, product = "") {
+    const model = (product || "").split("_")[0];
     const ota = await this.find(IS_OTA);
     if (!ota) return false;
-    return (await this.write(ota, image, onStep || (() => {}))).finished;
+    if (!product || !sameModel(ota.id.model, model)) {
+      ota.link.close();
+      throw fail("model", `the device is in the update mode of ${ota.id.text}, the package is for ${product || "an unknown model"}`, ota.id.text);
+    }
+    const step = onStep || (() => {});
+    const result = await this.writeResuming(ota, image, model, step);
+    if (!result.finished) return false;
+    if (product) {
+      step("reboot");
+      await sleep(3000);
+      const back = await this.waitFor((id) => !IS_OTA(id) && sameModel(id.model, model), 40000);
+      if (!back) throw fail("noreturn", "The device did not return after resuming the write.");
+      back.link.close();
+      if (back.id.text !== product) throw fail("mismatch", "The device reports a different firmware after resuming.", back.id.text);
+      step("done", back.id.text);
+    }
+    return true;
   }
 }

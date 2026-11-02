@@ -1,16 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
-/* FM-1 hardware guards. Every violation raises the CPU exception (vector 1) and
+/* FM-1 hardware guards (after the SDK's
+ * cpu/wl82/debug.c). Every violation raises the CPU exception (vector 1) and
  * ends in the fault report of fm1_irq.h, so install that first.
  *
  *   EMU stack limit   sp outside [_ustack_lo, _sstack_top] -> EMU_MSG bit 3.
- *                     One window for both stacks. Interrupts run on the system
- *                     stack (_sstack_lo.._sstack_top, 8 KiB): the crash records
- *                     of an interrupt (the audio render) always had sp there,
- *                     near its top, whatever the main loop was doing; the main
- *                     loop runs on the user stack. So the audio render and
- *                     everything nested on it share those 8 KiB (PERF shows the
- *                     deepest it has gone: plat_irq_stack_used).
+ *                     One window for both stacks: which of EMU_SSP/EMU_USP
+ *                     the core applies to our supervisor-mode main loop is
+ *                     not known, so both get the same range.
  *   write limits      CPU0 writes into the two 256-byte stack guard bands and
  *                     into 0x01C7FD50..0x01C7FFFF (boot info, mailbox, vectors)
  *                     -> DBG_MSG bit 13. The top window is armed separately
@@ -88,9 +85,10 @@ static void fm1_guard_enable(uint32_t which)
     fm1__dbg_lock();
 }
 
-/* the PC limits apply to the second core too, and it starts in the chip's ROM (found by Melodee's
- * dual-core work: DBG bit 10, c1_pc_limit_err_r): open them while it starts, then
- * fm1_guard_enable(FM1_GUARD_PC) again */
+/* the PC limits apply to the second core too, and it starts in the chip's ROM (found by Melodee's dual-core work;
+ * Jangada, X0X; as Felucca 1.6.1): open them while it starts (main.c), then fm1_guard_enable(FM1_GUARD_PC) again.
+ * (Skiff: its waiting loop, .c1_text, is inside .ram_text, app.ld: the PC limits' RAM window covers it) */
+#if FM1_CPU1_USED
 static void fm1_guard_pc_open(void)
 {
     fm1__dbg_unlock();
@@ -100,6 +98,7 @@ static void fm1_guard_pc_open(void)
     FM1_PC_LIMIT1_H = 0xFFFFFFFFu;
     fm1__dbg_lock();
 }
+#endif
 
 /* write-protect 0x01C7FD50..0x01C7FFFF (boot info, mailbox, vectors):
  * call after the last fm1_irq_attach */
@@ -112,9 +111,6 @@ static void fm1_guard_lock_top(void)
     FM1_C0_WR_LIMIT_EN |= 4u;
     fm1__dbg_lock();
 }
-
-/* the reserved top of RAM is write-protected now (fm1_guard_lock_top) */
-static int fm1_guard_top_locked(void) { return (FM1_C0_WR_LIMIT_EN & 4u) != 0; }
 
 /* reopen the reserved top of RAM (mailbox write before a UBOOT reset) */
 static void fm1_guard_unlock_top(void)

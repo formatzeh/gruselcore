@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Kerem Kilic (Ellic Studio)
+# GruselCore: on Skiff 2.1.1's tree (./build.sh, tests/run_tests.sh).
 # Shared-builder integration follows keremimo/melodee commit 4f5fb6d.
 name: Build and attest firmware
 
@@ -54,48 +55,24 @@ jobs:
       tests-block: true
       build: |
         set -euo pipefail
-        export X0X_JOBS=2
-        # the fonts' tabular figures (tools/gen_font.py, OpenType tnum): Pillow's raqm, which loads the system's FriBiDi
-        sudo apt-get install -y -qq libfribidi0
-        python3 -c "from PIL import features; assert features.check('raqm'), 'Pillow without raqm'"
+        python3 -m pip install -q fonttools pillow
         test "$(git -C "$AC79_SDK" rev-parse HEAD)" = d179b4484759423312073f5fbb232501aa491047
         mkdir -p build/release-assets
         if [[ "$GITHUB_REF" == refs/tags/* ]]; then
           version=${GITHUB_REF_NAME#v}
           ./build.sh --release "$version"
-          cp "build/gruselcore-$version.fwsc" build/x0x.fwsc
+          cp "build/gruselcore-$version.fwsc" build/felucca.fwsc        # (the tests read build/felucca.fwsc)
           cp "build/gruselcore-$version.fwsc" build/release-assets/
-          cp build/x0x.bin "build/release-assets/gruselcore-$version-app.bin"
+          cp build/felucca.bin "build/release-assets/gruselcore-$version-app.bin"
         else
           ./build.sh
-          cp build/x0x.fwsc "build/release-assets/gruselcore-dev-${GITHUB_RUN_NUMBER}.fwsc"
-          cp build/x0x.bin "build/release-assets/gruselcore-dev-${GITHUB_RUN_NUMBER}-app.bin"
+          cp build/felucca.fwsc "build/release-assets/gruselcore-dev-${GITHUB_RUN_NUMBER}.fwsc"
+          cp build/felucca.bin "build/release-assets/gruselcore-dev-${GITHUB_RUN_NUMBER}-app.bin"
         fi
       test: |
         set -euo pipefail
-        # The engine comparison tests need the original sources. Pin them so a
-        # later upstream change cannot silently change a release's test inputs.
-        # fetch_ref DIR COMMIT REPO...: the commit pins the content; it comes from the first repository
-        # that still serves it.
-        fetch_ref() {
-          local name="$1" dir="build/refs/$1" sha="$2" repo
-          shift 2
-          git init -q "$dir"
-          for repo in "$@"; do
-            if GIT_TERMINAL_PROMPT=0 git -C "$dir" fetch -q --depth 1 "https://github.com/$repo.git" "$sha"; then
-              git -C "$dir" checkout -q --detach FETCH_HEAD
-              test "$(git -C "$dir" rev-parse HEAD)" = "$sha"
-              echo "$name: $sha from $repo"
-              return 0
-            fi
-          done
-          echo "$name: $sha not found in: $*"
-          return 1
-        }
-        # the 303's reference (Open303 as X0X compares it); pinned, so an upstream change cannot alter a test
-        fetch_ref schwung-303 7680578cdecd91e512cfddb9c9eb07b287fb64f4 charlesvestal/schwung-303
-        export SCHWUNG303="$PWD/build/refs/schwung-303"
-        sh tests/run_tests.sh
+        sh tests/loader_guard.sh          # (GruselCore) the update loader is Skiff 2.1.1's, unchanged
+        SANITIZE=0 sh tests/run_tests.sh
       packages: build/release-assets/*
 
   verify:

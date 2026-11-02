@@ -14,10 +14,40 @@ import os
 import re
 import sys
 
-FUNCS = ["analog_render", "digital_render", "phase_render", "lofi_render", "sample_render", "formant_render",
-         "trio_render", "trio_pass", "drawbar_render", "drawbar_block",
-         "grain_render", "grain_block", "slicer_track", "drums_mix",
-         "fm1_alnk0_irq"]
+FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_render_custom", "phase_render", "lofi_render", "sample_render", "formant_render",
+         "trio_render", "trio_pass", "wheel_render", "wheel_block",
+         "grain_render", "grain_block", "phys_render", "drum_render", "drumx_render", "dx_run",   # (Skiff) DRUM-X: eng_drumx.c, drumx_voice.c
+         "noise_render", "fm6_render", "fm6_op_run", "fm6_op_fb", "px_modal_block", "px_modal_run", "px_memb_block",
+         "px_string_excite", "px_string_run", "px_symp_run",
+         "dv_metal_run", "dv_kick_run", "dv_snare_run", "dv_clap_run", "dv_hat_run", "dv_tom_run",   # drum_voice.c
+         "dv_rim_run", "dv_bell_run", "dv_cym_run", "dv_out", "dv_metal_mix",
+         "slicer_track",
+         "slice_render", "slc_rev",                          # SLICE (eng_slice.c): the render, the reverse windows
+         "fm1_alnk0_irq", "fm1_timer5_irq",               # the audio ISR; TIMER5: the key / LED scan (hal/fm1_input.h)
+         "uac_tap48",                                       # the USB audio input at 48 kHz: the 44.1 -> 48 resampler (usb.c)
+         "click_render",                                    # the metronome's click (click.c), while it sounds
+         "mod_begin", "mod_voice", "mod_end",                 # the modulation matrix (mod.c), called when active
+         "perf_begin", "perf_mute", "perf_pre", "perf_block", "perf_master",   # the FX layer (perform.c), when busy
+         "perf_gate", "perf_dub",                         # (Skiff phase 9) its GATE, DUB (FLANGE / VINYL: perf_mdl, a
+                                                          # sample a call, no loop: as perf_harm, not here)
+         "duck_block", "duck_apply",                       # (Skiff) ducking (duck.c): each block; a ducked track
+         "launch_step", "launch_swap",                     # (Skiff) live switching (launch.c): a staged pattern
+         "throw_on", "throw_off",                         # (Skiff) throws (throw.c): while one is out
+         "rev_room", "rev_spring",                # the reverb bus (fx.c): REVERB TYPE ROOM / SPRING
+         "dist_hard", "dist_fold", "dist_crush",  # (Skiff phase 9) FX > DRIVE's TYPEs (fx.c), on a track that uses one
+         "dist_fuzz",                             # ((2.0) INSERT's shapers; CRUSH was dist_bits)
+         "rev_hall", "rev_side_mix", "cho_mode",  # REVERB TYPE HALL ((Skiff #19) Felucca's) and its stereo; (Skiff
+                                                  # phase 9) CHORUS MODE / FEEDBACK (fx.c)
+         "mix_part", "mix_split",                 # (Skiff 1.3) a track's block (fx.c), on either core; the split
+         "track_insert", "ins_drive", "ins_swept",   # (Skiff 1.3) FX > INSERT (fx.c), on a track that uses one
+         "mix_spread", "esync_coef", "mod_depth",   # (Skiff 1.3) SPREAD (fx.c), ENV SYNC (voice.c), MOD DEPTH (mod.c)
+         "smx_render",                           # (Skiff, #21) a user sample's sound with its own sends (fx.c)
+         "lpan_render", "lpan_mix",              # (2.0, #36) a kit's lane panned: its voice, the mix (voice.c, fx.c)
+         "drum_smp"]                             # (2.0, #35) a user kit's lane (eng_drum.c)
+# built only with FELUCCA_FM4=1 (DIGITAL, src/eng_digital.c; not in the default build, so not in BUDGET): absent,
+# they are skipped; present, checked against these (their budget lines until the engine was retired in 1.0)
+OPTIONAL = {"digital_render": 12, "digital_render_legacy": 333, "digital_render_custom": 558,
+            "uac_tap48": 504}           # (absent from a FELUCCA_UAC_48K=0 or FELUCCA_UAC=0 build)
 TOL = 0.10                      # exact (no noise): small edits pass, a grown render loop does not
 DIV_W = 8                       # a divide weighs 1 + 8 instructions
 NEST = 4                        # an instruction in a loop inside a loop weighs 4, two deep 16, ...
@@ -80,7 +110,7 @@ def main():
         return 0
     fns = functions(dis)
     res = {n: cost(fns[n]) for n in FUNCS if fns.get(n)}
-    missing = [n for n in FUNCS if n not in res]
+    missing = [n for n in FUNCS if n not in res and n not in OPTIONAL]
     base = {}
     if os.path.exists(budget):
         for line in open(budget):
@@ -93,14 +123,15 @@ def main():
                     f"# function in build/felucca.dis, x{NEST} per nesting level, divides x{1 + DIV_W}. The check allows "
                     f"+{TOL * 100:.0f} %.\n# Rewritten by BUDGET_UPDATE=1.\n")
             for n, r in res.items():
-                f.write(f"{n} {r['cost']}\n")
+                if n not in OPTIONAL:
+                    f.write(f"{n} {r['cost']}\n")
         print(f"target: budget {budget} rewritten ({len(res)} functions)")
     fail = 0
     for n in missing:
         print(f"target: FAIL {n} not found in {dis} (renamed? inlined? update FUNCS)")
         fail += 1
     for n, r in res.items():
-        b = base.get(n)
+        b = base.get(n, OPTIONAL.get(n))
         state = "no budget (BUDGET_UPDATE=1 adds it)" if b is None else "ok"
         if b is not None and not os.environ.get("BUDGET_UPDATE"):
             if r["cost"] > b * (1 + TOL):
