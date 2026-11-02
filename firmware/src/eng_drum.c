@@ -440,11 +440,18 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
     }
 }
 
-/* the GM drum map, the first C (key 7) is the kick (C2, 36) */
+/* (GruselCore) the keys: the first 8 white keys (from F) play the 8 lanes at their own pitch, in the grid's order (BD SD
+ * CP CH OH TM RS PC: DRUM_LANE_NOTE); every other key is silent (255: seq.c KB_SILENT), kept for later. The octave
+ * buttons do not move them. MIDI notes in still follow the GM map (drum_lane) */
 static int32_t drum_keys(const track_t *t, uint32_t k)
 {
+    uint32_t i, w = 0;
     (void)t;
-    return clamp(29 + 12 * song.octave + (int32_t)k, 0, 127);
+    if ((0x54Au >> ((k + 5u) % 12u)) & 1u)            /* a black key (seq.c key_black) */
+        return 255;
+    for (i = 0; i < k; i++)                            /* its place among the white keys */
+        w += !((0x54Au >> ((i + 5u) % 12u)) & 1u);
+    return w < NLANE ? DRUM_LANE_NOTE[w] : 255;
 }
 
 /* (GruselCore) {KIT, PITCH, TONE, DECAY, GRIT, ACCENT, CHOKE, DRIVE}: a preset a kit (gc_kits.c), GC_KITS' order */

@@ -1279,20 +1279,20 @@ static int test_grid(void)
     keyboard_block();
     ok &= t->step[7].time == ST_REST && !t->rh_n;
     bad += check("REC on the grid: lane keys record hits, quantised (the next step late), no TIE holds", ok);
-    /* live recording elsewhere (HOME): the GM keys; a lane's note a hit, another GM drum a note */
+    /* live recording elsewhere (HOME): (GruselCore) the first 8 white keys are the lanes; the other keys silent */
     go_home();
     frame();
     t->seq_idx = 9;
     t->seq_pos = 0;
-    fm1_in.notes = (1u << 7) | (1u << 13) | (1u << 6);   /* C 36 KICK, F# 42 HAT CL, E 35 (a kick 2 st down) */
+    fm1_in.notes = (1u << 0) | (1u << 5) | (1u << 6) | (1u << 13);   /* F: BD, B (6): CH; A# and F# (5, 13): silent */
     keyboard_block();
     fm1_in.notes = 0;
     keyboard_block();
-    ok = !song.grid && t->step[9].hit == ((1u << DV_KICK) | (1u << DV_HATC)) && t->step[9].n == 1 && t->step[9].note[0] == 35 &&
+    ok = !song.grid && t->step[9].hit == ((1u << DV_KICK) | (1u << DV_HATC)) && t->step[9].n == 0 &&
          step_lanes(&t->step[9]) == ((1u << DV_KICK) | (1u << DV_HATC));
     song.rec = 0;
     song.playing = 0;
-    bad += check("REC on HOME: GM keys quantised into the grid (35 a note on the KICK lane)", ok);
+    bad += check("REC on HOME: the first 8 white keys are the lanes, quantised into the grid; the other keys record nothing", ok);
     /* the BEAT phrase (tests/phrases.h) into the DRUM track fills the grid */
     track_defaults_steps(t);
     load_pat16(t, PATTERNS[11].note, PATTERNS[11].flags);
@@ -3019,10 +3019,10 @@ static int test_edit_cycle(void)
         turn(EN_K2, -2);
         ok &= ui.lane == 2u && TSEL->p[P_LPAN0 + 2] == -10 && TSEL->p[P_LN2] == 125 && !TSEL->p[P_LPAN0 + 5] &&
               TSEL->p[P_LN5] == 124 && lock_id(1) == P_LN0 + 2u && lock_id(2) == P_LPAN0 + 2u && lock_id(3) == 0xFFu;
-        key_down(13); frame(); key_up(13); frame();  /* (13: F#, HAT CL) */
+        key_down(6); frame(); key_up(6); frame();    /* (GruselCore: the 4th white key, B: CH, HAT CL) */
         ok &= ui.lane == DV_HATC;
         turn(EN_K1, -1);
-        key_down(13); frame(); key_up(13); frame();  /* (the same key again: its lane again) */
+        key_down(6); frame(); key_up(6); frame();    /* (the same key again: its lane again) */
         ok &= ui.lane == DV_HATC;
         bad += check("(2.0, #36) LANE MIX: LANES' lane; KNOB 1 CLAP, 3 its PAN, 2 its LEVEL, a held step's lock them; a "
                      "key struck picks its lane, the same key again too", ok);
@@ -3087,7 +3087,7 @@ static int test_edit_cycle(void)
         ok &= str_eq(cur_page()->title, "SOUND") && dx_ui_win == 0u;
         bad += check("SELECT past the sheet's foot: (2.0) LANE MIX on the sheet's sound, nothing after it (U3); back: the "
                      "sheet's foot; up past its top: EDIT 2; on: its top", ok);
-        key_down(13); frame(); key_up(13); frame();   /* (the first C is key 7: 13 is F#, HAT CL) */
+        key_down(6); frame(); key_up(6); frame();     /* (GruselCore: the 4th white key, B: HAT CL) */
         bad += check("a key struck on the track picks the sound edited (HAT CL)", dx_ui_lane == DV_HATC && str_eq(page_head(), "SOUND CH"));
         ui.fam_last[FAM_EDIT] = ui.page;
         set_engine_of(TSEL, ENGI_DRUM); frame();
