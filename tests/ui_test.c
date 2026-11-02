@@ -3641,14 +3641,19 @@ static int test_quick_layers(void)
     key_up(white(eng_rank(2))); frame();
     key_down(white(1)); key_up(white(1)); frame();
     ok &= TSEL->eng_req == ENGI_FM6;                    /* (G3: FM6, second in ENGINE_ORDER) */
+#if FELUCCA_DRUMX
     key_down(white(NENG_SHOWN - 2u)); key_up(white(NENG_SHOWN - 2u)); frame();
     ok &= TSEL->eng_req == ENGI_DRUM;                   /* (the key before the last: DRUM) */
     key_down(white(NENG_SHOWN - 1u)); key_up(white(NENG_SHOWN - 1u)); frame();
     ok &= TSEL->eng_req == ENGI_DRUMX;                  /* (the last key: (Skiff) DRUM-X) */
+#else
+    key_down(white(NENG_SHOWN - 1u)); key_up(white(NENG_SHOWN - 1u)); frame();
+    ok &= TSEL->eng_req == ENGI_DRUM;                   /* (GruselCore: DRUM-X is not offered, the last key: DRUM) */
+#endif
     ok &= !memcmp(TSEL->step, before.step, sizeof before.step) && TSEL->p[P_SLEN] == before.p[P_SLEN] &&
           TSEL->p[P_SLCR] == SL_STUT;
     btn_up(B_EDIT); frame();
-    bad += check("EDIT + white key n: the n-th engine shown (FM6 2nd, DRUM, DRUM-X last), while playing; steps, LEN, SLICER stay", ok);
+    bad += check("EDIT + white key n: the n-th engine shown (FM6 2nd, DRUM last), while playing; steps, LEN, SLICER stay", ok);
     hold(B_SAVE);
     bad += check("  SAVE held: UNDO back to before the layer's loads, the steps untouched",
                  TSEL->eng_req == 0u && TSEL->preset == before.preset && !memcmp(TSEL->step, before.step, sizeof before.step));
@@ -4434,7 +4439,7 @@ static int test_fm6_charts(void)
 static int test_fm4_retired(void)
 {
     int bad = 0, ok = 1;
-    uint32_t i, k, e, total, seen = 0, all = ((1u << NENGINES) - 1u) & ~(1u << ENGI_DIGITAL);
+    uint32_t i, k, e, total, seen = 0, all = ((1u << NENGINES) - 1u) & ~(1u << ENGI_DIGITAL) & ~(FELUCCA_DRUMX ? 0u : 1u << ENGI_DRUMX);
     int16_t p[P_COUNT];
     uint8_t v[FP_SIZE + 1u];
     ui_power_on();
@@ -4446,7 +4451,7 @@ static int test_fm4_retired(void)
         if (e < NENGINES)
             seen |= 1u << e;
     }
-    bad += check("PRESETS: the list holds every engine's presets but DIGITAL's", seen == all && NENG_SHOWN == NENGINES - 1u);
+    bad += check("PRESETS: the list holds every engine's presets but DIGITAL's", seen == all && NENG_SHOWN == NENGINES - 1u - !FELUCCA_DRUMX);
     go_page(GR_BROWSE);
     set_engine_of(TSEL, 0);
     for (i = 0, seen = 0; i < NENG_SHOWN; i++) {
@@ -4455,10 +4460,15 @@ static int test_fm4_retired(void)
     }
     bad += check("PRESETS KNOB 2: the engines in order, DIGITAL skipped, back to the first",
                  seen == all && TSEL->eng_req == 0u && eng_step(0, 1) == ENGI_FM6 && eng_step(ENGI_FM6, 1) == 2u &&
-                 eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == ENGI_DRUMX && eng_step(ENGI_DRUMX, -1) == ENGI_DRUM);
+                 eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == (FELUCCA_DRUMX ? ENGI_DRUMX : ENGI_DRUM) &&
+                 (!FELUCCA_DRUMX || eng_step(ENGI_DRUMX, -1) == ENGI_DRUM));
     {   /* the display order (engines.c ENGINE_ORDER): every engine one can pick once; the PRESETS list follows it */
         static const char *const ORDER[] = {"ANALOG", "FM6", "PHASE", "LOFI", "SAMPLE", "VOICE", "TRIO", "WHEEL", "GRAIN",
-                                            "PHYS", "NOISE", "SLICE", "DRUM", "DRUM-X"};
+                                            "PHYS", "NOISE", "SLICE", "DRUM"
+#if FELUCCA_DRUMX
+                                            , "DRUM-X"
+#endif
+        };
         uint32_t last = 0xFFu, r = 0, n = 0;
         ok = NENG_SHOWN == NELEM(ORDER);
         for (i = 0; ok && i < NENG_SHOWN; i++)
@@ -4473,7 +4483,7 @@ static int test_fm4_retired(void)
             last = e;
             r++;
         }
-        bad += check("engines shown ANALOG FM6 PHASE ... NOISE SLICE DRUM DRUM-X (ENGINE_ORDER); PRESETS lists them so",
+        bad += check("engines shown ANALOG FM6 PHASE ... NOISE SLICE DRUM (ENGINE_ORDER); PRESETS lists them so",
                      ok && r == NENG_SHOWN);
     }
 #if FELUCCA_LEGACY                                     /* ((2.0) the converter's: fm4_convert.c) */
@@ -7757,13 +7767,13 @@ static int test_drum_lane_copy(void)
     cursor_set(0);
     shift_turn(15);
     shift_press(B_OCTDN);
-    ok = msg_is("NO BELL TO COPY") && clip.lane == CLIP_ALL;
+    ok = msg_is("NO PERC TO COPY") && clip.lane == CLIP_ALL;
     shift_press(B_OCTDN);
     ok &= msg_is("COPIED ALL LANES");
     go_page(GR_FEEL); frame();
     shift_press(B_OCTDN);
     ok &= clip.lane == CLIP_ALL && msg_is("COPIED 15 STEPS");   /* (the same steps 1-16 selected) */
-    bad += check("  a lane with nothing there: NO BELL TO COPY, again every lane; FEEL (no LANE card) every lane", ok);
+    bad += check("  a lane with nothing there: NO PERC TO COPY, again every lane; FEEL (no LANE card) every lane", ok);
     return bad;
 }
 
