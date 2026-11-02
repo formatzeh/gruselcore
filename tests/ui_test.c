@@ -1167,7 +1167,7 @@ static int test_grid(void)
     bad += check("SEQ > STEP on a DRUM track is the grid (keys to the UI), GRID in the footer", grid_on() && song.grid == 1u &&
                  cur_page()->scope == SC_STEP);
     bad += check("the lanes: KICK SNARE CLAP HATCL HATOP TOM RIM BELL on GM 36 38 39 42 46 45 37 56",
-                 str_eq(drum_lane_name(t, 0), "KICK") && str_eq(drum_lane_name(t, 7), "BELL") && DRUM_LANE_NOTE[3] == 42 &&
+                 str_eq(drum_lane_name(t, 0), "KICK") && str_eq(drum_lane_name(t, 7), "PERC") && DRUM_LANE_NOTE[3] == 42 &&
                  DRUM_LANE_NOTE[6] == 37 && drum_lane(41) == DV_TOM && drum_lane(49) == DV_BELL && drum_lane(35) == DV_KICK);
     tap_key(key_at(1, 1));
     bad += check("black key 2: lane 2 (SNARE) selected", ui.lane == 1u);
@@ -8227,9 +8227,9 @@ static int test_u4(void)
     bad += check("U4 V5: values in full (SPRING, MELLOW; were SPRIN, MELLO)", ok);
     set_engine_of(TSEL, ENGI_DRUM);
     TSEL->engine = TSEL->eng_req;
-    TSEL->p[P_E0] = DK_66;                              /* (66: a conga on TOM) */
+    TSEL->p[P_E0] = 10;                                 /* ((GruselCore) TRIBE PERC: a bongo on TOM) */
     ev_name(TSEL, P_LN0 + DV_TOM, nm);
-    bad += check("U4 L9: AUTOMATION names a lane as the kit plays it (66: CONGA)", str_eq(nm, "CONGA"));
+    bad += check("U4 L9: AUTOMATION names a lane as the kit plays it (TRIBE PERC: BONGO)", str_eq(nm, "BONGO"));
     bad += check("U4 R9: the REC layer says CLICK, COUNT-IN, CLICK LVL; GLOBAL's swing is SWING+",
                  str_eq(RL_LABEL[1], "COUNT-IN") && str_eq(GP[G_SWING].label, "SWING+"));
     {   /* L5: the header the page (EDIT 1 on ANALOG: OSC), the footer where it is */

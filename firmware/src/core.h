@@ -60,7 +60,11 @@ _Static_assert(NTRK <= 8 && NPART < NVOICE, "a track mask is a uint8_t; each par
 #define NENGINES 15u             /* (Skiff) DRUM-X (14) after SLICE (13): the other engines keep their numbers */
 #define ENGI_DIGITAL 1u          /* reserved without FELUCCA_FM4: never selectable (eng_ok), its sounds load as FM6 */
 #define ENGI_SLICE 13u           /* reserved without FELUCCA_SLICE, as DIGITAL is without FELUCCA_FM4 */
-#define NENG_SHOWN (NENGINES - !FELUCCA_FM4 - !FELUCCA_SLICE)   /* the engines one can pick: PRESETS, the EDIT layer,
+#ifndef FELUCCA_DRUMX
+#define FELUCCA_DRUMX 0          /* (GruselCore) DRUM-X (eng_drumx.c) offered: 0, its kits are Skiff's (GruselCore's are
+                                  * DRUM's); its code stays, so a DRUM-X sound that arrives (a project) still plays */
+#endif
+#define NENG_SHOWN (NENGINES - !FELUCCA_FM4 - !FELUCCA_SLICE - !FELUCCA_DRUMX)   /* the engines one can pick: PRESETS, the EDIT layer,
                                                 * the editor, in the display order of engines.c ENGINE_ORDER */
 #define UP_SLOTS 32u             /* user presets (upreset.c) */
 #define NELEM(a) (sizeof(a) / sizeof((a)[0]))
@@ -260,7 +264,7 @@ static int drum_from_phys(uint32_t engine, int16_t *e)
  * favourites (ui.c, settings_persist.c). Idempotent */
 #define ENGI_SAMPLE 4u
 #define SMP_SET_PERC 4u
-#define DRUM_KIT_E {0, 64, 70, 64, 64, 100, 0, 0}   /* {KIT STD, TUNE, TONE, DECY, SNAP, ACC, KICK PUNCH, DRV} */
+#define DRUM_KIT_E {0, 64, 70, 64, 64, 100, 0, 0}   /* DRUM_PRESETS[0]: {KIT 0, PITCH, TONE, DECAY, GRIT (GruselCore), ACC, CHOKE ON, DRV} */
 static int drum_from_perc(uint32_t engine, int16_t *e)
 {
     static const int16_t KIT[8] = DRUM_KIT_E;

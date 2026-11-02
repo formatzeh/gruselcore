@@ -836,7 +836,7 @@ int main(void)
                     (c).t[0].engine == ENGI_SAMPLE && (c).t[0].p[P_E0] == 2 && (c).t[1].engine == ENGI_SAMPLE)
         ok = proj_pack(&st, &a) && proj_import(&c, &st, sizeof st);
         bad += check("FUN8 with a SAMPLE PERC track: DRUM's kit, the rest of the sound and the steps kept", ok && PERC_OK(c) &&
-                     str_eq(ENGINES[ENGI_DRUM]->presets[0].name, "DRUM KIT") &&
+                     str_eq(ENGINES[ENGI_DRUM]->presets[0].name, "HARDTEK KIT") &&
                      !memcmp(ENGINES[ENGI_DRUM]->presets[0].e, (int8_t[8])DRUM_KIT_E, 8));
         bad += check("  its motion on CUT goes; a send's and the other track's stay",
                      c.motion.count == 2u && (c.motion.event[0].id == P_REV && !c.motion.event[0].lock) && c.motion.event[1].place == 3u &&

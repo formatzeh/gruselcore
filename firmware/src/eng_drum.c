@@ -449,7 +449,7 @@ static int32_t drum_keys(const track_t *t, uint32_t k)
 
 /* (GruselCore) {KIT, PITCH, TONE, DECAY, GRIT, ACCENT, CHOKE, DRIVE}: a preset a kit (gc_kits.c), GC_KITS' order */
 static const preset_t DRUM_PRESETS[] = {
-    {"HARDTEK KIT", {0, 64, 64, 64, 64, 100, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 20), TAG(PT_DRUM)},
+    {"HARDTEK KIT", DRUM_KIT_E, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 20), TAG(PT_DRUM)},
     {"TRIBETEK KIT", {1, 64, 64, 64, 64, 100, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 25), TAG(PT_DRUM)},
     {"MENTALTEK", {2, 64, 64, 64, 64, 100, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 15), TAG(PT_DRUM)},
     {"TECHNO KIT", {3, 64, 64, 64, 64, 100, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 20), TAG(PT_DRUM)},
