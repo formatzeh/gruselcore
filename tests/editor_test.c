@@ -1099,11 +1099,10 @@ static int menu_protocol(void)
     return bad;
 }
 
-/* DRUM KIT 1..3 (HAND CYM H+CYM until 1.0.4, retired): DESC names them as the kit they play (66 10 77), a SET of
- * one lands on that kit (the reply says so), a user preset sent with one loads as that kit */
+/* (GruselCore) DRUM KIT: Skiff's retired kits 1..3 (HAND CYM H+CYM) are gone, the kits are ours: DESC names them from
+ * the first (HRDTK, TRBTK ..), a SET of one lands on that kit as it is, a user preset and a project keep it */
 static int drum_kit_retired(void)
 {
-    static const uint8_t MAP[4] = {0, 6, 5, 8};
     static uint8_t a[16 + 2u * P_COUNT + 32u];
     int16_t got[P_COUNT];
     uint32_t r, i, k = 0, ok = 1;
@@ -1113,22 +1112,22 @@ static int drum_kit_retired(void)
     request(ED_SET, a, 4);
     a[0] = P_E0 > 127u ? 2 : 0; a[1] = P_E0 & 127u;     /* ((2.0, #36) P_E0 135: scope 2, wide) */
     request(ED_DESC, a, 2);
-    {   /* scope, id, fmt, min, max, def (v14 each), "KIT", "", then the 9 names */
+    {   /* scope, id, fmt, min, max, def (v14 each), "KIT", "", then the names */
         const char *n = (const char *)host_wire + 5 + 3 + 6;
-        static const char *const WANT[9] = {"STD", "66", "10", "77", "80", "10", "66", "55", "77"};
+        static const char *const WANT[4] = {"HRDTK", "TRBTK", "MNTTK", "TECHN"};
         n += strlen(n) + 1; n += strlen(n) + 1;
-        for (i = 0; i < 9u; i++, n += strlen(n) + 1)
+        for (i = 0; i < 4u; i++, n += strlen(n) + 1)
             ok &= !strcmp(n, WANT[i]);
     }
-    bad += check("DESC of DRUM KIT: STD 66 10 77 80 10 66 55 77 (1..3 as the kits they play)", ok);
+    bad += check("DESC of DRUM KIT: the names from HRDTK, TRBTK, MNTTK, TECHN (GruselCore's kits)", ok);
     for (r = 1, ok = ed_eng(TSEL) == ENGI_DRUM; r < 4u; r++) {
         uint32_t u = r + 8192u;
         a[0] = P_E0 > 127u ? 2 : 0; a[1] = P_E0 & 127u; a[2] = u & 127u; a[3] = u >> 7;
         request(ED_SET, a, 4);
-        ok &= TSEL->p[P_E0] == MAP[r] && (int32_t)(host_wire[7] | host_wire[8] << 7) - 8192 == MAP[r];
+        ok &= TSEL->p[P_E0] == (int16_t)r && (int32_t)(host_wire[7] | host_wire[8] << 7) - 8192 == (int32_t)r;
     }
-    bad += check("SET of DRUM KIT 1..3 lands on 66 10 77 (and replies it)", ok);
-    a[k++] = 5; a[k++] = ENGI_DRUM;                        /* slot U06, DRUM, KIT 3 (H+CYM) */
+    bad += check("SET of DRUM KIT 1..3 lands on that kit (and replies it)", ok);
+    a[k++] = 5; a[k++] = ENGI_DRUM;                        /* slot U06, DRUM, KIT 3 */
     memcpy(a + k, "OLDKIT", 6); k += 6; a[k++] = 0;
     for (i = 0; i < P_COUNT; i++) {
         uint32_t u = (uint32_t)((i == P_E0 ? 3 : param_desc_of(ENGI_DRUM, i)->def) + 8192);
@@ -1137,8 +1136,8 @@ static int drum_kit_retired(void)
     for (i = 0; i < 16u; i++) { a[k++] = 0; a[k++] = 0; }
     request(ED_UP_PUT, a, k);
     up_values(up_rec(5), got);
-    bad += check("a user preset of DRUM KIT 3 (H+CYM) loads as 77", up_used(5) && got[P_E0] == 8);
-    {   /* a project whose DRUM tracks hold KIT 0..3: loaded (and bounded, as from flash) as STD 66 10 77 */
+    bad += check("a user preset of DRUM KIT 3 loads as KIT 3", up_used(5) && got[P_E0] == 3);
+    {   /* a project whose DRUM tracks hold KIT 0..5: loaded (and bounded, as from flash) as they are */
         static project_t p;
         for (r = 0; r < NTRK; r++) {
             set_engine_of(&trk[r], ENGI_DRUM); apply_preset_to(&trk[r], 0);
@@ -1148,11 +1147,11 @@ static int drum_kit_retired(void)
         for (r = 0; r < NTRK; r++) p.t[r].p[P_E0] = (int16_t)r;
         p.sum = proj_sum(&p);
         ok = !project_restore_runtime(&p);
-        for (r = 0; r < NTRK; r++) ok &= trk[r].p[P_E0] == (r < 4u ? MAP[r] : r);   /* (4..: kits as they are) */
+        for (r = 0; r < NTRK; r++) ok &= trk[r].p[P_E0] == (int16_t)r;
         for (r = 0; r < NTRK; r++) p.t[r].p[P_E0] = (int16_t)r;
         proj_bound(&p);
-        for (r = 0; r < NTRK; r++) ok &= p.t[r].p[P_E0] == (r < 4u ? MAP[r] : r);
-        bad += check("a project of DRUM KIT 1..3 loads as 66 10 77 (STD stays)", ok);
+        for (r = 0; r < NTRK; r++) ok &= p.t[r].p[P_E0] == (int16_t)r;
+        bad += check("a project of DRUM KIT 0..5 keeps its kits", ok);
     }
     return bad;
 }

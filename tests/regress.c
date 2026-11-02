@@ -1046,6 +1046,8 @@ int main(int argc, char **argv)
     add(J_DRUMS, "drums/drum_gm_kit");
     for (i = 1; i < GC_NKITS; i++) {                /* ((GruselCore) every other kit) */
         snprintf(name, sizeof name, "drums/kit_%s", N_DRUM_KIT[i]);
+        for (char *q = name; *q; q++)
+            if (*q == ' ') *q = '_';                /* (a kit's name holds a space: the file's fields are split at it) */
         add(J_DRUMS, name)->arg = (uint8_t)i;
     }
     for (i = 0; i < 3u; i++)
@@ -1118,6 +1120,8 @@ int main(int argc, char **argv)
     for (i = 1; i < GC_NKITS; i++) {                /* ((GruselCore) DRUM's kits: the 8 lanes, as its preset above */
         job_t *j;
         snprintf(name, sizeof name, "cpu/DRUM/kit_%s", N_DRUM_KIT[i]);
+        for (char *q = name; *q; q++)
+            if (*q == ' ') *q = '_';
         j = add(J_CPU, name);
         memset(cpu_parts[ncpu], 0, sizeof cpu_parts[ncpu]);
         cpu_parts[ncpu][0][0] = ENGI_DRUM, cpu_parts[ncpu][0][1] = 0, cpu_parts[ncpu][0][2] = 8;
