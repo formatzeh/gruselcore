@@ -323,6 +323,7 @@ typedef struct {
 #define MORE(...) .more = {__VA_ARGS__}
 #define TAG(t) .tag = (t)
 enum { PT_NONE, PT_BASS, PT_LEAD, PT_PAD, PT_KEYS, PT_PLUCK, PT_DRUM, PT_FX, PT_N };   /* (stored: the LIST setting) */
+#define PT_HIDE 0x80u            /* (GruselCore) or-ed into a tag: never listed (ui.c preset_skip), still loads as a default */
 
 struct track;
 typedef struct {                 /* an engine (engines.c ENGINES[]; the eng_*.c files) */

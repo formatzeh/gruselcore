@@ -161,7 +161,7 @@ static uint32_t fm4_convert_ref(int16_t *p, uint8_t *v)
     p[P_E7] = FM4_TO_FM6[near];
     for (k = P_FM1_ATK; k <= P_FM4_LEVEL; k++)
         p[k] = (k - P_FM1_ATK) % 5u == 2u || (k - P_FM1_ATK) % 5u == 4u ? 127 : 0;
-    return FM4_TO_FM6[near];
+    return fm6_preset_of_slot(FM4_TO_FM6[near]);   /* (GruselCore: as fm4_convert.c) */
 }
 
 static int bad;
@@ -278,7 +278,7 @@ int main(void)
             memcpy(ref, full[t], sizeof ref);
             pr = fm4_convert_ref(ref, v);
             fm6_pack(v, pk);
-            ok = q.t[t].engine == ENGI_FM6 && q.t[t].preset == pr && pr == FM4_TO_FM6[(k + t + 4u) % FM4_NPRESETS] &&
+            ok = q.t[t].engine == ENGI_FM6 && q.t[t].preset == pr && pr == fm6_preset_of_slot(FM4_TO_FM6[(k + t + 4u) % FM4_NPRESETS]) &&
                  !memcmp(q.fm6[t], pk, FM6_PACKED) && !memcmp(q.t[t].p, ref, sizeof ref);
         }
         if (!k)

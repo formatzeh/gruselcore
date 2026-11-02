@@ -592,7 +592,8 @@ static void cost(void)
         if (pi < FM6_NFACTORY)
             fm6_unpack(FM6_FACTORY[pi], v);
         c = (mix_cost(pi < FM6_NFACTORY ? v : heavy, 6) - idle) / 6;
-        printf("fm6:   %-12s %5.0f  ~%.2f %%\n", pi < FM6_NFACTORY ? ENG_FM6.presets[pi].name : "(6 carriers)", c, c * 0.017);
+        printf("fm6:   %-12.10s %5.0f  ~%.2f %%\n", pi < FM6_NFACTORY ? (const char *)v + FP_NAME : "(6 carriers)", c,
+               c * 0.017);                     /* (GruselCore: the patch's own name; FM6's presets are fewer than F1..F8) */
         worst = c > worst ? c : worst;
     }
     snprintf(what, sizeof what, "cost: at most %.0f instructions a sample and voice (~%.1f %% on the device, 6 voices ~%.0f %%; limit %.0f)",
@@ -706,9 +707,9 @@ int main(int argc, char **argv)
     if (!getenv("NOCOST"))
         cost();
     if (argc > 1) {
-        for (pi = 0; pi < FM6_NFACTORY; pi++)
+        for (pi = 0; pi < ENG_FM6.npresets; pi++)
             demo(argv[1], pi);
-        printf("fm6: demos in %s: the %u presets, each playing its suggested pattern\n", argv[1], (uint32_t)FM6_NFACTORY);
+        printf("fm6: demos in %s: the %u presets, each playing its suggested pattern\n", argv[1], (uint32_t)ENG_FM6.npresets);
     }
     printf("fm6_test: %s\n", bad ? "FAILED" : "all checks ok");
     return bad != 0;

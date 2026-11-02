@@ -348,12 +348,8 @@ static const preset_t TRIO_PRESETS[] = {
     {"FAT BASS", {0, 0, -12, 9, 0, 62, 45, 64}, {0, 62, 60, 25}, 40, 1, FX(10, 0, 10, 10), TAG(PT_BASS)},
     {"ARP LEAD", {2, 12, 0, 4, 0, 88, 25, 32}, {0, 60, 90, 30}, 8, 0, FX(0, 0, 35, 20), TAG(PT_LEAD)},
     {"SYNC LEAD", {9, 9, 0, 0, 0, 82, 30, 64}, {2, 70, 100, 40}, 18, 1, FX(0, 10, 40, 25), TAG(PT_LEAD)},
-    {"RING BELL", {13, 0, 18, 6, 1, 96, 30, 64}, {0, 92, 0, 80}, 0, 0, FX(0, 20, 35, 55), TAG(PT_KEYS)},
-    {"CHIP CHOIR", {1, 0, 12, 7, 1, 62, 95, 40}, {70, 90, 110, 85}, 30, 0, FX(0, 50, 20, 65), TAG(PT_PAD)},
     /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
-    {"TURBO SYNC", {9, 7, 0, 3, 0, 92, 28, 64}, {2, 72, 105, 45}, 20, 1, FX(6, 15, 55, 30), MORE({P_GLIDE, 24}, {P_LRATE, 86}, {P_LFADE, 90}, {P_LD_PIT, 8}), TAG(PT_LEAD)},
     {"NEON ARP", {1, 12, 0, 5, 0, 70, 35, 40}, {0, 66, 0, 45}, 36, 0, FX(0, 25, 70, 25), TAG(PT_PLUCK)},
-    {"COLLIDER", {13, 0, 23, 9, 2, 60, 50, 64}, {0, 70, 0, 55}, 0, 0, FX(8, 10, 50, 50), MORE({P_ED_PIT, 36}), TAG(PT_FX)},
     /* (Skiff phase 9) more for every engine: basses, kits */
     {"DIRTY BASS", {1, -12, 0, 8, 1, 62, 85, 30}, {0, 50, 50, 20}, 35, 1, FX(72, 0, 5, 5), MORE({P_DTYPE, 1}, {P_DTONE, -10}), TAG(PT_BASS)},
 };

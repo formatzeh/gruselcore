@@ -74,13 +74,9 @@ SLC_GRID, SLC_AUTO, SLC_HOP = 128, 32, 32   # eng_slice.c slc_src_t, its AUTO de
 ENV = {"wave":(5, 80, 100, 50), "kit": (0, 127, 127, 60), "multi": (0, 85, 0, 75),
        "oneshot": (0, 127, 127, 70), "sus": (12, 80, 120, 60)}
 SET_TAG = {"PIANO": "PT_KEYS", "FLUTE": "PT_LEAD", "SAX": "PT_LEAD"}   # (Skiff phase 9) core.h PT_*: PRESETS' LIST
-SET_VARIANTS = [   # (Skiff phase 9) SAMPLE's presets after PERC's slot: (name, e, env, mono, fx, tag[, more]), apply9.py
-    ("LOFI PIANO", [0, 0, 110, 1, 30, 0, 30, 0], [0, 127, 127, 70], 0, [40, 10, 20, 40], "PT_KEYS", [("P_DTYPE", 3), ("P_LRATE", 40), ("P_LD_PIT", 8)]),
-    ("MUSIC BOX", [0, 24, 0, 0, 110, 0, 0, 0], [0, 90, 0, 80], 0, [0, 30, 40, 60], "PT_PLUCK"),
-    ("FLUTE PAD", [2, 0, 0, 1, 90, 0, 0, 0], [80, 90, 120, 100], 0, [0, 60, 25, 90], "PT_PAD"),
-    ("DARK SAX", [3, -12, 0, 1, 26, 0, 48, 0], [22, 80, 120, 55], 1, [0, 15, 20, 60], "PT_LEAD", [("P_LD_PIT", 8), ("P_LRATE", 84), ("P_LFADE", 100)]),
-    ("KOTO", [0, 12, 0, 0, 120, 0, 22, 0], [0, 72, 0, 50], 0, [0, 0, 25, 30], "PT_PLUCK", [("P_ED_PIT", 2)]),
-]
+SET_HIDE = True    # (GruselCore) SAMPLE lists no presets: its set presets stay (SET numbers, aliases, the engine's
+                   # default) but carry PT_HIDE (ui.c preset_skip)
+SET_VARIANTS = []  # (GruselCore) Skiff's LOFI PIANO, MUSIC BOX, FLUTE PAD, DARK SAX and KOTO removed
 
 # PIANO's notes cut to 0.75 s (saves flash), faded out over the last SET_FADE s; (Skiff 1.3) FLUTE's and SAX's to 0.68 s:
 # their sustain loops (from 0.40 s) half as long, 0.28 s (18 KB of flash for 1.3's features)
@@ -319,8 +315,9 @@ class Builder:
         perc = PERC_SLOT if len(named) > PERC_SLOT else len(named)
         # (Skiff phase 9) the variations follow PERC's slot, only with the CC0 sets their SET values name (PERC's
         # alias then is a preset among them, hidden as the other alias)
-        var = SET_VARIANTS if len(named) == PERC_SLOT + 1 else []
-        npre = len(named) + len(var) if var else perc
+        full = len(named) == PERC_SLOT + 1
+        var = SET_VARIANTS if full else []
+        npre = len(named) + len(var) if full else perc   # (GruselCore) PERC's alias stays preset 4 without variations
         L.append(f"#define SMP_NPRESETS {npre}")
         if len(named) > PERC_SLOT:
             L.append(f"#define SMP_PERC_SLOT {PERC_SLOT}   /* once PERC (the GM kit): an alias, its sounds load as DRUM */")
@@ -333,7 +330,7 @@ class Builder:
             loop = 0 if k == "kit" else 1
             si = self.alias.get(i, i)                   # an alias: the original's preset (hidden by its name)
             L.append(f'    {{"{name}", {{{si}, 0, 0, {loop}, 127, 0, 0, 0}}, {{{a}, {d}, {s_}, {r}}}, 0, 0, '
-                     f'TAG({SET_TAG.get(name, "PT_NONE")})}},')
+                     f'TAG({SET_TAG.get(name, "PT_NONE")}{" | PT_HIDE" if SET_HIDE else ""})}},')
         for name, e, env, mono, fx, tag, *more in var:  # (more: [(id, value)], as the engines' MORE)
             mo = ", ".join(f"{{{i}, {v}}}" for i, v in more[0]) if more else ""
             L.append(f'    {{"{name}", {{{", ".join(map(str, e))}}}, {{{", ".join(map(str, env))}}}, 0, {mono}, '

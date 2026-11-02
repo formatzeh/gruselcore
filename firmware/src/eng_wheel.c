@@ -268,15 +268,6 @@ static void wheel_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 static const preset_t WHEEL_PRESETS[] = {
     /* name, {REG, SUB, BODY, TOP, PERC, CLICK, DRIVE, ROTR}, {A D S R}, fenv, mono */
     {"FULL ORGAN", {15, 0, 0, 0, 0, 30, 20, 1}, {0, 64, 127, 45}, 0, 0, FX(0, 0, 10, 35), TAG(PT_KEYS)},
-    {"JAZZ PERC", {4, 0, 0, 0, 2, 50, 8, 1}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 25), TAG(PT_KEYS)},
-    {"GOSPEL", {6, 0, 0, 0, 1, 60, 40, 2}, {0, 64, 127, 45}, 0, 0, FX(0, 0, 0, 40), TAG(PT_KEYS)},
-    {"SOFT FLUTE", {1, 0, -2, 0, 0, 10, 0, 1}, {0, 64, 127, 55}, 0, 0, FX(0, 20, 15, 55), TAG(PT_KEYS)},
-    {"ROCK DRIVE", {7, 0, 0, 0, 0, 70, 100, 2}, {0, 64, 127, 40}, 0, 0, FX(35, 0, 10, 25), TAG(PT_KEYS)},
-    /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
-    {"CATHEDRAL", {12, 2, 0, 0, 0, 6, 0, 0}, {48, 64, 127, 72}, 0, 0, FX(0, 0, 0, 110), TAG(PT_KEYS)},
-    /* (Skiff phase 9) more for every engine: basses, kits */
-    {"PEDAL BASS", {14, 4, 0, -4, 0, 20, 10, 0}, {0, 64, 127, 30}, 0, 1, FX(0, 0, 0, 15), TAG(PT_BASS)},
-    {"CLARINET", {9, 0, 2, -5, 0, 0, 14, 1}, {24, 64, 120, 45}, 0, 1, FX(0, 20, 15, 40), MORE({P_LD_PIT, 8}, {P_LRATE, 89}, {P_LFADE, 70}), TAG(PT_LEAD)},
 };
 
 static const engine_t ENG_WHEEL = {

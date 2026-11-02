@@ -386,16 +386,9 @@ _Static_assert(NELEM(N_FM6_PATCH) == FM6_OWN + 2u, "a SLOT name per value");
 
 /* {ALG, FB, MLVL, MRAT, MEG, VMOD, DTUN, SLOT}: the factory patch F1..F8 as it is, DTUN on the pad */
 static const preset_t FM6_PRESETS[] = {
-    {"TINE EP", {0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 127, 0}, 0, 0, FX(0, 45, 25, 35), TAG(PT_KEYS)},
-    {"GLASS BELL", {0, 0, 0, 0, 0, 0, 0, 1}, {0, 0, 127, 0}, 0, 0, FX(0, 10, 30, 70), TAG(PT_KEYS)},
-    {"FM BASS", {0, 0, 0, 0, 0, 0, 0, 2}, {0, 0, 127, 0}, 0, 1, FX(0, 0, 10, 10), TAG(PT_BASS)},
-    {"FM BRASS", {0, 0, 0, 0, 0, 0, 0, 3}, {0, 0, 127, 0}, 0, 0, FX(0, 25, 20, 40), TAG(PT_LEAD)},
-    {"PAD", {0, 0, 0, 0, 0, 0, 30, 4}, {0, 0, 127, 0}, 0, 0, FX(0, 60, 30, 70), TAG(PT_PAD)},
     {"FM MARIMBA", {0, 0, 0, 0, 0, 0, 0, 5}, {0, 0, 127, 0}, 0, 0, FX(0, 0, 25, 40), TAG(PT_KEYS)},
-    {"FM ORGAN", {0, 0, 0, 0, 0, 0, 0, 6}, {0, 0, 127, 0}, 0, 0, FX(10, 40, 0, 30), TAG(PT_KEYS)},
     {"NYLON PICK", {0, 0, 0, 0, 0, 0, 0, 7}, {0, 0, 127, 0}, 0, 0, FX(0, 20, 35, 30), TAG(PT_PLUCK)},
     /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
-    {"GRAVE BELL", {0, 0, 6, 0, 20, 0, 30, 1}, {0, 0, 127, 0}, 0, 0, FX(0, 10, 15, 100), TAG(PT_KEYS)},
     {"GLASS KEYS", {0, 0, 8, 0, 0, 0, 24, 0}, {0, 0, 127, 0}, 0, 0, FX(0, 75, 30, 45), TAG(PT_KEYS)},
     {"ISOTOPE", {0, 0, 14, 2, -10, 0, 50, 1}, {0, 0, 127, 0}, 0, 0, FX(0, 20, 50, 70), TAG(PT_KEYS)},
     {"DARK MATTER", {0, 4, 16, 0, 10, 0, 0, 2}, {0, 0, 127, 0}, 0, 1, FX(8, 0, 0, 10), TAG(PT_BASS)},

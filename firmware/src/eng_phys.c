@@ -222,17 +222,8 @@ static void phys_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
  * 98 1 : 3.57 : 7.65, 116 1 : 4.0 : 9.0 (a tuned bar: 1 : 4 : 10) */
 static const preset_t PHYS_PRESETS[] = {
     /* name, {MODEL, STRC, BRIT, DAMP, POS, ACC, BOW, EXC}, {A D S R}, fenv, mono */
-    {"BELL TREE", {PM_MODAL, 70, 100, 106, 12, 100, 0, 6}, {0, 100, 127, 96}, 0, 0, FX(0, 20, 30, 60), TAG(PT_KEYS)},
-    {"MARIMBA", {PM_MODAL, 116, 38, 40, 24, 90, 0, 30}, {0, 90, 127, 52}, 0, 0, FX(0, 0, 15, 30), TAG(PT_KEYS)},
     {"PLUCK", {PM_STRING, 56, 72, 84, 40, 96, 0, 0}, {0, 100, 127, 58}, 0, 0, FX(0, 10, 30, 30), TAG(PT_PLUCK)},
     {"BOWED METAL", {PM_MODAL, 98, 70, 112, 10, 80, 90, 0}, {60, 90, 127, 90}, 0, 0, FX(0, 40, 20, 70), TAG(PT_PAD)},
-    {"KALIMBA", {PM_MODAL, 34, 16, 56, 100, 90, 0, 48}, {0, 100, 127, 60}, 0, 0, FX(0, 10, 20, 40), TAG(PT_PLUCK)},
-    /* MEMB: {MODEL, HARM, BRIT, DAMP, POS, ACC, BEND, EXC} */
-    /* SYMP: {MODEL, CHRD, BRIT, DAMP, SYMP, ACC, BUZZ, EXC} */
-    {"DRONE STRING", {PM_SYMP, 127, 80, 88, 64, 100, 92, 0}, {0, 100, 127, 90}, 0, 0, FX(0, 10, 20, 50), TAG(PT_PAD)},
-    {"HARP", {PM_SYMP, 8, 62, 74, 60, 90, 0, 0}, {0, 100, 127, 80}, 0, 0, FX(0, 20, 20, 60), TAG(PT_PLUCK)},
-    /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
-    {"HARPSICHORD", {PM_STRING, 44, 112, 76, 10, 127, 0, 24}, {0, 100, 127, 50}, 0, 0, FX(0, 10, 10, 60), TAG(PT_KEYS)},
     /* (Skiff phase 9) more for every engine: basses, kits */
     {"UPRIGHT", {PM_STRING, 60, 60, 90, 20, 127, 0, 60}, {0, 100, 127, 40}, 0, 1, FX(20, 0, 5, 20), TAG(PT_BASS)},
 };

@@ -753,10 +753,10 @@ int main(void)
         a.motion.event[3] = (motion_event_t){.place = 0u << 6 | 3u, .id = P_E4, .value = 70};          /* track 1 (ANALOG): stays */
         a.motion.event[4] = (motion_event_t){.place = 1u << 6 | 9u, .id = P_E7, .value = 0};           /* track 2: E7 */
         a.sum = proj_sum(&a);
-#define FM4_OK(c) ((c).t[1].engine == ENGI_FM6 && (c).t[1].preset == 4u && !memcmp((c).fm6[1], pk, FM6_PACKED) && \
+#define FM4_OK(c) ((c).t[1].engine == ENGI_FM6 && (c).t[1].preset == fm6_preset_of_slot(FM4_TO_FM6[5]) && !memcmp((c).fm6[1], pk, FM6_PACKED) && \
                    !memcmp((c).t[1].p, p, sizeof p) && (c).t[0].engine == 0u && !memcmp((c).fm6[0], FM6_INIT, FM6_PACKED))
         ok = proj_pack(&st, &a) && proj_import(&c, &st, sizeof st);
-        bad += check("FUN8 with a DIGITAL track: FM6, the converted patch its own, PTCH / preset FM6 PAD", ok && FM4_OK(c));
+        bad += check("FUN8 with a DIGITAL track: FM6, the converted patch its own, PTCH FM6 PAD, its preset the first on that slot", ok && FM4_OK(c));
         bad += check("  its motion on INDEX / OP LEVEL / E7 goes; a send's and the other track's stay",
                      c.motion.count == 2u && (c.motion.event[0].id == P_CHOR && !c.motion.event[0].lock) && c.motion.event[1].place == 3u &&
                      (c.motion.event[1].id == P_E4 && !c.motion.event[1].lock) && motion_valid(&c.motion) && proj_ok(&c));
@@ -795,7 +795,7 @@ int main(void)
         w1.t.preset = 1;
         w1.sum = proj_hash(&w1, sizeof w1 - 4u);
         memcpy(&buf, &w1, sizeof w1);
-        ok = proj_import(&c, &buf, (int)sizeof w1) && c.t[0].engine == ENGI_FM6 && c.t[0].preset == 1u &&
+        ok = proj_import(&c, &buf, (int)sizeof w1) && c.t[0].engine == ENGI_FM6 && c.t[0].preset == fm6_preset_of_slot(FM4_TO_FM6[1]) &&
              c.t[1].engine == ENGI_FM6 && c.t[1].preset == PROJ_DEF_SOUND;   /* (track 2: the power-on FM6 PAD) */
         bad += check("FUN1 with DIGITAL: track 1 FM6 (BELL), track 2 the power-on sound (FM6 now)", ok);
 #undef FM4_OK

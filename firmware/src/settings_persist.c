@@ -112,10 +112,12 @@ static int settings_import_per(persist_t *p, int n)
     favorites.filter = favorites.filter == 1u;
 #if defined(FM4_NPRESETS) && !FELUCCA_FM4 && FELUCCA_LEGACY
     {   /* DIGITAL's starred presets (engine 1, retired) -> the FM6 presets that cover them (fm4_convert.c) */
-        uint32_t k;
+        uint32_t k, f;
         for (k = 0; k < FM4_NPRESETS; k++)
-            if ((favorites.factory[ENGI_DIGITAL][0] >> k) & 1u)
-                favorites.factory[ENGI_FM6][FM4_TO_FM6[k] / 8u] |= (uint8_t)(1u << (FM4_TO_FM6[k] % 8u));
+            if ((favorites.factory[ENGI_DIGITAL][0] >> k) & 1u) {
+                f = fm6_preset_of_slot(FM4_TO_FM6[k]);
+                favorites.factory[ENGI_FM6][f / 8u] |= (uint8_t)(1u << (f % 8u));
+            }
         favorites.factory[ENGI_DIGITAL][0] = 0;  /* ((1.3) bytes 2..31: MIDI LEARN's map, midi_control.c ML_N) */
     }
 #endif

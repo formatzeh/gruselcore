@@ -646,7 +646,7 @@ static int program_change(void)
     ok = ui.mpc[1] == (0x80u | 2u);
     frame();
     for (k = 0; k < ENGINES[e]->npresets; k++)        /* the 3rd shown preset */
-        if (preset_orig(ENGINES[e], k) == k && n++ == 2u)
+        if (!preset_skip(ENGINES[e], k) && n++ == 2u)
             break;
     ok &= !ui.mpc[1] && trk[1].preset == k && trk[1].eng_req % NENGINES == e;
     k = trk[1].preset;
@@ -659,7 +659,7 @@ static int program_change(void)
     midi_event(0xC0u, 9, 1, 0);
     frame();
     for (k = 0, n = 0; k < ENGINES[e]->npresets; k++)
-        if (preset_orig(ENGINES[e], k) == k && n++ == 1u)
+        if (!preset_skip(ENGINES[e], k) && n++ == 1u)
             break;
     ok &= trk[2].preset == k;
     song.g[G_ROUTE] = 0;
@@ -997,21 +997,22 @@ static int midi_learn_channels(void)
     {   /* kept with the settings: engine 1's row, its byte 0 still DIGITAL's stars (moved to FM6's) */
         sks_t p;
         uint8_t row[32];
+        const uint32_t F0 = fm6_preset_of_slot(FM4_TO_FM6[0]);   /* (GruselCore) the FM6 preset DIGITAL 0's star goes to */
         memcpy(row, favorites.factory[ENGI_DIGITAL], 32);
         settings_export(&p);                            /* ((2.0) SKS1: the map by name, ml) */
         p.fav[ENGI_DIGITAL][0] = 1u;
         memset(favorites.factory[ENGI_DIGITAL], 0, 32);
-        favorites.factory[ENGI_FM6][FM4_TO_FM6[0] / 8u] &= (uint8_t)~(1u << (FM4_TO_FM6[0] % 8u));
+        favorites.factory[ENGI_FM6][F0 / 8u] &= (uint8_t)~(1u << (F0 % 8u));
         settings_import(&p, (int)sizeof p);
 #if FELUCCA_LEGACY
         ok &= !memcmp(favorites.factory[ENGI_DIGITAL] + 1, row + 1, 31) && !favorites.factory[ENGI_DIGITAL][0] &&
-              ((favorites.factory[ENGI_FM6][FM4_TO_FM6[0] / 8u] >> (FM4_TO_FM6[0] % 8u)) & 1u) && ml_count() == ML_N;
+              ((favorites.factory[ENGI_FM6][F0 / 8u] >> (F0 % 8u)) & 1u) && ml_count() == ML_N;
 #else                                                   /* ((2.0) DIGITAL's stars as they are: no list shows engine 1) */
         ok &= !memcmp(favorites.factory[ENGI_DIGITAL] + 1, row + 1, 31) && favorites.factory[ENGI_DIGITAL][0] == 1u &&
-              !((favorites.factory[ENGI_FM6][FM4_TO_FM6[0] / 8u] >> (FM4_TO_FM6[0] % 8u)) & 1u) && ml_count() == ML_N;
+              !((favorites.factory[ENGI_FM6][F0 / 8u] >> (F0 % 8u)) & 1u) && ml_count() == ML_N;
         favorites.factory[ENGI_DIGITAL][0] = 0;
 #endif
-        favorites.factory[ENGI_FM6][FM4_TO_FM6[0] / 8u] &= (uint8_t)~(1u << (FM4_TO_FM6[0] % 8u));
+        favorites.factory[ENGI_FM6][F0 / 8u] &= (uint8_t)~(1u << (F0 % 8u));
     }
     hold(B_HOME);                                       /* LEARN CLEAR */
     ui.menu_sel = MI_LCLEAR;

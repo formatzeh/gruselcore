@@ -615,18 +615,9 @@ static void slice_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     }
 }
 
-/* two factory sounds, both on BREAK (always there) */
+/* (GruselCore) one factory sound, hidden (PT_HIDE): what choosing SLICE loads, on BREAK (always there); none listed */
 static const preset_t SLICE_PRESETS[] = {
-    {"CHOP", {0, 2, 0, 0, SLC_ONE, 0, 127, 127}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 12), TAG(PT_DRUM)},
-    {"STUTTER", {0, 1, 0, 0, SLC_GATE, 0, 90, 110}, {0, 127, 127, 12}, 0, 0, FX(10, 0, 20, 10), TAG(PT_DRUM)},
-    /* (Skiff phase 9) more for every engine: basses, kits */
-    {"LOW BREAK", {0, 2, 0, -7, 0, 0, 127, 100}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 10), TAG(PT_DRUM)},
-    {"BACK BREAK", {0, 2, 0, 0, 0, 1, 127, 127}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 10), TAG(PT_DRUM)},
-    {"BREAK HITS", {0, 4, 0, 0, 0, 0, 127, 127}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 10), TAG(PT_DRUM)},
-    {"SHORT CHOP", {0, 2, 0, 0, 0, 0, 80, 127}, {0, 127, 127, 20}, 0, 0, FX(0, 0, 0, 10), TAG(PT_DRUM)},
-    {"FAST BREAK", {0, 2, 0, 5, 0, 0, 110, 127}, {0, 127, 127, 25}, 0, 0, FX(35, 0, 10, 10), MORE({P_DTYPE, 1}), TAG(PT_DRUM)},
-    {"ROLL LOOP", {0, 3, 0, 0, 2, 0, 127, 127}, {0, 127, 127, 20}, 0, 0, FX(0, 0, 0, 10), TAG(PT_FX)},
-    {"FUNK BREAK", {5, 1, 0, 0, 0, 0, 127, 127}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 10), TAG(PT_DRUM)},
+    {"CHOP", {0, 2, 0, 0, SLC_ONE, 0, 127, 127}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 12), TAG(PT_DRUM | PT_HIDE)},
 };
 
 /* the lowest key is slice 0 (C4 + ROOT), no scale */

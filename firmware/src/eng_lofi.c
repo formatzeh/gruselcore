@@ -204,15 +204,11 @@ static void lofi_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
 }
 
 static const preset_t LOFI_PRESETS[] = {
-    {"PULSE LD", {0, 0, 32, 0, 0, 20, 0, 127}, {0, 60, 90, 30}, 0, 1, FX(0, 0, 40, 20), TAG(PT_LEAD)},
-    {"WAVE BASS", {1, 1, 0, 0, 0, 0, 0, 90}, {0, 50, 70, 20}, 0, 1, FX(0, 0, 10, 0), TAG(PT_BASS)},
     {"ARP 8BIT", {2, 0, 96, 0, 0, 0, 2, 110}, {0, 60, 80, 40}, 0, 0, FX(0, 0, 30, 20), TAG(PT_LEAD)},
     /* wave RAM VOXA (DUTY 92 / 8 = 11), a little vibrato */
     {"WAVE LEAD", {0, 4, 92, 0, 0, 18, 0, 110}, {0, 70, 90, 30}, 0, 1, FX(0, 0, 40, 25), TAG(PT_LEAD)},
     /* STEP: 25 % pulse, DCY 34 = D7 (a 15-step decay over 0.5 s), REL ~54 ms of staircase after note-off */
     {"STEP LEAD", {4, 0, 40, 34, 0, 16, 0, 127}, {0, 64, 127, 55}, 0, 1, FX(0, 0, 40, 20), TAG(PT_LEAD)},
-    /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
-    {"PHOTON", {2, 1, 64, 0, 16, 0, 0, 120}, {0, 70, 0, 40}, 0, 0, FX(0, 0, 50, 35), TAG(PT_PLUCK)},
     /* (Skiff phase 9) more for every engine: basses, kits */
     {"TRI BASS", {0, 1, 64, 0, 0, 0, 0, 100}, {0, 60, 90, 20}, 0, 1, FX(0, 0, 5, 5), TAG(PT_BASS)},
     {"CHIP BELL", {2, 0, 20, 0, 30, 0, 0, 110}, {0, 70, 0, 50}, 0, 0, FX(0, 0, 40, 40), TAG(PT_PLUCK)},

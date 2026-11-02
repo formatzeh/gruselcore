@@ -440,11 +440,8 @@ static void grain_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 static const preset_t GRAIN_PRESETS[] = {
     /* name, {SRC, POS, SIZE, DENS, PTCH, SPRD, RAND, TONE}, {A D S R}, fenv, mono */
     {"CLOUD PAD", {2, 50, 92, 88, 0, 40, 14, 100}, {70, 90, 120, 90}, 0, 0, FX(0, 40, 25, 85), TAG(PT_PAD)},
-    {"GLITCH", {3, 64, 24, 112, 0, 100, 90, 127}, {0, 70, 100, 30}, 0, 0, FX(10, 0, 50, 25), TAG(PT_FX)},
     {"FROZEN", {0, 40, 108, 72, 0, 0, 10, 92}, {50, 100, 127, 100}, 0, 0, FX(0, 30, 20, 95), TAG(PT_PAD)},
     {"SHIMMER", {0, 30, 70, 100, 12, 30, 24, 110}, {30, 90, 110, 90}, 0, 0, FX(0, 50, 40, 90), TAG(PT_PAD)},
-    /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
-    {"QUARK CLOUD", {2, 70, 6, 124, 12, 120, 70, 115}, {50, 90, 120, 95}, 0, 0, FX(0, 30, 45, 85), TAG(PT_PAD)},
     /* (Skiff phase 9) more for every engine: basses, kits */
     {"PIANO HAZE", {0, 20, 100, 80, 0, 50, 20, 90}, {70, 90, 120, 100}, 0, 0, FX(0, 50, 30, 90), TAG(PT_PAD)},
     {"SAX DRONE", {3, 60, 120, 90, -12, 20, 10, 80}, {90, 90, 127, 100}, 0, 0, FX(0, 40, 20, 90), TAG(PT_PAD)},

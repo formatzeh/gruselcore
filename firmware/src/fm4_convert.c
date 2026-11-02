@@ -76,8 +76,17 @@ static const preset_t DIGITAL_PRESETS[] = {
 };
 #define FM4_NPRESETS 8u
 _Static_assert(NELEM(DIGITAL_PRESETS) == FM4_NPRESETS, "DIGITAL presets");
-/* DIGITAL preset k -> the FM6 factory preset (= its PTCH) that covers that sound */
+/* DIGITAL preset k -> the FM6 factory patch (its SLOT, F1..F8) that covers that sound */
 static const uint8_t FM4_TO_FM6[FM4_NPRESETS] = {0, 1, 2, 3, 6, 4, 5, 7};
+/* (GruselCore) FM6's presets are no longer F1..F8 in order: the first one on SLOT slot, 0 when none is */
+static uint32_t fm6_preset_of_slot(uint32_t slot)
+{
+    uint32_t k;
+    for (k = 0; k < NELEM(FM6_PRESETS); k++)
+        if (FM6_PRESETS[k].e[7] == (int8_t)slot)
+            return k;
+    return 0;
+}
 
 /* EDIT: the ranges are the stores' (a value of engine 1 is clamped to them before it converts) */
 #define FM4_EDIT(l0, l1, l2, l3, l4, l5, l6, f0, f1, n0, n1) {                                              \
@@ -355,7 +364,7 @@ static uint32_t fm4_convert(int16_t *p, uint8_t *v)
     p[P_E7] = FM4_TO_FM6[near];
     for (k = P_FM1_ATK; k <= P_FM4_LEVEL; k++)
         p[k] = (k - P_FM1_ATK) % 5u == 2u || (k - P_FM1_ATK) % 5u == 4u ? 127 : 0;
-    return FM4_TO_FM6[near];
+    return fm6_preset_of_slot(FM4_TO_FM6[near]);
 }
 
 /* DIGITAL preset k's values into p as a preset load sets them (ui.c apply_preset_to: the EDIT values, ENV, ENV ->

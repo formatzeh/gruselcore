@@ -256,16 +256,11 @@ static void noise_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 
 /* {MODE, COLR, FREQ, RES, TRK, DENS, DRFT, CRSH / CLK} */
 static const preset_t NOISE_PRESETS[] = {
-    {"WIND", {NZ_ANLG, 64, 70, 100, 127, 0, 70, 0}, {90, 90, 110, 90}, 0, 0, FX(0, 30, 20, 80), TAG(PT_FX)},
-    {"RAIN", {NZ_DUST, 30, 88, 80, 64, 105, 40, 0}, {50, 90, 127, 70}, 0, 0, FX(0, 0, 20, 70), TAG(PT_FX)},   /* ((Skiff phase 9) its
-                                                                         * attack slower: it came in hard) */
     /* a 7-bit register (127 steps) clocked 84 semitones (7 octaves) above the key: one period per key period,
      * a pitched chip-style buzz */
     {"ARCADE", {NZ_LFSR, 0, 127, 0, 127, 112, 0, 84}, {0, 80, 0, 50}, 0, 0, FX(0, 0, 10, 20), TAG(PT_FX)},
-    {"METAL", {NZ_META, 0, 100, 40, 100, 32, 0, 0}, {0, 75, 40, 60}, 10, 0, FX(0, 20, 30, 45), TAG(PT_FX)},
     /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
     {"CAVE WIND", {NZ_ANLG, 100, 70, 112, 127, 0, 100, 0}, {100, 90, 120, 100}, 0, 0, FX(0, 40, 10, 100), TAG(PT_FX)},
-    {"GEIGER", {NZ_DUST, 10, 100, 40, 64, 34, 0, 0}, {0, 90, 127, 40}, 0, 0, FX(0, 0, 5, 15), TAG(PT_FX)},
     {"PLASMA", {NZ_META, 0, 90, 90, 100, 40, 80, 0}, {60, 90, 110, 90}, 0, 0, FX(0, 30, 30, 80), MORE({P_LRATE, 56}, {P_LD_FLT, 18}), TAG(PT_FX)},
     /* (Skiff phase 9) more for every engine: basses, kits */
     {"OCEAN", {NZ_ANLG, 50, 60, 20, 0, 0, 40, 0}, {100, 90, 120, 110}, 0, 0, FX(0, 30, 10, 90), MORE({P_LRATE, 20}, {P_LD_FLT, 40}, {P_LWAVE, 1}), TAG(PT_FX)},

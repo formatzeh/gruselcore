@@ -146,13 +146,13 @@ async function editorMock() {
     const lv2 = E.parse[E.CMD.DUMP](await rq(E.req.dump()), info);
     ok(lv.p[84] === 40 && lv2.p[84] === 127, "editor: a lane level is the sound's: a factory preset sets it back to 100 %");
     await rq(E.req.set(0, 82, 0));
-    /* (Skiff) a factory preset's other values (core.h preset_t more): ANALOG NEON LEAD (16) sets the LFO's RATE, FADE
+    /* (Skiff) a factory preset's other values (core.h preset_t more): ANALOG NEON LEAD (10; GruselCore's list) sets the LFO's RATE, FADE
        and PIT and GLIDE (9, 12, 13, 38); the next preset puts them back to their defaults */
-    await rq(E.req.preset(0, 16));
+    await rq(E.req.preset(0, 10));
     const nl = E.parse[E.CMD.DUMP](await rq(E.req.dump()), info);
     await rq(E.req.preset(0, 0));
     const sl = E.parse[E.CMD.DUMP](await rq(E.req.dump()), info);
-    ok(nl.preset === 16 && nl.p[9] === 86 && nl.p[12] === 92 && nl.p[13] === 11 && nl.p[38] === 28 &&
+    ok(nl.preset === 10 && nl.p[9] === 86 && nl.p[12] === 92 && nl.p[13] === 11 && nl.p[38] === 28 &&
        sl.p[9] === 60 && sl.p[12] === 0 && sl.p[13] === 0 && sl.p[38] === 0,
       "editor: NEON LEAD sets its LFO and GLIDE, the next factory preset their defaults");
   }
@@ -389,10 +389,10 @@ async function editorSamplePresets() {
   const names = E.parse[C.NAMES](await rq(E.req.names(4)));
   await rq(E.req.preset(4, 0));
   const set = E.parse[C.DESC](await rq(E.req.desc(0, info.pe0)));
-  ok(eq(names.names.slice(0, 6), ["PIANO", "PIANO", "FLUTE", "SAX", "PIANO", "LOFI PIANO"]) && names.names.length === 10 &&
+  ok(eq(names.names, ["PIANO", "PIANO", "FLUTE", "SAX", "PIANO"]) &&
     eq(set.names.slice(0, 4), ["PIANO", "PIANO", "FLUTE", "SAX"]) && set.names[4] === "PIANO" &&
     eq(set.names.slice(5), ["USR1", "USR2", "USR3"]),
-    "SAMPLE: TRANH and PERC removed, SET 1 and 4 kept as PIANO aliases, indices unchanged; (phase 9) the variations after");
+    "SAMPLE: TRANH and PERC removed, SET 1 and 4 kept as PIANO aliases, indices unchanged; (GruselCore) no variations");
   ok(E.aliasOf(names.names, 1) === 0 && E.aliasOf(names.names, 2) === 2 && E.aliasOf(set.names, 5) === 5 &&
      E.aliasOf(set.names, 4) === 0, "SAMPLE: an entry named like an earlier one is an alias of it");
   const alias = E.parse[C.PRESET](await rq(E.req.preset(4, 1)));
@@ -437,8 +437,8 @@ function mockTables() {
     const m0 = E.makeMockDevice({ auto: false }), ph = m0.tables.ENG[9], dr = m0.tables.ENG[10];
     m0.stop();
     ok(ph.name === "PHYS" && ph.edit[0].names.join() === "MODAL,STRNG,MEMB,SYMP" && ph.edit[0].max === 3 &&
-       ph.presets.length === 9 && !ph.presets.some((p) => ["RAIN", "DRUM KIT", "HAND DRUM", "TOMS"].includes(p.name)),
-       "editor: PHYS models MODAL STRNG MEMB SYMP (no DUST, no DRUM), 9 presets (GruselCore: HAND DRUM, TOMS out)");
+       ph.presets.length === 3 && !ph.presets.some((p) => ["RAIN", "DRUM KIT", "HAND DRUM", "TOMS"].includes(p.name)),
+       "editor: PHYS models MODAL STRNG MEMB SYMP (no DUST, no DRUM), 3 presets (GruselCore: PLUCK BOWED METAL UPRIGHT)");
     ok(dr.name === "DRUM" && dr.edit.map((d) => d.label).join() === "KIT,PITCH,TONE,DECAY,GRIT,ACCENT,CHOKE,DRIVE" &&
        dr.presets.length === 18 && dr.presets[0].name === "HARDTEK KIT",
        "editor: DRUM engine 10 (KIT PITCH TONE DECAY GRIT ACCENT CHOKE DRIVE), HARDTEK KIT first of 18");
@@ -551,14 +551,14 @@ async function editorFm4() {
   let d = E.parse[C.DUMP](await rq(E.req.dump()), info);
   const owned = (p) => p.map((v, i) => (i === info.pe0 + 7 ? 8 : v));   /* (1.0.3: the converted patch is the track's own: SLOT OWN) */
   let want = E.FM4.convert(digital(0, d0.p), info.pe0);
-  ok(d.engine === 12 && d.preset === 0 && eq(d.p, owned(want.p)) && eq(await fm6Of(), E.FM6.pack(want.voice)),
-    "DIGITAL retired: SET G_ENGSEL 1 -> FM6 with E.PIANO converted (its own patch, SLOT OWN, preset TINE EP)");
+  ok(d.engine === 12 && d.preset === want.preset && eq(d.p, owned(want.p)) && eq(await fm6Of(), E.FM6.pack(want.voice)),
+    "DIGITAL retired: SET G_ENGSEL 1 -> FM6 with E.PIANO converted (its own patch, SLOT OWN, preset: the first FM6 one on F1)");
   d0 = d;
   await rq(E.req.preset(1, 5));
   d = E.parse[C.DUMP](await rq(E.req.dump()), info);
   want = E.FM4.convert(digital(5, d0.p), info.pe0);
-  ok(d.engine === 12 && d.preset === 4 && eq(d.p, owned(want.p)) && E.FM6.name(E.FM6.unpack(await fm6Of())) === "PAD",
-    "DIGITAL retired: PRESET 1 5 (its PAD) -> FM6, the converted patch named PAD, SLOT OWN, preset FM6 PAD");
+  ok(d.engine === 12 && d.preset === want.preset && eq(d.p, owned(want.p)) && E.FM6.name(E.FM6.unpack(await fm6Of())) === "PAD",
+    "DIGITAL retired: PRESET 1 5 (its PAD) -> FM6, the converted patch named PAD, SLOT OWN, preset: the first FM6 one on PAD's slot");
   /* library files of DIGITAL sounds: today's parameters (INFO's: (Skiff) DIR at 91, the ducking 92..94, phase 9's 95..116), 91 (P_E0 83: before the DRUM lane levels),
      89 (P_E0 81), 69 (P_E0 61, no OP ENV) */
   const PC = info.pcount, PE = info.pe0;

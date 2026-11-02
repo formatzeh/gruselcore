@@ -1843,18 +1843,32 @@ static uint32_t preset_orig(const engine_t *e, uint32_t k)
     return e->presets == SMP_PRESET_TABLE && k < SMP_NSETS ? SMP_SET_ORIG[k] : k;
 }
 
+/* (GruselCore) browsing skips preset k of e: an alias, or a hidden one (PT_HIDE: SLICE's and SAMPLE's defaults, kept so
+ * an engine change loads a sound, never listed) */
+static int preset_skip(const engine_t *e, uint32_t k)
+{
+    return preset_orig(e, k) != k || (e->presets[k].tag & PT_HIDE);
+}
+
 /* the presets of engine e that browsing shows before preset k (k = npresets: all of them) */
 static uint32_t preset_rank(const engine_t *e, uint32_t k)
 {
     uint32_t i, n = 0;
-    if (e->presets != SMP_PRESET_TABLE)
-        return k;
-    for (i = 0; i < k; i++)
-        n += preset_orig(e, i) == i;
+    for (i = 0; i < k && i < e->npresets; i++)
+        n += !preset_skip(e, i);
     return n;
 }
 
-#define preset_shown(e) (ENGINES[e]->npresets - (ENGINES[e]->presets == SMP_PRESET_TABLE ? SMP_NALIAS : 0u))
+#define preset_shown(e) preset_rank(ENGINES[e], ENGINES[e]->npresets)
+
+/* the n-th preset browsing shows of e (n < preset_shown) */
+static uint32_t preset_nth(const engine_t *e, uint32_t n)
+{
+    uint32_t k;
+    for (k = 0; preset_skip(e, k) || n--; k++)
+        ;
+    return k;
+}
 
 /* (Skiff 1.3, from Felucca 1.5.1, its #179 by renebohne) MIDI Program Change: program n on track t, as the PRESETS list
  * numbers the engine's sounds from 0: its n-th preset, the aliases skipped (preset_orig), loaded as from there (one
@@ -1866,8 +1880,7 @@ static void midi_pc_load(track_t *t, uint32_t n)
     uint32_t e = t->eng_req % NENGINES, k;
     if (n >= preset_shown(e))
         return;
-    for (k = 0; preset_orig(ENGINES[e], k) != k || n--; k++)   /* the n-th shown preset */
-        ;
+    k = preset_nth(ENGINES[e], n);                       /* the n-th shown preset */
     apply_preset_to(t, k);
 }
 static void midi_pc_poll(void)                       /* main loop (ui_input) */
@@ -2089,7 +2102,7 @@ static uint32_t preset_all_pos(uint32_t *total)          /* list index of the se
 /* list index n (< total) -> engine, *k its preset; NENGINES = user preset, *k its slot */
 static uint32_t preset_all_at(uint32_t n, uint32_t *k)
 {
-    uint32_t e = 0, i, r;
+    uint32_t e = 0, r;
     for (r = 0; r < NENG_SHOWN && n >= preset_listed(eng_vis(r)); r++)
         n -= preset_listed(eng_vis(r));
     if (r == NENG_SHOWN) {
@@ -2097,9 +2110,7 @@ static uint32_t preset_all_at(uint32_t n, uint32_t *k)
         return NENGINES;
     }
     e = eng_vis(r);
-    for (i = 0; preset_orig(ENGINES[e], i) != i || n--; i++)    /* the n-th shown preset */
-        ;
-    *k = i;
+    *k = preset_nth(ENGINES[e], n);                     /* the n-th shown preset */
     return e;
 }
 
@@ -2211,9 +2222,7 @@ static void eng_list_step(int32_t direction)         /* the next / previous soun
         return;
     n = (cur + (direction > 0 ? 1u : total - 1u)) % total;
     if (n < np) {
-        for (k = 0; preset_orig(ENGINES[e], k) != k || n--; k++)   /* the n-th shown preset */
-            ;
-        apply_preset(k);
+        apply_preset(preset_nth(ENGINES[e], n));           /* the n-th shown preset */
     } else {
         n -= np;
         for (k = 0; k < UP_SLOTS; k++)
@@ -2225,10 +2234,21 @@ static void eng_list_step(int32_t direction)         /* the next / previous soun
     ui.force = 1;
 }
 
+/* (GruselCore) the selected track plays a hidden factory sound (SLICE's, SAMPLE's): not in the list, its place the
+ * next listed sound's (preset_all_pos) */
+static int preset_off_list(void)
+{
+    const engine_t *en = ENGINES[TSEL->eng_req % NENGINES];
+    return user_of(TSEL) >= UP_SLOTS && en->npresets && preset_skip(en, preset_orig(en, TSEL->preset % en->npresets));
+}
 static void preset_step(int32_t direction)
 {
     uint32_t total, cur = preset_pos(&total);
     if (!total) { ui_message(ui_ptag ? "NO SOUNDS" : "NO FAVORITES"); return; }
+    if (!list_mode() && preset_off_list() && cur < total) {   /* right: the sound at its place, left: the one before */
+        preset_go(direction > 0 ? cur : (cur + total - 1u) % total);
+        return;
+    }
     preset_go(cur >= total ? (direction > 0 ? 0 : total - 1) :
               (cur + (direction > 0 ? 1u : total - 1u)) % total);
 }

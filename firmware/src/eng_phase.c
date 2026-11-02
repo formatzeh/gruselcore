@@ -297,14 +297,9 @@ static const preset_t PHASE_PRESETS[] = {
     {"PD BRASS", {0, 0, 30, 90, 0, 0, 0, 0}, {8, 70, 90, 40}, 0, 0, FX(0, 20, 20, 40), TAG(PT_LEAD)},
     {"PD ORGAN", {3, 0, 40, 0, 0, 0, 0, 0}, {0, 127, 127, 30}, 0, 0, FX(0, 40, 0, 30), TAG(PT_KEYS)},
     {"PD STRINGS", {0, 4, 50, 40, 12, 0, 0, 0}, {40, 90, 100, 70}, 0, 0, FX(0, 50, 20, 60), TAG(PT_PAD)},
-    {"RESO", {5, 0, 60, 60, 0, 0, 0, 0}, {0, 70, 30, 60}, 0, 0, FX(0, 0, 40, 40), TAG(PT_LEAD)},
-    {"PD BELL", {6, 0, 80, 50, 0, 0, 0, 0}, {0, 95, 0, 90}, 0, 0, FX(0, 0, 30, 70), TAG(PT_KEYS)},
     {"WIRE", {4, 7, 70, 40, 7, 0, 0, 0}, {10, 80, 80, 60}, 0, 0, FX(15, 30, 30, 40), TAG(PT_LEAD)},
     /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
     {"NEUTRINO", {3, 0, 20, 70, 0, 0, 0, 0}, {0, 80, 0, 75}, 0, 0, FX(0, 10, 75, 55), TAG(PT_PLUCK)},
-    /* (Skiff phase 9) more for every engine: basses, kits */
-    {"PD BASS", {0, 0, 50, 80, 4, 0, 60, 0}, {0, 60, 60, 25}, 0, 1, FX(5, 0, 5, 10), TAG(PT_BASS)},
-    {"SOFT KEYS", {3, 0, 30, 60, 6, 0, 0, 0}, {0, 85, 30, 60}, 0, 0, FX(0, 40, 20, 40), TAG(PT_KEYS)},
 };
 
 static const engine_t ENG_PHASE = {
