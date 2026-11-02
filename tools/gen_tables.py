@@ -71,6 +71,7 @@ def main(path):
     L += arr("DECAY_K", "uint16_t", [min(65535, int(65536 * math.exp(-6.9 / (m / 1000 * FS)))) for m in dms])
     # soft clip curve for |x| in 0..2 (Q12 in, Q15 out): tanh
     L += arr("TANH_Q15", "int16_t", [int(32767 * math.tanh(i / 256 * 2)) for i in range(257)])
+    L += gc_drum_tables()
     L += fm6_tables()
     Path(path).write_text("\n".join(L) + "\n")
 
@@ -115,5 +116,32 @@ def fm6_tables():
     print(f"tables: {path}")
 
 
+def gc_drum_tables():
+    """(GruselCore) the drum voice's coefficients by pot value 0..127 (firmware/src/gc_drum.c): each a multiplier
+    for GCD_SUB samples in Q16, the noise / metal filter's g in Q12, the drive in Q8. The same curves as the float
+    engine the kits were made with (GruselCore 0.1, dsp/gdrum.c)"""
+    sub = 8
+    L = ["", "/* (GruselCore) the drum voice's tables (gc_drum.c): by pot value; Q16 multipliers per GCD_SUB samples */",
+         f"#define GCD_SUB {sub}"]
+    def expo(p, lo, octs):
+        return lo * 2 ** (octs * p / 127)
+    def kq16(x):
+        return max(1, min(65535, int(round(65536 * x))))
+    dec = [expo(p, 0.005, 9.23) for p in range(128)]               # amp decay 5 ms .. 3 s (to -60 dB)
+    L += arr("GCD_DEC_K", "uint16_t", [kq16(math.exp(-6.9077553 * sub / (t * FS))) for t in dec])
+    L += arr("GCD_TAIL_K", "uint16_t", [kq16(math.exp(-6.9077553 * sub / (2 * t * FS))) for t in dec])
+    pdec = [expo(p, 0.0003, 7.64) for p in range(128)]             # the pitch drop 0.3 .. 60 ms (to 1/e)
+    L += arr("GCD_PDEC_K", "uint16_t", [kq16(math.exp(-sub / (t * FS))) for t in pdec])
+    L += arr("GCD_BODY_K", "uint16_t", [kq16(math.exp(-sub / (min(max(8 * t, 0.02), 0.3) * FS))) for t in pdec])
+    tone = [min(expo(p, 100.0, 7.32), 18000.0) for p in range(128)]  # the filter 100 Hz .. 16 kHz
+    L += arr("GCD_TONE_G", "uint16_t", [int(round(4096 * math.tan(math.pi * f / FS))) for f in tone])
+    L += arr("GCD_DRIVE_Q8", "uint16_t", [int(round(256 * expo(p, 1.0, 5.9))) for p in range(128)])
+    L += [f"#define GCD_CLICK_K {kq16(math.exp(-6.9077553 * sub / (0.004 * FS)))}u   /* the click: 4 ms */",
+          f"#define GCD_CLAP_K {kq16(0.9915 ** sub)}u   /* a clap burst: ~3 ms */",
+          f"#define GCD_CHOKE_K {kq16(0.995 ** sub)}u   /* a choked hat */"]
+    return L
+
+
 if __name__ == "__main__":
     main(sys.argv[1])
+

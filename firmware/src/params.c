@@ -279,8 +279,8 @@ static int32_t enum_orig(const param_desc_t *d, int32_t v)
     if (d->names == N_SLC_SRC && (v == 2 || v == 3))  /* (SMK-37: USR2, USR3 have no flash; the knob steps over them) */
         return 1;
 #endif
-    if (d->names == N_DRUM_KIT)
-        return v >= 0 && v < DK_COUNT ? (int32_t)DK_PLAYS[v] : v;
+    if (d->names == N_DRUM_KIT)                       /* (GruselCore: no retired kits) */
+        return v;
     return d->names == SMP_ALL_NAMES && v >= 0 && v < SMP_NSETS ? SMP_SET_ORIG[v] : v;
 }
 

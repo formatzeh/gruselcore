@@ -565,7 +565,7 @@ static int card_dead(const page_t *pg, uint32_t c)
          (id == P_FNOTE && t->p[P_FMODE] == FM_FIT)))   /* FIT takes the whole chord: NOTE nothing) */
         return 1;
     return pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_DRUM && id == P_E6 &&
-           drum_kit_plays(t->p[P_E0]) != DK_STD;
+           drum_kit_plays(t->p[P_E0]) >= DK_USR1;   /* (GruselCore) CHOKE: a user kit's own */
 }
 
 /* action pages: the footer's first row says what OCT+ and OCT- do ("OCT+ LOAD   OCT- BACK") */
