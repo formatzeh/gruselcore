@@ -24,6 +24,8 @@ The earlier GruselCore (on X0X) is kept on the branch `x0x-base`.
   original patterns never change (G4 HOME plays them; KEEP stores what you hear as a new entry). DESIGN.md has the
   details.
 - **Tempo to 300 BPM** (was 240), for mentalcore and tribecore; MIDI clock in follows up to 300 too.
+- **Measured genre notes:** `design/GENRES.md` (from the user's 65 examples, `tools/genre_analyze.py`): tempo, step
+  patterns, kick, bass, key and breaks per genre, and a GruselCore recipe for each.
 - **Identity:** `FM-1_966` (development builds on GitHub `FM-1_9669` + the run number, releases `FM-1_966XXYYZZ`),
   packages `gruselcore-*.fwsc`.
 
