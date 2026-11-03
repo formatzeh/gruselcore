@@ -1495,7 +1495,7 @@ static void setup(int s)
                 evo.swp[k] = (uint8_t)(k & 1u ? 70u : 0u);
                 evo.gat[k] = (uint8_t)(k == 0u ? 45u : 0u);
                 evo.chd[k] = (uint8_t)(k == 1u ? 60u : k == 4u ? 30u : 0u);
-                evo_trn[k] = (int8_t)(s == S_PERF_EVOLVE2 && k != 3u && k != 5u ? 5 : 0);
+                evo_trn[k] = (int8_t)(s == S_PERF_EVOLVE2 && k != 3u && k != 5u ? -7 : 0);
             }
             evo.protect = 1; evo.freeze = 0; evo.brk = 0; evo.home = 0;
             evo.plen = s == S_PERF_EVOLVE_OFF ? 0u : 8u; evo.ppos = 5;

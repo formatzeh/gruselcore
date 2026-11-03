@@ -30,7 +30,8 @@ static const uint8_t EVO_RATE[EVO_RATES] = {1, 2, 4, 8, 16};
 static const char *const EVO_ARR[3] = {"OFF", "LIGHT", "FULL"};
 #define EVO_ROOTS 5u
 static const char *const EVO_ROOT[EVO_ROOTS] = {"OFF", "I-IV", "I-V", "I-IV-V", "I-VII-VI"};
-static const int8_t EVO_PROG[EVO_ROOTS][4] = {{0, 0, 0, 0}, {0, 5, 0, 5}, {0, 7, 0, 7}, {0, 5, 7, 5}, {0, -2, -4, -2}};
+static const int8_t EVO_PROG[EVO_ROOTS][4] = {{0, 0, 0, 0}, {0, -7, 0, -7}, {0, -5, 0, -5}, {0, -7, -5, -7}, {0, -2, -4, -2}};
+/* (every move down, the user's wish: IV a fifth under, V a fourth under, VII and VI under) */
 enum { EVO_KEY_ON, EVO_KEY_T1, EVO_KEY_ALL = EVO_KEY_T1 + NTRK, EVO_KEY_HOME, EVO_KEY_KEEP, EVO_KEY_NEW,
        EVO_KEY_PROTECT, EVO_KEY_FREEZE, EVO_KEYS };
 static struct {

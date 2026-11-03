@@ -11,7 +11,7 @@
  *   AMOUNT    per track: OFF plays the original, the other track evolves; ALL sets every track
  *   HOME      every track its original, nothing modulated or moved, until HOME again
  *   KEEP      the copy as a new pattern in a free entry, the track's own steps as they were; a full list says so
- *   ROOT      I-IV: the second phrase sounds 5 semitones up; STOP leaves nothing sounding
+ *   ROOT      I-IV: the second phrase sounds 7 semitones down (IV under, as every move); STOP leaves nothing sounding
  *   HELD      a drone (one note held over the bar) at AMOUNT 100: its rhythm changes (struck again, cut, held on),
  *             never its pitch
  *   CHORD     100 at AMOUNT 0: thirds, fifths, octaves over T1's notes, every step's own notes kept, all in C minor
@@ -286,10 +286,10 @@ int main(void)
     run_steps(2u * 16u);
     for (k = 0; k < step_len() / 4u; k += CTL)          /* (a quarter into the step) */
         block();
-    ok = sounding(M, 48) && !sounding(M, 53);           /* bar 3, its first step: C */
+    ok = sounding(M, 48) && !sounding(M, 41);           /* bar 3, its first step: C */
     run_steps(6u * 16u);                                /* bar 9 (the second phrase) */
-    ok &= sounding(M, 53) && !sounding(M, 48);          /* .. F */
-    bad += check("ROOT I-IV: the first phrase as written, the second 5 semitones up", ok);
+    ok &= sounding(M, 41) && !sounding(M, 48);          /* .. F, under */
+    bad += check("ROOT I-IV: the first phrase as written, the second 7 semitones down", ok);
     seq_stop();
     for (k = 0; k < 64u; k++)
         block();
