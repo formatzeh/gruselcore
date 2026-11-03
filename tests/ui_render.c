@@ -1494,6 +1494,7 @@ static void setup(int s)
                 evo.amt[k] = A[k]; evo.dft[k] = F[k];
                 evo.swp[k] = (uint8_t)(k & 1u ? 70u : 0u);
                 evo.gat[k] = (uint8_t)(k == 0u ? 45u : 0u);
+                evo.chd[k] = (uint8_t)(k == 1u ? 60u : k == 4u ? 30u : 0u);
                 evo_trn[k] = (int8_t)(s == S_PERF_EVOLVE2 && k != 3u && k != 5u ? 5 : 0);
             }
             evo.protect = 1; evo.freeze = 0; evo.brk = 0; evo.home = 0;
@@ -1501,6 +1502,7 @@ static void setup(int s)
             evo_mute = s == S_PERF_EVOLVE ? 1u << 2 : 0u;
             memset((void *)evo_play, s != S_PERF_EVOLVE_OFF, sizeof evo_play);
             evo_play[4] = 0;
+            trk[5].p[P_MUTE] = (int16_t)(s != S_PERF_EVOLVE_OFF);   /* (T6 muted: the M; T2 selected: its name below) */
             song.playing = s != S_PERF_EVOLVE_OFF;
             sel_set(1);
             go_home(); ui.layer = LAYER_PERF;

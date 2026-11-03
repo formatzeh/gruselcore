@@ -1177,42 +1177,57 @@ static void evo_pct(char *b, const char *tag, uint32_t v)   /* "AMT 40", "AMT --
 }
 static void layer_evo(void)
 {
+#define ER_H 15                                         /* (a row 15 px, every 16: the six, the keys' row, the name) */
+#define ER_Y(r) (2 + 16 * (int32_t)(r))
     static const char *const KN[NTRK] = {"G3", "A3", "B3", "C4", "D4", "E4"};
-    uint32_t k, two = evo.keys == 2u;
+    uint32_t k, two = evo.keys == 2u, sk = song.sel % NTRK;
     char b[24];
-    int32_t ly = PR_Y(NTRK) + CAP_IN(S, PR_H);
+    int32_t ly = ER_Y(NTRK) + CAP_IN(S, ER_H), ny = ER_Y(NTRK + 1u) + CAP_IN(S, ER_H);
     cv_rect(0, 0, 240, H_GRAPH + (int32_t)foot_less(), T_BG);
     cv_bg = T_BG;
     for (k = 0; k < NTRK; k++) {
-        int32_t y = PR_Y(k), ty = y + CAP_IN(S, PR_H);
-        int out = (evo_mute >> k) & 1u, band = k == song.sel % NTRK, drum = drum_track(&trk[k]);
+        int32_t y = ER_Y(k), ty = y + CAP_IN(S, ER_H);
+        int out = (evo_mute >> k) & 1u, band = k == sk, drum = drum_track(&trk[k]);
+        int muted = trk[k].p[P_MUTE] != 0 || trk_cut(k), staged = mute_arm[k] != 0;
         uint16_t col = T_TRK(k), g = band ? T_RAISE : T_BG;
         char d[2] = {(char)('1' + k), 0};
-        const char *what = !evo.on ? "READY" : evo.home ? "HOME" : !evo.amt[k] ? "ORIGINAL" : out ? "OUT"
-                         : drum && evo.brk ? "BREAK" : evo.freeze ? "FROZEN" : evo_play[k] ? "EVOLVING" : "WAITING";
+        const char *what = !evo.on ? "READY" : evo.home ? "HOME" : muted ? "MUTED"
+                         : !evo.amt[k] && (!evo.chd[k] || drum) ? "ORIGINAL" : out ? "OUT"
+                         : drum && evo.brk ? "BREAK" : evo.freeze ? "FROZEN" : !evo.amt[k] ? "CHORDS"
+                         : evo_play[k] ? "EVOLVING" : "WAITING";
         if (band)
-            cv_rrect(3, y, 234, PR_H, 3, T_RAISE, T_BG);
-        GFX_HOOK_ALIGN(0, y, 0, y + PR_H, AL_V, "evolve track number on its row's middle");
-        cv_text_on(6, y + CAP_IN(M, PR_H), &AF_M, d, col, g);
+            cv_rrect(3, y, 234, ER_H, 3, T_RAISE, T_BG);
+        GFX_HOOK_ALIGN(0, y, 0, y + ER_H, AL_V, "evolve track number on its row's middle");
+        cv_text_on(6, y + CAP_IN(M, ER_H), &AF_M, d, muted ? T_DIM : col, g);
         cv_text_on(20, ty, &AF_S, KN[k], T_MID, g);
         if (two) {
             evo_pct(b, "SWP ", evo.swp[k]);
             cv_text_on(42, ty, &AF_S, b, evo.swp[k] ? T_TEXT : T_DIM, g);
             evo_pct(b, "GATE ", evo.gat[k]);
-            cv_text_on(96, ty, &AF_S, b, evo.gat[k] ? T_TEXT : T_DIM, g);
+            cv_text_on(88, ty, &AF_S, b, evo.gat[k] ? T_TEXT : T_DIM, g);
+            evo_pct(b, "CHD ", evo.chd[k]);
+            cv_text_on(140, ty, &AF_S, b, evo.chd[k] && !drum ? T_TEXT : T_DIM, g);
             if (evo_trn[k]) {
                 b[0] = evo_trn[k] < 0 ? '-' : '+';
                 fmt_int(b + 1, evo_trn[k] < 0 ? -evo_trn[k] : evo_trn[k]);
-                cv_text_on(196, ty, &AF_S, b, T_TEXT, g);
+                cv_text_on(192, ty, &AF_S, b, T_TEXT, g);
             }
         } else {
             evo_pct(b, "AMT ", evo.amt[k]);
             cv_text_on(42, ty, &AF_S, b, evo.amt[k] ? T_TEXT : T_DIM, g);
             evo_pct(b, "DRF ", evo.dft[k]);
-            cv_text_on(90, ty, &AF_S, b, evo.dft[k] ? T_TEXT : T_DIM, g);
-            cv_text_on(136, ty, &AF_S, what, evo.on && evo.amt[k] && !evo.home ? (out ? T_REC : T_TEXT) : T_MID, g);
-            if (evo.protect && evo.amt[k])
-                cv_text_on(196, ty, &AF_S, drum ? "BD SD" : "BEATS", T_DIM, g);
+            cv_text_on(88, ty, &AF_S, b, evo.dft[k] ? T_TEXT : T_DIM, g);
+            cv_text_on(132, ty, &AF_S, what, muted || out ? T_REC : evo.on && !evo.home && (evo.amt[k] || evo.chd[k])
+                       ? T_TEXT : T_MID, g);
+            if (evo.protect && evo.amt[k] && !muted)
+                cv_text_on(186, ty, &AF_S, drum ? "BD SD" : "BEATS", T_DIM, g);
+        }
+        if (muted || staged) {                          /* (as PERFORM's map: M, red while muted; a mute staged:
+                                                         * outlined) */
+            if (staged)
+                cv_frame(222, y + 1, 14, ER_H - 2, muted ? T_MID : T_REC);
+            GFX_HOOK_ALIGN(222, y, 236, y + ER_H, AL_HV, "evolve mute mark centred");
+            cv_text_in(222, y + CAP_IN(S, ER_H), 14, &AF_S, "M", muted ? T_REC : T_MID, g);
         }
     }
     cv_text_on(6, ly, &AF_S, evo.on ? "F3 ON" : "F3 OFF", evo.on ? T_TEXT : T_MID, T_BG);
@@ -1223,8 +1238,16 @@ static void layer_evo(void)
         fmt_int(b + str_len(b), evo.plen);
         cv_text_on(50, ly, &AF_S, b, T_TEXT, T_BG);
     }
-    cv_text_on(136, ly, &AF_S, two ? (evo.freeze ? "D5 FROZEN" : "D5 FREEZE") : evo.protect ? "C5 PROTECT" : "C5 FREE",
+    cv_text_on(132, ly, &AF_S, two ? (evo.freeze ? "D5 FROZEN" : "D5 FREEZE") : evo.protect ? "C5 PROTECT" : "C5 FREE",
                two ? (evo.freeze ? T_TEXT : T_MID) : evo.protect ? T_TEXT : T_MID, T_BG);
+    b[0] = 'T';                                         /* the selected track's sound: what is what */
+    b[1] = (char)('1' + sk);
+    b[2] = 0;
+    cv_text_on(6, ny, &AF_S, b, T_TRK(sk), T_BG);
+    sound_name(&trk[sk], b);
+    cv_text_on(24, ny, &AF_S, b[0] ? b : "--", T_TEXT, T_BG);
+#undef ER_Y
+#undef ER_H
 }
 /* what the PERFORM map shows of every track and the scenes (draw_layer: redrawn when it changes) */
 static uint32_t perf_sig(void)
@@ -1391,8 +1414,8 @@ static void layer_cards(uint32_t l)
     } else if (l == LAYER_EDIT) {
         engine_columns();
     } else if (l == LAYER_PERF && evo.keys) {           /* ((GruselCore) KEYS EVOLVE: AMOUNT RATE ARRANGE DRIFT) */
-        uint32_t sk = song.sel % NTRK;                  /* (AMOUNT DRIFT SWEEP GATE: the selected track's) */
-        if (evo.keys == 2u) {                           /* EVOLVE 2: SWEEP GATE ROOT, KNOB 4 nothing */
+        uint32_t sk = song.sel % NTRK;                  /* (AMOUNT DRIFT SWEEP GATE CHORD: the selected track's) */
+        if (evo.keys == 2u) {                           /* EVOLVE 2: SWEEP GATE ROOT CHORD */
             fmt_int(val, evo.swp[sk]);
             draw_column(0, "SWEEP", evo.swp[sk] ? val : "OFF", evo.swp[sk] ? "%" : "", evo.swp[sk] ? VR_LIVE : VR_DIM,
                         evo.swp[sk] * 10, ICON_SWEEP);
@@ -1401,7 +1424,9 @@ static void layer_cards(uint32_t l)
                         evo.gat[sk] * 10, ICON_GATE);
             draw_column(2, "ROOT", EVO_ROOT[evo.root % EVO_ROOTS], "", evo.root ? VR_LIVE : VR_DIM, evo.root * 250,
                         ICON_TRANSPOSE);
-            draw_column(3, "", "", "", VR_THEME, -1, ICON_NONE);
+            fmt_int(val, evo.chd[sk]);
+            draw_column(3, "CHORD", evo.chd[sk] ? val : "OFF", evo.chd[sk] ? "%" : "", evo.chd[sk] ? VR_LIVE : VR_DIM,
+                        evo.chd[sk] * 10, ICON_SCALE);
         } else {                                        /* EVOLVE: AMOUNT EVERY ARRANGE DRIFT */
             fmt_int(val, evo.amt[sk]);
             draw_column(0, "AMOUNT", evo.amt[sk] ? val : "OFF", evo.amt[sk] ? "%" : "", evo.amt[sk] ? VR_LIVE : VR_DIM,

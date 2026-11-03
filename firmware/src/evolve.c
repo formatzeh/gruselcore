@@ -13,8 +13,9 @@
  *           kick), then the drop
  *   DRIFT   (the selected track's) its sound wanders: the tone, a second sound parameter (DRUM's DECAY), the reverb
  *           and delay sends glide around their own values
- * Page 2 (KEYS EVOLVE 2): SWEEP (the tone up and down over 16 bars), GATE (the notes' length breathing over 8 bars),
- * both the selected track's; ROOT (every melodic
+ * Page 2 (KEYS EVOLVE 2): SWEEP (the tone up and down over 16 bars), GATE (length breathing over 8 bars: a kit's
+ * DECAY, a line's step GATE, a held note's RELEASE and SUSTAIN), CHORD (thirds, fifths, octaves coming and going over
+ * the notes), the selected track's; ROOT (every melodic
  * track through a progression, a step a phrase). The modulations are offsets the audio ISR puts over the parameters
  * for a block and takes off after it (fx.c evo_mod, throw.c), never saved; ROOT moves the notes as they play
  * (seq.c evo_trn); the mutes, FILL and ROOT come in on the bar (launch.c launch_clock).
@@ -37,7 +38,7 @@ static struct {
     uint8_t keys;                      /* PERFORM's KEYS: 1 EVOLVE, 2 EVOLVE 2 (0: TRACK / SCENE) */
     uint8_t screen;                    /* the EVOLVE screen stays (ui_layer.c: until ARP is held on it) */
     uint32_t press_t;                  /* ARP pressed on it (fm1_ms | 1; 0 none) */
-    uint8_t amt[NTRK], dft[NTRK], swp[NTRK], gat[NTRK];
+    uint8_t amt[NTRK], dft[NTRK], swp[NTRK], gat[NTRK], chd[NTRK];
     uint8_t rate, arrange, root;
     uint8_t protect, freeze, home;
     uint32_t all_k;                    /* F4 ALL held (its key's bit: ui_layer.c layer_keys) */
@@ -257,25 +258,103 @@ static int evo_note_ok(const step_t *st, const step_t *own, uint32_t len, uint32
         return 0;
     return a ? evo_anchor(own, i) : 1;
 }
+/* the NOTE step a TIE at i holds (its run's start); NSTEP: none */
+static uint32_t evo_run_start(const step_t *st, uint32_t i)
+{
+    while (i && st[i].time == ST_TIE)
+        i--;
+    return st[i].time == ST_NOTE && st[i].n && !st[i].hit ? i : NSTEP;
+}
+static void evo_note_copy(step_t *d, const step_t *s0)  /* a run's notes as a plain note (no ratchet, tie, accent) */
+{
+    *d = *s0;
+    d->flags &= (uint8_t)~(SF_RATCH | SF_FLAM | SF_ACCENT);
+    d->acc = 0;
+    d->cond = 0;
+    d->nudge = 0;
+}
+/* a held note's rhythm (AMOUNT): a TIE struck again (the run's notes), a run's last TIE cut to a rest, a rest after a
+ * run held on, or the rest after a run given a short note of its pitch; the pitch stays. 1: made */
+static int evo_held_op(step_t *st, uint32_t len)
+{
+    uint32_t i = evo_rnd(len), k, r = evo_rnd(4), s0;
+    for (k = 0; k < len; k++, i = (i + 1u) % len) {
+        const step_t *nx = &st[(i + 1u) % len];
+        if (r < 2u && st[i].time == ST_TIE && i && (s0 = evo_run_start(st, i)) < NSTEP && !step_ties(nx)) {
+            if (r == 0u) {                              /* struck again partway */
+                evo_note_copy(&st[i], &st[s0]);
+                return 1;
+            }
+            if (nx->time != ST_TIE) {                   /* its tail cut */
+                step_clear(&st[i]);
+                return 1;
+            }
+        } else if (r == 2u && st[i].time == ST_REST && !st[i].n && !st[i].hit && i &&
+                   evo_run_start(st, i - 1u) < NSTEP && nx->time != ST_TIE && !step_ties(nx)) {
+            st[i].time = ST_TIE;                        /* held on into a rest */
+            return 1;
+        } else if (r == 3u && st[i].time == ST_REST && !st[i].n && !st[i].hit && i >= 2u && !(i & 1u) &&
+                   st[i - 1u].time == ST_REST && (s0 = evo_run_start(st, i - 2u)) < NSTEP &&
+                   nx->time != ST_TIE && !step_ties(nx)) {
+            evo_note_copy(&st[i], &st[s0]);             /* a short note of its pitch in a rest after it */
+            return 1;
+        }
+    }
+    return 0;
+}
+/* a beat of the line (4 steps without ties) onto another beat, now and then a scale step up or down (PROTECT: the
+ * beat's anchor stays). 1: made */
+static int evo_phrase_op(const track_t *t, step_t *st, uint32_t len)
+{
+    uint32_t nb = len / 4u, a, b, j, notes = 0;
+    int32_t d = evo_rnd(3) ? 0 : (evo_rnd(2) ? 1 : -1);
+    if (nb < 2u)
+        return 0;
+    a = evo_rnd(nb);
+    b = (a + 1u + evo_rnd(nb - 1u)) % nb;
+    for (j = 0; j < 4u; j++) {                          /* (both beats free of ties, the steps after them too) */
+        if (!evo_open(st, len, a * 4u + j) || !evo_open(st, len, b * 4u + j) || st[a * 4u + j].hit ||
+            st[b * 4u + j].hit)
+            return 0;
+        notes += st[a * 4u + j].time == ST_NOTE && st[a * 4u + j].n;
+    }
+    if (notes < 2u)                                     /* (a line's beat: not one note and rests) */
+        return 0;
+    for (j = evo.protect ? 1u : 0u; j < 4u; j++) {
+        step_t x = st[a * 4u + j];
+        uint32_t k;
+        for (k = 0; d && x.time == ST_NOTE && k < x.n && k < 4u; k++)
+            x.note[k] = (uint8_t)tl_neigh(t, x.note[k], d);
+        st[b * 4u + j] = x;
+    }
+    return 1;
+}
 static int evo_mel_op(const track_t *t, step_t *st, uint32_t len)
 {
-    uint32_t i, j, k, g = 0, r = evo_rnd(20);
+    uint32_t i, j, k, g = 0, r = evo_rnd(24);
     int a = 0;
     step_t *s;
     const step_t *own = t->step;
+    if (r >= 20u)                                       /* a held note's rhythm, else a phrase */
+        return evo_held_op(st, len) || evo_phrase_op(t, st, len);
+    if (r >= 17u && evo_phrase_op(t, st, len))
+        return 1;
     if (!evo.protect && evo_rnd(2))                     /* (PROTECT off: the notes on the beats, half the time) */
         for (j = 0; j < len && !a; j++)
             a = evo_note_ok(st, own, len, j, 1);
     for (j = 0; j < len; j++)
         g += (uint32_t)evo_note_ok(st, own, len, j, a);
     if (!g)
-        return 0;
+        return evo_held_op(st, len);                    /* (held notes only: their rhythm) */
     for (j = evo_rnd(g), i = 0; i < len && (!evo_note_ok(st, own, len, i, a) || j--); i++)
         ;
     if (i >= len)
         return 0;
     s = &st[i];
-    if (r < 10u) {                                      /* a scale step up or down, (r 9) an octave */
+    r = evo_rnd(20);
+    if (r < 10u && (own[i].time != ST_NOTE || !own[i].n))   /* (a note made of a held one: its pitch stays) */
+        return evo_held_op(st, len);
+    if (r < 10u) {                                      /* a scale step up or down, (r 9) an octave: a line's own notes */
         int32_t d = evo_rnd(2) ? 1 : -1, x;
         uint8_t q[4];
         for (k = 0; k < s->n && k < 4u; k++) {
@@ -312,6 +391,39 @@ static int evo_mel_op(const track_t *t, step_t *st, uint32_t len)
         st[j].nudge = 0;
     }
     return 1;
+}
+
+/* CHORD: on each NOTE step of a melodic copy a third, a fifth or an octave (the scale's, over the step's first note)
+ * comes and goes; the step's own notes always stay. Thicker the higher CHORD is */
+static void evo_chords(const track_t *t, step_t *nx, const step_t *own, uint32_t len, uint32_t chd)
+{
+    static const uint8_t UP[3] = {2, 4, 7};             /* scale steps: a third, a fifth; an octave */
+    uint32_t i, k, base;
+    for (i = 0; i < len; i++) {
+        step_t *s = &nx[i];
+        if (s->time != ST_NOTE || !s->n || s->hit)
+            continue;
+        base = own[i].time == ST_NOTE && !own[i].hit && own[i].n && own[i].n <= s->n ? own[i].n : 1u;
+        if (s->n < 4u && evo_rnd(200) < chd) {          /* one more */
+            int32_t x = s->note[0];
+            uint32_t up = UP[evo_rnd(3)], dup = 0;
+            if (up == 7u)
+                x += 12;
+            else
+                for (k = 0; k < up; k++)
+                    x = tl_neigh(t, x, 1);
+            for (k = 0; k < s->n; k++)
+                dup |= s->note[k] == x;
+            if (!dup && x <= 108) {
+                s->note[s->n] = (uint8_t)x;
+                s->acc &= (uint8_t)~(1u << s->n);       /* (a new note: not tied) */
+                s->n++;
+            }
+        } else if (s->n > base && evo_rnd(200) < 100u - chd) {
+            s->n--;                                     /* the last one added goes */
+            s->acc &= (uint8_t)((1u << s->n) - 1u);
+        }
+    }
 }
 
 /* ------------------------------------------------------- a new version --- */
@@ -354,22 +466,31 @@ static void evo_build(uint32_t k)
 {
     static step_t nx[NSTEP];
     const track_t *t = &trk[k];
-    uint32_t len = tl_len(t), i, m, tries, f, amt = evo.amt[k], home = 4u + (100u - amt) / 3u;
+    uint32_t len = tl_len(t), i, k2, m, tries, f, amt = evo.amt[k], home = 4u + (100u - amt) / 3u;
     int drum = drum_track(t);
-    memcpy(nx, evo_step[k], sizeof nx);
-    for (i = 0; i < len; i++)
-        if (evo_rnd(100) < home)
-            evo_home_step(nx, t->step, len, i);
-    m = len * amt / 150u;
-    for (m = m ? m : 1u, tries = 8u * m; m && tries; tries--)
-        if (drum ? evo_drum_op(nx, len) : evo_mel_op(t, nx, len))
-            m--;
+    memcpy(nx, amt ? evo_step[k] : t->step, sizeof nx);   /* (AMOUNT OFF, CHORD on: the original each time) */
+    if (amt) {
+        for (i = 0; i < len; i++)
+            if (evo_rnd(100) < home)
+                evo_home_step(nx, t->step, len, i);
+        m = len * amt / (drum ? 150u : 100u);           /* (lines: as many changes as AMOUNT % of the steps) */
+        for (m = m ? m : 1u, tries = 8u * m; m && tries; tries--)
+            if (drum ? evo_drum_op(nx, len) : evo_mel_op(t, nx, len))
+                m--;
+    }
+    if (!drum && evo.chd[k])
+        evo_chords(t, nx, t->step, len, evo.chd[k]);
     if (drum)
         evo_drum_fix(nx, t->step, len);
-    else if (evo.protect)                               /* the anchors the original's */
-        for (i = 0; i < len; i += 4u)
-            if ((evo_anchor(t->step, i) || nx[i].n) && memcmp(&nx[i], &t->step[i], sizeof nx[i]))
+    else if (evo.protect)                               /* the anchors the original's (CHORD's notes over them stay) */
+        for (i = 0; i < len; i += 4u) {
+            const step_t *o = &t->step[i];
+            int keep = nx[i].time == o->time && nx[i].n >= o->n && !nx[i].hit;
+            for (k2 = 0; keep && k2 < o->n; k2++)
+                keep = nx[i].note[k2] == o->note[k2];
+            if ((evo_anchor(t->step, i) || nx[i].n) && !keep)
                 evo_home_step(nx, t->step, len, i);
+        }
     f = motion_guard();
     if (evo_play[k])
         memcpy(evo_step[k], nx, sizeof nx);
@@ -503,7 +624,7 @@ static void evo_mods(void)
     evo.mod_t = now;
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];
-        uint32_t tone = evo_drift_id(t, 0), len = tl_len(t);
+        uint32_t tone = evo_drift_id(t, 0);
         for (c = 0; c < 4u; c++) {                      /* DRIFT */
             uint32_t i = k * 4u + c, id = evo_drift_id(t, c);
             const param_desc_t *d;
@@ -529,11 +650,20 @@ static void evo_mods(void)
             int32_t w = (int32_t)evo_tri(at + k * 256u / NTRK, 256u) * 2 - 1000;
             n = evo_mod_put(l, n, k, tone, w * lim / 1000);
         }
-        if (evo.gat[k]) {                               /* GATE: 8 bars, from staccato to legato */
-            const param_desc_t *d = param_desc_of(eng_idx(t->eng_req), P_SGATE);
-            int32_t lim = (d->max - d->min) * evo.gat[k] / 200;
-            int32_t w = (int32_t)evo_tri(at + k * 128u / NTRK + 64u, 128u) * 2 - 1000;
-            n = evo_mod_put(l, n, k, P_SGATE, w * lim / 1000);
+        if (evo.gat[k]) {                               /* GATE: 8 bars, length by kind: a kit's DECAY; else */
+            int32_t w = (int32_t)evo_tri(at + k * 128u / NTRK + 64u, 128u) * 2 - 1000;   /* the step's GATE, */
+            uint32_t e = eng_idx(t->eng_req);           /* the RELEASE, the SUSTAIN down where the wave is low */
+            if (t->eng_req == ENGI_DRUM) {
+                const param_desc_t *d = param_desc_of(e, P_E3);
+                n = evo_mod_put(l, n, k, P_E3, w * ((d->max - d->min) * evo.gat[k] * 45 / 10000) / 1000);
+            } else if (!drum_track(t)) {
+                const param_desc_t *g = param_desc_of(e, P_SGATE), *rl = param_desc_of(e, P_REL),
+                                   *su = param_desc_of(e, P_SUS);
+                n = evo_mod_put(l, n, k, P_SGATE, w * ((g->max - g->min) * evo.gat[k] / 200) / 1000);
+                n = evo_mod_put(l, n, k, P_REL, w * ((rl->max - rl->min) * evo.gat[k] * 35 / 10000) / 1000);
+                if (w < 0)
+                    n = evo_mod_put(l, n, k, P_SUS, w * ((su->max - su->min) * evo.gat[k] * 45 / 10000) / 1000);
+            }
         }
     }
     f = motion_guard();
@@ -560,7 +690,7 @@ static void evo_poll(void)
     evo_mods();
     k = evo.rr++ % NTRK;
     t = &trk[k];
-    if (!evo.amt[k]) {                                  /* AMOUNT OFF: its original */
+    if (!evo.amt[k] && (!evo.chd[k] || drum_track(t))) {   /* AMOUNT OFF (no CHORD): its original */
         if (evo_play[k])
             evo_drop(k);
         return;
@@ -666,7 +796,7 @@ static void evo_turn(uint8_t *v, uint32_t knob, int32_t s, int32_t hi, int acc)
         if (k == sel || evo_all())
             v[k] = (uint8_t)x;
 }
-/* PERFORM, KEYS EVOLVE: KNOB 1..4 AMOUNT EVERY ARRANGE DRIFT; EVOLVE 2: SWEEP GATE ROOT (KNOB 4 nothing) */
+/* PERFORM, KEYS EVOLVE: KNOB 1..4 AMOUNT EVERY ARRANGE DRIFT; EVOLVE 2: SWEEP GATE ROOT CHORD */
 static void evo_knob(uint32_t k, int32_t s)
 {
     if (evo.keys == 2u) {
@@ -676,6 +806,8 @@ static void evo_knob(uint32_t k, int32_t s)
             evo_turn(evo.gat, k, s, 100, 1);
         else if (k == 2u)
             evo.root = (uint8_t)clamp((int32_t)evo.root + (s > 0 ? 1 : -1), 0, EVO_ROOTS - 1);
+        else
+            evo_turn(evo.chd, k, s, 100, 1);
     } else if (k == 0u) {
         evo_turn(evo.amt, k, s, 100, 1);
     } else if (k == 1u) {
@@ -703,7 +835,9 @@ static uint32_t evo_sig(void)
     uint32_t k, h = evo.gen * 131u + evo.on * 7u + evo_mute * 977u + evo.brk * 31u + evo_fill * 61u + evo.keys * 3u +
                     evo.ppos * 7919u + (uint32_t)(uint8_t)evo.trn * 104729u + evo.home * 13u;
     for (k = 0; k < NTRK; k++)
-        h = h * 33u + evo_play[k];
+        h = h * 33u + evo_play[k] + (trk[k].p[P_MUTE] != 0) * 7u + mute_arm[k] * 11u;
+    h += perf_cut * 2803u + (perf_held >> PF_M1) * 977u;          /* (a mute held: the map's M) */
+    h += (uint32_t)TSEL->eng_req * 104729u + TSEL->preset * 7919u + TSEL->user * 31u;   /* (its sound's name) */
     return h;
 }
 /* the header in KEYS EVOLVE (ui_blocks.c); 0: PERFORM's */

@@ -12,6 +12,10 @@
  *   HOME      every track its original, nothing modulated or moved, until HOME again
  *   KEEP      the copy as a new pattern in a free entry, the track's own steps as they were; a full list says so
  *   ROOT      I-IV: the second phrase sounds 5 semitones up; STOP leaves nothing sounding
+ *   HELD      a drone (one note held over the bar) at AMOUNT 100: its rhythm changes (struck again, cut, held on),
+ *             never its pitch
+ *   CHORD     100 at AMOUNT 0: thirds, fifths, octaves over T1's notes, every step's own notes kept, all in C minor
+ *   GATE      100: a kit's DECAY, a synth's GATE, RELEASE and SUSTAIN in the modulations, their own values kept
  *   SEED      the same seed: the same copies
  *   EDIT      a step edited: the copy starts again from the edited steps
  *   SCREEN    ARP held in KEYS EVOLVE and let go: the screen stays; another page: it goes, EVOLVE runs on; ARP tapped:
@@ -39,7 +43,7 @@ static void evo_reset(void)
     evo.all_k = 0;
     for (k = 0; k < NTRK; k++) {
         evo.amt[k] = 100;
-        evo.dft[k] = evo.swp[k] = evo.gat[k] = 0;
+        evo.dft[k] = evo.swp[k] = evo.gat[k] = evo.chd[k] = 0;
     }
 }
 static void setup(void)
@@ -290,6 +294,71 @@ int main(void)
     for (k = 0; k < 64u; k++)
         block();
     bad += check("  STOP: nothing sounding, nothing moved", nsound(M) == 0u && nothing_left());
+
+    setup();                                            /* HELD: T1 a drone, C3 held over the bar */
+    for (k = 0; k < 16u; k++)
+        M->step[k] = k ? (step_t){{0}, 0, ST_TIE, 0, 0} : (step_t){{48}, 1, ST_NOTE, 0, 100};
+    M->step[15] = (step_t){{0}, 0, ST_REST, 0, 0};
+    memcpy(m0, M->step, sizeof m0);
+    evo_set_on(1);
+    evo_seed(31u);
+    evo.amt[3] = 0;
+    seq_start();
+    {
+        int changed = 0, pitch_ok = 1;
+        for (e = 0; e < 16u; e++) {
+            run_bars(1);
+            changed |= memcmp(evo_step[0], m0, sizeof m0) != 0;
+            for (k = 0; k < 16u; k++)
+                for (f = 0; f < evo_step[0][k].n; f++)
+                    pitch_ok &= evo_step[0][k].note[f] == 48;
+        }
+        bad += check("HELD: a drone at AMOUNT 100 changes its rhythm within 16 bars, its pitch never", changed && pitch_ok);
+    }
+    seq_stop();
+    evo_poll();
+
+    setup();                                            /* CHORD */
+    evo_set_on(1);
+    evo_seed(5u);
+    evo.amt[0] = evo.amt[3] = 0;
+    evo.chd[0] = 100;
+    memset(&r, 0, sizeof r);
+    seq_start();
+    run_bars(8);
+    {
+        int more = 0, kept = 1;
+        for (k = 0; k < 16u; k++) {
+            const step_t *c = &evo_step[0][k];
+            if (m0[k].time != ST_NOTE || !m0[k].n)
+                continue;
+            more |= c->n > m0[k].n;
+            kept &= c->time == ST_NOTE && c->n >= m0[k].n && c->note[0] == m0[k].note[0];
+        }
+        bad += check("CHORD 100, AMOUNT 0: notes gain thirds / fifths / octaves, each step's own note kept, C minor",
+                     evo_play[0] && more && kept && !r.scale && !r.valid && !memcmp(M->step, m0, sizeof m0));
+    }
+    seq_stop();
+    evo_poll();
+
+    setup();                                            /* GATE */
+    evo_set_on(1);
+    evo.gat[0] = evo.gat[3] = 100;
+    memset(&r, 0, sizeof r);
+    seq_start();
+    run_bars(2);
+    {
+        int dec = 0, sg = 0, rel = 0;
+        for (k = 0; k < evo_mod_n; k++) {
+            dec |= evo_mod[k].trk == 3u && evo_mod[k].id == P_E3;
+            sg |= evo_mod[k].trk == 0u && evo_mod[k].id == P_SGATE;
+            rel |= evo_mod[k].trk == 0u && evo_mod[k].id == P_REL;
+        }
+        bad += check("GATE 100: the kit's DECAY, the synth's GATE and RELEASE breathe; their own values as they were",
+                     dec && sg && rel && !r.own_p);
+    }
+    seq_stop();
+    evo_poll();
 
     setup();                                            /* SEED */
     evo_set_on(1);
