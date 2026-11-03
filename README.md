@@ -23,6 +23,7 @@ The earlier GruselCore (on X0X) is kept on the branch `x0x-base`.
   SWEEP, PHASE (polymeter), GATE and ROOT (key moves). The kick, snare and the notes on the beats stay (PROTECT), the
   original patterns never change (G4 HOME plays them; KEEP stores what you hear as a new entry). DESIGN.md has the
   details.
+- **Tempo to 300 BPM** (was 240), for mentalcore and tribecore; MIDI clock in follows up to 300 too.
 - **Identity:** `FM-1_966` (development builds on GitHub `FM-1_9669` + the run number, releases `FM-1_966XXYYZZ`),
   packages `gruselcore-*.fwsc`.
 
@@ -663,6 +664,10 @@ every setting back as a new unit has it. The web editor's Settings tab reads and
   sounds the step it lands on, when stopped
 - **RETURN** (CONTROL, 2.0): SNAP, 1 BEAT or 1 BAR (default): how MOMENTARY's values (LFO held + a knob), the FX
   layer's macros and PERFORM's throws come back, at once or in a line over that time; OCT+ keeps them instead
+- **LOAD** (SYSTEM, GruselCore): **PEAK 92% LATE 3**: the slowest audio block since the last reset as a share of the
+  time it has (100 %: too slow), and how many blocks came too late since then, each one an audible crack. A turn of a
+  knob on the row resets both. If you hear cracks and LATE counts up, the FM-1 is overloaded (fewer voices, effects
+  or a lighter sound help); if LATE stays at 0, the cracks are in a sound itself
 - **CPU** (SYSTEM): **1 CORE** (default) or **2 CORES (BETA)**, then how busy the audio is. 2 CORES takes effect
   at the next power-on: stop playing first (the row says STOP while the music plays, since settings are saved
   stopped), then restart when it says RESTART: the FM-1's second core renders some of the tracks of

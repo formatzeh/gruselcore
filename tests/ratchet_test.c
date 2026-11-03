@@ -78,6 +78,18 @@ static int play(void)
     bad += check("RATCH x1..x4: that many note-ons in a pass, in equal parts, each ended by its gate", ok);
     t = one_step(4, 0);
     bad += check("  x4 over 8 passes: 32 note-ons", run(t, passes(t, 8), 0, 0, 0) == 32u);
+    t = one_step(4, 0);                                 /* ((GruselCore) BPM to 300: the shortest parts there */
+    song.g[G_BPM] = 300;
+    t->p[P_SDIV] = 3;                                   /* (1/32: 1102 samples a step, 275 a part) */
+    n = run(t, passes(t, 1), at, 8, 0);
+    len = step_len(t, 0);
+    ok = n == 4u && len == 1102u;
+    for (uint32_t k = 0; k < n && k < 8u; k++) {
+        int32_t d = (int32_t)at[k] - (int32_t)(k * (len / 4u));
+        ok &= d > -(int32_t)CTL && d <= (int32_t)CTL;
+    }
+    bad += check("  (GruselCore) 300 BPM, 1/32, x4: 4 note-ons a pass, each on its part", ok && GP[G_BPM].max == 300);
+    song.g[G_BPM] = 120;
     t = one_step(3, 0);
     t->p[P_VOICE] = V_POLY;
     t->step[0].n = 3; t->step[0].note[1] = 64; t->step[0].note[2] = 67;

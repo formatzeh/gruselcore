@@ -20,12 +20,65 @@ struct felucca_dbg {
     uint32_t stage, page, home;           /* where the main loop is (breadcrumbs) */
     uint32_t prev_stage, prev_page, prev_home, prev_rst, prev_frames;   /* as found at boot */
 } felucca_dbg __attribute__((section(".noinit")));
+static uint32_t load_late(void) { return felucca_dbg.late; }   /* ((GruselCore) LOAD) */
 static volatile uint32_t audio_halves, audio_max_us;
+/* ((GruselCore) MENU > SYSTEM > LOAD, menu_items.c) the slowest half's render since the reset, as a share of a half
+ * (audio_max_us: nothing else reads it), and the halves rendered too late since power-on */
+#define FELUCCA_LOAD 1
+static uint32_t load_peak_pct(void) { return audio_max_us * 100u / (HALF_FRAMES * 1000000u / FS); }
+static uint32_t load_late(void);
+static void load_peak_reset(void) { audio_max_us = 0; }
 static volatile uint32_t t5_nested_ticks;              /* TIMER4 ticks TIMER5 spent nested in this ISR (main.c) */
 static uint32_t audio_cpu_rem;                         /* keep the fractional IIR step: no low-load bias */
 #define SCOPE_N 512u
 static int16_t scope_buf[SCOPE_N];
 static uint32_t scope_w;
+/* ((GruselCore) diagnostics: the console's `clk`) a crack in what goes to the DAC, found by the main loop in the scope's
+ * samples (the left channel, every second sample: nothing added to the audio ISR): a second difference far above its
+ * 3 ms either side. Each kept with when (the 1/16 since PLAY, the ms), its size and the ISR's own counters then, so a
+ * crack the render made shows here, one from a late half shows in LATE, and one that shows in neither came after */
+#define CLK_N 24u
+static struct { uint32_t ms, steps, d2, ratio, late, max_us; } clk_ev[CLK_N];
+static uint32_t clk_n, clk_r, clk_missed, clk_scanned;
+/* (the main loop, each pass) the scope's samples since the last look, each judged once its 64 neighbours on both sides
+ * are there */
+static void clk_poll(void)
+{
+    uint32_t w = scope_w, i;
+    if (w - clk_r > SCOPE_N - 140u) {                   /* (the loop was away too long: skipped, counted) */
+        clk_missed += w - clk_r - (SCOPE_N - 140u);
+        clk_r = w - (SCOPE_N - 140u);
+    }
+    for (i = clk_r; i + 66u <= w; i++) {
+        int32_t d, loc = 0, k;
+        if (i < 66u)
+            continue;
+#define CLK_S(n) ((int32_t)scope_buf[(n) & (SCOPE_N - 1u)])
+#define CLK_D2(n) (CLK_S(n) - 2 * CLK_S((n) - 1u) + CLK_S((n) - 2u))
+        d = CLK_D2(i);
+        d = d < 0 ? -d : d;
+        for (k = -64; k <= 64; k += 2) {
+            int32_t e = CLK_D2(i + (uint32_t)k);
+            if (k)
+                loc += e < 0 ? -e : e;
+        }
+        loc /= 64;
+        clk_scanned++;
+        if (d > 700 && d > 10 * (loc ? loc : 1)) {
+            uint32_t s = clk_n++ % CLK_N;
+            clk_ev[s].ms = fm1_ms;
+            clk_ev[s].steps = launch_steps;
+            clk_ev[s].d2 = (uint32_t)d;
+            clk_ev[s].ratio = (uint32_t)(d / (loc ? loc : 1));
+            clk_ev[s].late = felucca_dbg.late;
+            clk_ev[s].max_us = audio_max_us;
+            i += 64u;
+        }
+#undef CLK_D2
+#undef CLK_S
+    }
+    clk_r = i > clk_r ? i : clk_r;
+}
 
 static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 -> 24 bit */
 {

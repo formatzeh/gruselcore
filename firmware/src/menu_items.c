@@ -24,13 +24,13 @@
  * past MI_COUNT, so its setting stays and no tab shows it */
 enum { MI_COLOR, MI_PHEAD, MI_LARGE, MI_ANIM, MI_SCROFF, MI_HINTS, MI_HOLD, MI_ACCEL, MI_BPMLOCK, MI_SCLLED, MI_PREVIEW,
        MI_RETURN, MI_KVEL, MI_LOWCUT, MI_USB, MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TUNE, MI_CLOCK, MI_ROUTE,
-       MI_LEARN, MI_LCLEAR, MI_TCH1, MI_TCH2, MI_TCH3, MI_TCH4, MI_TCH5, MI_TCH6, MI_SERIAL_IN MI_RESTORE, MI_CPU, MI_CLK,
+       MI_LEARN, MI_LCLEAR, MI_TCH1, MI_TCH2, MI_TCH3, MI_TCH4, MI_TCH5, MI_TCH6, MI_SERIAL_IN MI_RESTORE, MI_CPU, MI_LOAD, MI_CLK,
        MI_PANEL, MI_RESET, MI_ABOUT, MI_COUNT, MI_LEDS MI_SERIAL_OUT };
 static const char *const KVEL_N[SMK_KV_N] = {"DYNAMIC", "SOFT", "HARD", "FIXED 64", "FIXED 100", "FIXED 127"};
 #else
 enum { MI_COLOR, MI_PHEAD, MI_LARGE, MI_ANIM, MI_LEDS, MI_SCROFF, MI_HINTS, MI_HOLD, MI_ACCEL, MI_BPMLOCK, MI_SCLLED,
        MI_PREVIEW, MI_RETURN, MI_LOWCUT, MI_USB, MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TUNE, MI_CLOCK, MI_ROUTE,
-       MI_LEARN, MI_LCLEAR, MI_TCH1, MI_TCH2, MI_TCH3, MI_TCH4, MI_TCH5, MI_TCH6, MI_SERIAL_IN MI_RESTORE, MI_CPU, MI_CLK,
+       MI_LEARN, MI_LCLEAR, MI_TCH1, MI_TCH2, MI_TCH3, MI_TCH4, MI_TCH5, MI_TCH6, MI_SERIAL_IN MI_RESTORE, MI_CPU, MI_LOAD, MI_CLK,
        MI_PANEL, MI_RESET, MI_ABOUT, MI_COUNT MI_SERIAL_OUT };
 #endif   /* ((Skiff U4, A3) HINTS; RESET SETTINGS, a row with no value: its dialog) */   /* ((Skiff U3, R8, R2) CLOCK, MIDI IN, TUNE: the unit's, GLOBAL's and SYSTEM's before; CPU: read) */   /* (1.1: the metronome's rows in
                                                                                              * AUDIO; 1.2: RESTORE LAST in SYSTEM, SCALE LEDS
@@ -48,8 +48,21 @@ static const char *const MI_NAME[MI_COUNT] = {"THEME", "PLAYHEAD", "LARGE", "ANI
                                               "SPEAKER EQ", "USB LEVEL", "CLICK", "CLICK LEVEL", "COUNT-IN", "TUNE",
                                               "CLOCK", "MIDI IN", "MIDI LEARN", "LEARN CLEAR",
                                               "T1 CHANNEL", "T2 CHANNEL", "T3 CHANNEL", "T4 CHANNEL", "T5 CHANNEL", "T6 CHANNEL",
-                                              MI_SERIAL_NAME "RESTORE LAST", "CPU", "CPU CLOCK", "CALIBRATION", "RESET SETTINGS",
+                                              MI_SERIAL_NAME "RESTORE LAST", "CPU", "LOAD", "CPU CLOCK", "CALIBRATION", "RESET SETTINGS",
                                               "ABOUT"};
+/* ((GruselCore) LOAD: the late halves counted from here (felucca_dbg.late counts since power-on); PEAK: audio.c
+ * audio_max_us, which nothing else reads, back to 0 */
+#ifndef FELUCCA_LOAD                                    /* (the host's tests: no audio.c) */
+static uint32_t load_peak_pct(void) { return 0; }
+static uint32_t load_late(void) { return 0; }
+static void load_peak_reset(void) {}
+#endif
+static uint32_t load_late0;
+static void load_reset(void)
+{
+    load_peak_reset();
+    load_late0 = load_late();
+}
 /* 1.0.5: the MENU's tabs (ui_menu.c: ALGORITHM steps between them, PRESETS among one tab's rows; the editor gets a
  * row's tab after its MENU_DESC reply). A tab's rows follow each other in MI order (tests/ui_test.c checks it); the
  * page shows MTAB_ROWS of them (ui_menu.c fits them; (1.3) MIDI's ten scroll, the cursor's row the last shown). A new
@@ -81,8 +94,9 @@ static const uint8_t MI_TAB[MI_COUNT] = {
                                                                              * CONTROL) */
     MTAB_MIDI, MTAB_MIDI,                                                   /* (1.3) MIDI LEARN, LEARN CLEAR */
     MTAB_MIDI, MTAB_MIDI, MTAB_MIDI, MTAB_MIDI, MTAB_MIDI, MTAB_MIDI,       /* (1.3) T1..T6 CHANNEL */
-    MI_SERIAL_TAB MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM,                    /* USB SERIAL, RESTORE LAST, (Skiff U3) CPU,
-                                                                             * (Skiff) CPU CLOCK (SYSTEM's seven scroll) */
+    MI_SERIAL_TAB MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM,       /* USB SERIAL, RESTORE LAST, (Skiff U3) CPU,
+                                                                             * ((GruselCore) LOAD), (Skiff) CPU CLOCK
+                                                                             * (SYSTEM's rows scroll) */
     MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM,                                  /* CALIBRATION, (U4) RESET SETTINGS, ABOUT */
 };
 typedef char mtab_fits_ui[sizeof ui.menu_row >= MTAB_COUNT ? 1 : -1];   /* (ui.c: the row last picked per tab) */
@@ -168,7 +182,7 @@ static uint32_t menu_n(uint32_t row)
     return row == MI_COLOR ? NPALETTES + (uint32_t)cpal_stored() :   /* ((Skiff #27) CUSTOM, while stored) */
            row == MI_LOWCUT || row == MI_RETURN || (row >= MI_CLICK && row <= MI_COUNTIN) ? 3u :
            row == MI_HOLD ? 4u : row == MI_LEDS ? LEDS_COUNT : row == MI_SCROFF ? NELEM(SCROFF_N) :
-           row == MI_CLOCK ? NELEM(N_CLOCK) : row == MI_TUNE ? 101u : row == MI_CPU ? 1u + FELUCCA_CPU2 :
+           row == MI_CLOCK ? NELEM(N_CLOCK) : row == MI_TUNE ? 101u : row == MI_CPU ? 1u + FELUCCA_CPU2 : row == MI_LOAD ? 2u :
            MI_TCH(row) ? 16u : row == MI_LEARN || row == MI_LCLEAR ? 1u :
 #if BOARD_SMK37
            row == MI_KVEL ? SMK_KV_N :
@@ -267,6 +281,16 @@ static const char *menu_vname(uint32_t row, uint32_t v)
         str_cpy(b + str_len(b), row == MI_TUNE ? " CT" : " %", sizeof b - str_len(b));
         return b;
     }
+    case MI_LOAD: {                                    /* ((GruselCore) "PEAK 92% LATE 3": the slowest half-buffer's
+                                                        * render since the last reset (100 %: the DMA caught up) and the
+                                                        * halves that came too late, each an audible crack (audio.c) */
+        static char l[24] __attribute__((section(".pool")));
+        str_cpy(l, "PEAK ", sizeof l);
+        fmt_int(l + 5, (int32_t)load_peak_pct());
+        str_cpy(l + str_len(l), "% LATE ", sizeof l - str_len(l));
+        fmt_int(l + str_len(l), (int32_t)(load_late() - load_late0));
+        return l;
+    }
     case MI_CLK: {                                     /* ((Skiff) "320 MHZ"; set another way than this power-on runs, as
                                                         * CPU's: ": RESTART" (playing ": STOP"), and 320 refused at boot
                                                         * (main.c; its header message said why): ": REFUSED" */
@@ -328,6 +352,9 @@ static void menu_put(uint32_t row, uint32_t v)
                                                         * at STOP, and the row says STOP till then) */
         break;
 #endif
+    case MI_LOAD:                                      /* ((GruselCore) turned: PEAK and LATE from now on */
+        load_reset();
+        break;
     case MI_CLK:                                       /* ((Skiff) the clock: switched at boot only, main.c; saved as CPU) */
         CPU2_BYTE = (uint8_t)(v ? CPU2_BYTE | 4u : CPU2_BYTE & ~4u);
         settings_save();

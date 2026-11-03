@@ -174,11 +174,10 @@ static inline int fm1_cpu1_wait(void)
             fm1_c1_gave_up = 1;
             return -1;
         }
-        if (fm1_c1_mb.done == fm1_c1_mb.job) {
-            if (FM1_C1_T4 - t0 > fm1_c1_wait_max)
-                fm1_c1_wait_max = FM1_C1_T4 - t0;
-            return 0;
-        }
+        if (fm1_c1_mb.done == fm1_c1_mb.job)
+            break;                              /* ((GruselCore) done: out of the loop, its time noted below; a
+                                                 * return in here let the compiler place that note far up the
+                                                 * audio ISR: tests/target_budget.py read it as a loop round all) */
         if (FM1_C1_T4 - t0 > 24000u * 4u) {     /* 4 ms (as Jangada): past any block's work, a half is 2.9 ms
                                                  * (it faulted, or stalled): one glitch, then one core */
             fm1_cpu1_hold();
@@ -186,6 +185,9 @@ static inline int fm1_cpu1_wait(void)
             return -1;
         }
     }
+    if (FM1_C1_T4 - t0 > fm1_c1_wait_max)
+        fm1_c1_wait_max = FM1_C1_T4 - t0;
+    return 0;
 }
 
 /* bytes of core 1's stack ever used (the mark left untouched below them) */

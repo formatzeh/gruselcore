@@ -444,12 +444,51 @@ static void con_padtest(void)
 }
 #endif
 
+/* ((GruselCore) audio.c clk_poll) the cracks found in the output: when (bar.step of the 16ths since PLAY, ms), how
+ * big (the second difference, Q15; times its neighbourhood), and LATE and the slowest render then; `clk reset` clears */
+static void con_clk(const char *p)
+{
+    uint32_t i, n = clk_n < CLK_N ? clk_n : CLK_N;
+    if (con_word(&p, "reset")) {
+        clk_n = clk_missed = clk_scanned = 0;
+        con_puts("clk: cleared\r\n");
+        return;
+    }
+    con_kv("clk_found", (int32_t)clk_n);
+    con_kv("clk_missed_samples", (int32_t)clk_missed);
+    con_kv("clk_scanned", (int32_t)clk_scanned);
+    con_kv("late_now", (int32_t)felucca_dbg.late);
+    con_kv("bpm", song.g[G_BPM]);
+    for (i = clk_n - n; i < clk_n; i++) {
+        const uint32_t s = i % CLK_N;
+        con_puts("bar ");
+        con_dec((int32_t)(clk_ev[s].steps / 16u + 1u));
+        con_puts(".");
+        con_dec((int32_t)(clk_ev[s].steps % 16u / 4u + 1u));
+        con_puts(".");
+        con_dec((int32_t)(clk_ev[s].steps % 4u + 1u));
+        con_puts("  ms ");
+        con_dec((int32_t)clk_ev[s].ms);
+        con_puts("  d2 ");
+        con_dec((int32_t)clk_ev[s].d2);
+        con_puts(" x");
+        con_dec((int32_t)clk_ev[s].ratio);
+        con_puts("  late ");
+        con_dec((int32_t)clk_ev[s].late);
+        con_puts("  max_us ");
+        con_dec((int32_t)clk_ev[s].max_us);
+        con_puts("\r\n");
+    }
+}
+
 static void con_exec(const char *p)
 {
     if (con_word(&p, "help") || con_word(&p, "?"))
-        con_puts("status  dbg  inp  crash  params  memr ADDR [LEN]  flr OFF [LEN]  uboot yes\r\n");
+        con_puts("status  dbg  inp  crash  params  memr ADDR [LEN]  flr OFF [LEN]  clk [reset]  uboot yes\r\n");
     else if (con_word(&p, "status"))
         con_status();
+    else if (con_word(&p, "clk"))
+        con_clk(p);
     else if (con_word(&p, "dbg"))
         con_dbg();
     else if (con_word(&p, "crash"))

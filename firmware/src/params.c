@@ -199,7 +199,7 @@ static const param_desc_t TP[P_COUNT] = {
 };
 
 static const param_desc_t GP[G_COUNT] = {
-    [G_BPM] = PD("BPM", F_BPM, 40, 240, 120),
+    [G_BPM] = PD("BPM", F_BPM, 40, 300, 120),        /* ((GruselCore) to 300: mentalcore, tribecore) */
     [G_SWING] = PD("SWING+", F_PCT, 0, 100, 0),   /* ((Skiff U4, R9) added to PATTERN's SWG) */
     [G_CLOCK] = PE("CLOCK", N_CLOCK, 0),
     [G_TUNE] = PD("TUNE", F_INT, -50, 50, 0),

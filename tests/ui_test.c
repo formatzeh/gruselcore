@@ -1621,7 +1621,7 @@ static int test_menu_tabs(void)
                  "tab gaps constant (S, LARGE)",
                  ok && MTAB_COUNT == 5u && str_eq(MTAB_NAME[0], "DISPLAY") && str_eq(MTAB_NAME[MTAB_MIDI], "MIDI") &&
                  mtab_rows(MTAB_DISPLAY) == 7u && mtab_rows(MTAB_CONTROL) == 6u && mtab_rows(MTAB_AUDIO) == 6u &&   /* (#27; (2.0) RETURN) */
-                 mtab_rows(MTAB_SYSTEM) == 6u + FELUCCA_CDC && mtab_rows(MTAB_MIDI) == 10u);   /* ((Skiff) SYSTEM: CPU
+                 mtab_rows(MTAB_SYSTEM) == 7u + FELUCCA_CDC && mtab_rows(MTAB_MIDI) == 10u);   /* ((GruselCore) LOAD; (Skiff) SYSTEM: CPU
                                                          * CLOCK; (Skiff 2.0) USB SERIAL with the console only) */
 
     ui_power_on();
@@ -1652,13 +1652,18 @@ static int test_menu_tabs(void)
     turn(EN_K4, 1); ok &= (ui_prefs & PREF_USB_FIXED) && fx_usb_fixed;
     turn(EN_K2, -1); ok &= !(ui_prefs & PREF_USB_FIXED) && !fx_usb_fixed;
     bad += check("MENU: any of KNOB 1..4 changes the selected row's value in any tab, the menu stays", ok && ui.menu == 1);
+    menu_put(MI_LOAD, 1);                               /* ((GruselCore) SYSTEM > LOAD: the peak and the late halves, a
+                                                         * turn resets them (no audio here: 0) */
+    bad += check("(GruselCore) MENU > SYSTEM > LOAD: PEAK and LATE, in SYSTEM after CPU", str_eq(menu_vname(MI_LOAD, 0),
+                 "PEAK 0% LATE 0") && MI_TAB[MI_LOAD] == MTAB_SYSTEM && MI_LOAD == MI_CPU + 1u);
 
     /* OCT+ / OCT-: the next / previous value on every kind of row (as the knobs: stopping at the ends; COLOR wraps); each
      * new value draws the menu again (drawn: the value in the menu's signature) */
     ok = drawn = 1;
     for (i = 0; i < MI_VALUES; i++) {
         uint32_t n = menu_n(i), v, j, seen, want, s0;
-        if (i == MI_TUNE || i == MI_CPU || menu_act(i))   /* ((U3) TUNE's 101 values: below; CPU: below; (1.3) MIDI
+        if (i == MI_TUNE || i == MI_CPU || i == MI_LOAD || menu_act(i))   /* ((U3) TUNE's 101 values: below; CPU: below;
+                                                        * ((GruselCore) LOAD: read, turned it resets: below); (1.3) MIDI
                                                         * LEARN, LEARN CLEAR: actions, test_midi_learn) */
             continue;
         ui.menu_sel = (uint8_t)i;
