@@ -20,7 +20,7 @@ The earlier GruselCore (on X0X) is kept on the branch `x0x-base`.
 - **EVOLVE (generative playback):** hold ARP (PERFORM), turn PRESETS to KEYS EVOLVE, let go: the EVOLVE screen stays
   (ARP tapped brings it back from any page, ARP held on it closes it). F3 on: the patterns evolve, each track by its
   own AMOUNT; tracks drop out and come back, breakdowns and drops (ARRANGE); the sounds drift (DRIFT). EVOLVE 2:
-  SWEEP, PHASE (polymeter), GATE and ROOT (key moves). The kick, snare and the notes on the beats stay (PROTECT), the
+  SWEEP, GATE and ROOT (key moves). The kick, snare and the notes on the beats stay (PROTECT), the
   original patterns never change (G4 HOME plays them; KEEP stores what you hear as a new entry). DESIGN.md has the
   details.
 - **Tempo to 300 BPM** (was 240), for mentalcore and tribecore; MIDI clock in follows up to 300 too.

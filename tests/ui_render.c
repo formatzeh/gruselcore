@@ -1483,7 +1483,7 @@ static void setup(int s)
         break;
     case S_PERF_EVOLVE:                             /* (GruselCore) PERFORM, KEYS EVOLVE: on, playing, T5's AMOUNT OFF, */
     case S_PERF_EVOLVE_OFF:                         /* T3 taken out by ARRANGE, T2 selected, phrase 5 of 8; (OFF) off, */
-    case S_PERF_EVOLVE2:                            /* stopped; (2) EVOLVE 2: SWEEP PHASE GATE on some, ROOT I-IV-V +5 */
+    case S_PERF_EVOLVE2:                            /* stopped; (2) EVOLVE 2: SWEEP GATE on some, ROOT I-IV-V +5 */
         {
             uint32_t k;
             static const uint8_t A[NTRK] = {60, 40, 100, 25, 0, 80}, F[NTRK] = {25, 0, 50, 100, 0, 10};
@@ -1492,7 +1492,7 @@ static void setup(int s)
             evo.rate = 2; evo.arrange = 2; evo.root = s == S_PERF_EVOLVE2 ? 3u : 0u;
             for (k = 0; k < NTRK; k++) {
                 evo.amt[k] = A[k]; evo.dft[k] = F[k];
-                evo.swp[k] = (uint8_t)(k & 1u ? 70u : 0u); evo.phs[k] = (uint8_t)(k == 2u ? 2u : 0u);
+                evo.swp[k] = (uint8_t)(k & 1u ? 70u : 0u);
                 evo.gat[k] = (uint8_t)(k == 0u ? 45u : 0u);
                 evo_trn[k] = (int8_t)(s == S_PERF_EVOLVE2 && k != 3u && k != 5u ? 5 : 0);
             }

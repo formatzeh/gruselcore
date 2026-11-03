@@ -13,8 +13,8 @@
  *           kick), then the drop
  *   DRIFT   (the selected track's) its sound wanders: the tone, a second sound parameter (DRUM's DECAY), the reverb
  *           and delay sends glide around their own values
- * Page 2 (KEYS EVOLVE 2): SWEEP (the tone up and down over 16 bars), PHASE (the loop 1..4 steps shorter: it turns
- * against the others), GATE (the notes' length breathing over 8 bars), all the selected track's; ROOT (every melodic
+ * Page 2 (KEYS EVOLVE 2): SWEEP (the tone up and down over 16 bars), GATE (the notes' length breathing over 8 bars),
+ * both the selected track's; ROOT (every melodic
  * track through a progression, a step a phrase). The modulations are offsets the audio ISR puts over the parameters
  * for a block and takes off after it (fx.c evo_mod, throw.c), never saved; ROOT moves the notes as they play
  * (seq.c evo_trn); the mutes, FILL and ROOT come in on the bar (launch.c launch_clock).
@@ -30,7 +30,6 @@ static const char *const EVO_ARR[3] = {"OFF", "LIGHT", "FULL"};
 #define EVO_ROOTS 5u
 static const char *const EVO_ROOT[EVO_ROOTS] = {"OFF", "I-IV", "I-V", "I-IV-V", "I-VII-VI"};
 static const int8_t EVO_PROG[EVO_ROOTS][4] = {{0, 0, 0, 0}, {0, 5, 0, 5}, {0, 7, 0, 7}, {0, 5, 7, 5}, {0, -2, -4, -2}};
-#define EVO_PHASES 5u                                   /* PHASE: OFF, 1 .. 4 steps shorter */
 enum { EVO_KEY_ON, EVO_KEY_T1, EVO_KEY_ALL = EVO_KEY_T1 + NTRK, EVO_KEY_HOME, EVO_KEY_KEEP, EVO_KEY_NEW,
        EVO_KEY_PROTECT, EVO_KEY_FREEZE, EVO_KEYS };
 static struct {
@@ -38,7 +37,7 @@ static struct {
     uint8_t keys;                      /* PERFORM's KEYS: 1 EVOLVE, 2 EVOLVE 2 (0: TRACK / SCENE) */
     uint8_t screen;                    /* the EVOLVE screen stays (ui_layer.c: until ARP is held on it) */
     uint32_t press_t;                  /* ARP pressed on it (fm1_ms | 1; 0 none) */
-    uint8_t amt[NTRK], dft[NTRK], swp[NTRK], phs[NTRK], gat[NTRK];
+    uint8_t amt[NTRK], dft[NTRK], swp[NTRK], gat[NTRK];
     uint8_t rate, arrange, root;
     uint8_t protect, freeze, home;
     uint32_t all_k;                    /* F4 ALL held (its key's bit: ui_layer.c layer_keys) */
@@ -69,11 +68,6 @@ static uint32_t evo_rnd(uint32_t n)
 }
 static void evo_seed(uint32_t s) { evo.st = s ? s : 0x9E3779B9u; }
 static uint32_t evo_sel(void) { return song.sel % NTRK; }
-/* PHASE: how many steps shorter track k's loop plays (the offset evo_mods puts over its LEN) */
-static uint32_t evo_short(uint32_t k, uint32_t len)
-{
-    return evo.phs[k] && len > 4u ? (evo.phs[k] < len - 2u ? evo.phs[k] : len - 2u) : 0u;
-}
 
 #define EVO_KS ((1u << DV_KICK) | (1u << DV_SNARE))
 /* the lanes EVOLVE leaves alone on a DRUM track: the kick and the snare (PROTECT) */
@@ -497,7 +491,7 @@ static uint32_t evo_mod_put(evo_mod_t *l, uint32_t n, uint32_t k, uint32_t id, i
     l[n].max = d->max;
     return n + 1u;
 }
-/* every 30 ms: DRIFT's glides, SWEEP's and GATE's waves (from the 1/16 steps since PLAY), PHASE; the list handed over
+/* every 30 ms: DRIFT's glides, SWEEP's and GATE's waves (from the 1/16 steps since PLAY); the list handed over
  * with the ISR held off */
 static void evo_mods(void)
 {
@@ -541,7 +535,6 @@ static void evo_mods(void)
             int32_t w = (int32_t)evo_tri(at + k * 128u / NTRK + 64u, 128u) * 2 - 1000;
             n = evo_mod_put(l, n, k, P_SGATE, w * lim / 1000);
         }
-        n = evo_mod_put(l, n, k, P_SLEN, -(int32_t)evo_short(k, len));   /* PHASE: the loop shorter */
     }
     f = motion_guard();
     memcpy(evo_mod, l, n * sizeof l[0]);
@@ -579,7 +572,6 @@ static void evo_poll(void)
     if (evo.freeze)
         return;
     len = tl_len(t);
-    len -= evo_mod_n ? evo_short(k, len) : 0u;          /* (PHASE: its pass as it plays) */
     if (!evo.due[k] && (uint16_t)(take_pass[k] - evo.pass[k]) >= EVO_RATE[evo.rate % EVO_RATES])
         evo.due[k] = 1;
     if (evo.due[k] && (t->seq_cnt >= len || len == 1u)) {   /* its last step: the next pass is the new one */
@@ -674,17 +666,15 @@ static void evo_turn(uint8_t *v, uint32_t knob, int32_t s, int32_t hi, int acc)
         if (k == sel || evo_all())
             v[k] = (uint8_t)x;
 }
-/* PERFORM, KEYS EVOLVE: KNOB 1..4 AMOUNT EVERY ARRANGE DRIFT; EVOLVE 2: SWEEP PHASE GATE ROOT */
+/* PERFORM, KEYS EVOLVE: KNOB 1..4 AMOUNT EVERY ARRANGE DRIFT; EVOLVE 2: SWEEP GATE ROOT (KNOB 4 nothing) */
 static void evo_knob(uint32_t k, int32_t s)
 {
     if (evo.keys == 2u) {
         if (k == 0u)
             evo_turn(evo.swp, k, s, 100, 1);
         else if (k == 1u)
-            evo_turn(evo.phs, k, s, EVO_PHASES - 1, 0);
-        else if (k == 2u)
             evo_turn(evo.gat, k, s, 100, 1);
-        else
+        else if (k == 2u)
             evo.root = (uint8_t)clamp((int32_t)evo.root + (s > 0 ? 1 : -1), 0, EVO_ROOTS - 1);
     } else if (k == 0u) {
         evo_turn(evo.amt, k, s, 100, 1);

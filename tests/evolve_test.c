@@ -3,7 +3,7 @@
  * tests/ui_test.c's stubs: a melodic T1 (C minor, 16 steps) and a DRUM T4 (kick, snare, hats; 16 steps), played with
  * the main loop's evo_poll between the blocks and the block's modulations on and off around them (as fx.c mix_block):
  *   OFF       nothing plays a copy, nothing modulated
- *   SAFE      everything on (AMOUNT 100, ARRANGE FULL, DRIFT SWEEP GATE PHASE, ROOT): the tracks' own steps (what the
+ *   SAFE      everything on (AMOUNT 100, ARRANGE FULL, DRIFT SWEEP GATE, ROOT): the tracks' own steps (what the
  *             bank and the autosave keep) and their own parameters never change; the copies do
  *   PROTECT   on: the kick and snare lanes the original's (a breakdown: no kick), T1's notes on the beats as they are,
  *             the drum track never taken out; off: they change
@@ -11,7 +11,6 @@
  *   AMOUNT    per track: OFF plays the original, the other track evolves; ALL sets every track
  *   HOME      every track its original, nothing modulated or moved, until HOME again
  *   KEEP      the copy as a new pattern in a free entry, the track's own steps as they were; a full list says so
- *   PHASE     2 steps shorter: the loop's passes come every 14 steps, the own LEN stays
  *   ROOT      I-IV: the second phrase sounds 5 semitones up; STOP leaves nothing sounding
  *   SEED      the same seed: the same copies
  *   EDIT      a step edited: the copy starts again from the edited steps
@@ -40,7 +39,7 @@ static void evo_reset(void)
     evo.all_k = 0;
     for (k = 0; k < NTRK; k++) {
         evo.amt[k] = 100;
-        evo.dft[k] = evo.swp[k] = evo.phs[k] = evo.gat[k] = 0;
+        evo.dft[k] = evo.swp[k] = evo.gat[k] = 0;
     }
 }
 static void setup(void)
@@ -188,14 +187,13 @@ int main(void)
     evo.root = 3;
     for (k = 0; k < NTRK; k++) {
         evo.dft[k] = evo.swp[k] = evo.gat[k] = 100;
-        evo.phs[k] = 1;
     }
     memset(&r, 0, sizeof r);
     seq_start();
     run_bars(64);
     bad += check("SAFE: 64 bars of everything: the tracks' own steps unchanged",
                  !memcmp(M->step, m0, sizeof m0) && !memcmp(D->step, d0, sizeof d0));
-    bad += check("  .. their own parameters after every block (DRIFT SWEEP GATE PHASE only over them)", !r.own_p);
+    bad += check("  .. their own parameters after every block (DRIFT SWEEP GATE only over them)", !r.own_p);
     bad += check("  the copies evolved (both tracks), the modulations ran", r.changed_m && r.changed_d && r.mods);
     bad += check("PROTECT on: the snare lane as it is, the kick as it is or (a breakdown) none", !r.prot);
     bad += check("  T1's notes on the beats (steps 1 5 9 13) as they are", !r.anchor);
@@ -275,20 +273,6 @@ int main(void)
     for (e = 0, ok = 1; e < NENT + 2u && ok; e++)
         ok = bank_keep_steps(0, keep, &f) == 0;
     bad += check("  the list full: NO EMPTY ENTRY (bank_keep_steps 1)", !ok && bank_keep_steps(0, keep, &f) == 1);
-
-    setup();                                            /* PHASE */
-    evo_set_on(1);
-    evo.amt[0] = evo.amt[3] = 0;
-    evo.phs[0] = 2;
-    seq_start();
-    run_steps(16);                                      /* (the list made, PHASE on) */
-    p0 = take_pass[0];
-    k = take_pass[3];
-    run_steps(56);
-    bad += check("PHASE 2: T1's passes every 14 steps (4 in 56), T4's every 16 (3 or 4), own LEN 16",
-                 (uint16_t)(take_pass[0] - p0) == 4u && (uint16_t)(take_pass[3] - k) <= 4u && M->p[P_SLEN] == 16);
-    seq_stop();
-    evo_poll();
 
     setup();                                            /* ROOT */
     evo_set_on(1);

@@ -1198,16 +1198,8 @@ static void layer_evo(void)
         if (two) {
             evo_pct(b, "SWP ", evo.swp[k]);
             cv_text_on(42, ty, &AF_S, b, evo.swp[k] ? T_TEXT : T_DIM, g);
-            str_cpy(b, "PHS ", sizeof b);
-            if (evo.phs[k]) {
-                b[4] = '-';
-                fmt_int(b + 5, evo.phs[k]);
-            } else {
-                str_cpy(b + 4, "--", 4);
-            }
-            cv_text_on(90, ty, &AF_S, b, evo.phs[k] ? T_TEXT : T_DIM, g);
             evo_pct(b, "GATE ", evo.gat[k]);
-            cv_text_on(136, ty, &AF_S, b, evo.gat[k] ? T_TEXT : T_DIM, g);
+            cv_text_on(96, ty, &AF_S, b, evo.gat[k] ? T_TEXT : T_DIM, g);
             if (evo_trn[k]) {
                 b[0] = evo_trn[k] < 0 ? '-' : '+';
                 fmt_int(b + 1, evo_trn[k] < 0 ? -evo_trn[k] : evo_trn[k]);
@@ -1399,20 +1391,17 @@ static void layer_cards(uint32_t l)
     } else if (l == LAYER_EDIT) {
         engine_columns();
     } else if (l == LAYER_PERF && evo.keys) {           /* ((GruselCore) KEYS EVOLVE: AMOUNT RATE ARRANGE DRIFT) */
-        uint32_t sk = song.sel % NTRK;                  /* (AMOUNT DRIFT SWEEP PHASE GATE: the selected track's) */
-        if (evo.keys == 2u) {                           /* EVOLVE 2: SWEEP PHASE GATE ROOT */
+        uint32_t sk = song.sel % NTRK;                  /* (AMOUNT DRIFT SWEEP GATE: the selected track's) */
+        if (evo.keys == 2u) {                           /* EVOLVE 2: SWEEP GATE ROOT, KNOB 4 nothing */
             fmt_int(val, evo.swp[sk]);
             draw_column(0, "SWEEP", evo.swp[sk] ? val : "OFF", evo.swp[sk] ? "%" : "", evo.swp[sk] ? VR_LIVE : VR_DIM,
                         evo.swp[sk] * 10, ICON_SWEEP);
-            val[0] = '-';
-            fmt_int(val + 1, evo.phs[sk]);
-            draw_column(1, "PHASE", evo.phs[sk] ? val : "OFF", evo.phs[sk] ? "STEPS" : "", evo.phs[sk] ? VR_LIVE : VR_DIM,
-                        evo.phs[sk] * 250, ICON_PHASE);
             fmt_int(val, evo.gat[sk]);
-            draw_column(2, "GATE", evo.gat[sk] ? val : "OFF", evo.gat[sk] ? "%" : "", evo.gat[sk] ? VR_LIVE : VR_DIM,
+            draw_column(1, "GATE", evo.gat[sk] ? val : "OFF", evo.gat[sk] ? "%" : "", evo.gat[sk] ? VR_LIVE : VR_DIM,
                         evo.gat[sk] * 10, ICON_GATE);
-            draw_column(3, "ROOT", EVO_ROOT[evo.root % EVO_ROOTS], "", evo.root ? VR_LIVE : VR_DIM, evo.root * 250,
+            draw_column(2, "ROOT", EVO_ROOT[evo.root % EVO_ROOTS], "", evo.root ? VR_LIVE : VR_DIM, evo.root * 250,
                         ICON_TRANSPOSE);
+            draw_column(3, "", "", "", VR_THEME, -1, ICON_NONE);
         } else {                                        /* EVOLVE: AMOUNT EVERY ARRANGE DRIFT */
             fmt_int(val, evo.amt[sk]);
             draw_column(0, "AMOUNT", evo.amt[sk] ? val : "OFF", evo.amt[sk] ? "%" : "", evo.amt[sk] ? VR_LIVE : VR_DIM,
