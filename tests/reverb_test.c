@@ -811,6 +811,26 @@ static void test_chorus_modes(void)
                  (const char *[]){"CHORUS", "FLANGER", "PHASER"}[m], big, tail);
         check(what, big <= 4 * 65536 && tail * 50 < big);   /* (-34 dB a second on: dying away) */
     }
+    {   /* ((GruselCore) a crack the user heard: the four allpasses' state went past 2^16 on a loud send and mulq15's
+         * 32-bit product wrapped) a smooth tone three times full scale, as three tracks' sends together, at the user's
+         * MODE PHASER, DEPTH 110, FEEDBACK 58: the output as smooth as the tone (no jump between two samples near
+         * full scale) */
+        int32_t jump = 0, prev = 0, ip = 0, ijump = 0;
+        for (i = 0; i < 2u * FS; i++) {
+            burst[i] = (int32_t)(98304.0 * sin(2.0 * 3.14159265 * 80.0 * i / FS) + 30000.0 * sin(2.0 * 3.14159265 * 330.0 * i / FS));
+            ijump = abs(burst[i] - ip) > ijump ? abs(burst[i] - ip) : ijump;
+            ip = burst[i];
+        }
+        bus_fresh(2, 110, 58);
+        bus_run(burst, 2u * FS, 2u * FS);
+        for (i = 1; i < 2u * FS; i++) {
+            jump = abs(ir[i] - prev) > jump ? abs(ir[i] - prev) : jump;
+            prev = ir[i];
+        }
+        snprintf(what, sizeof what, "  (GruselCore) PHASER, DEPTH 110, FEEDBACK 58, a smooth tone at 3x full scale: the "
+                 "biggest step between samples %d (the tone's %d)", jump, ijump);
+        check(what, jump < 8 * ijump + 2000);
+    }
     bus_fresh(0, 60, 0);
 }
 

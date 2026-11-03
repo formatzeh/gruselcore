@@ -623,7 +623,9 @@ static __attribute__((noinline)) void cho_mode(const int32_t *cho_in, const int3
         for (i = 0; i < n; i++) {
             int32_t x = (cho_in[i] >> 1) + mulq15(fx.cho_y, fb);
             for (k = 0; k < 4u; k++) {                  /* (a + z^-1) / (1 + a z^-1): w = x - a w1, y = a w + w1 */
-                int32_t w = clamp(x - mulq15(fx.ph_s[k], a), -262144, 262144);
+                int32_t w = clamp(x - mulq15(fx.ph_s[k], a), -65535, 65535);   /* ((GruselCore) +-2^16: the state
+                                                         * times a (to 31130) stays in mulq15's 32 bits; at +-2^18 a loud
+                                                         * send wrapped it, a burst of cracks) */
                 x = mulq15(w, a) + fx.ph_s[k];
                 fx.ph_s[k] = w;
             }
