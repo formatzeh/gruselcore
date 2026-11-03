@@ -25,6 +25,9 @@ static void theme_apply(void) { palette_set(settings.palette); }   /* (ui.c's: T
 #if __has_include("../firmware/src/favorites.c")
 #include "../firmware/src/favorites.c"
 #endif
+#ifndef PT_N
+#define PT_N 9u                                         /* (core.h's PT_N, not included here: PT_NONE .. PT_TEST) */
+#endif
 #include "../firmware/src/settings_persist.c"
 int main(void)
 {
