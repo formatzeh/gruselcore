@@ -260,14 +260,14 @@ static const preset_t NOISE_PRESETS[] = {
      * a pitched chip-style buzz */
     {"ARCADE", {NZ_LFSR, 0, 127, 0, 127, 112, 0, 84}, {0, 80, 0, 50}, 0, 0, FX(0, 0, 10, 20), TAG(PT_FX)},
     /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
-    {"CAVE WIND", {NZ_ANLG, 100, 70, 112, 127, 0, 100, 0}, {100, 90, 120, 100}, 0, 0, FX(0, 40, 10, 100), TAG(PT_FX)},
+    {"CAVE WIND", {NZ_ANLG, 100, 70, 112, 127, 0, 100, 0}, {100, 90, 120, 100}, 0, 0, FX(0, 40, 10, 100), TAG(PT_FX), TRIM(6)},
     {"PLASMA", {NZ_META, 0, 90, 90, 100, 40, 80, 0}, {60, 90, 110, 90}, 0, 0, FX(0, 30, 30, 80), MORE({P_LRATE, 56}, {P_LD_FLT, 18}), TAG(PT_FX)},
     /* (Skiff phase 9) more for every engine: basses, kits */
-    {"OCEAN", {NZ_ANLG, 50, 60, 20, 0, 0, 40, 0}, {100, 90, 120, 110}, 0, 0, FX(0, 30, 10, 90), MORE({P_LRATE, 20}, {P_LD_FLT, 40}, {P_LWAVE, 1}), TAG(PT_FX)},
+    {"OCEAN", {NZ_ANLG, 50, 60, 20, 0, 0, 40, 0}, {100, 90, 120, 110}, 0, 0, FX(0, 30, 10, 90), MORE({P_LRATE, 20}, {P_LD_FLT, 40}, {P_LWAVE, 1}), TAG(PT_FX), TRIM(7)},
     /* (GruselCore) 2026-11-02: dark, hypnotic sounds for the genres; jungle / DnB basses */
-    {"RISER", {NZ_ANLG, 64, 30, 80, 0, 0, 0, 0}, {100, 90, 127, 60}, 0, 1, FX(0, 30, 40, 80), MORE({P_LSYNC, 1}, {P_LWAVE, 2}, {P_LD_FLT, 60}), TAG(PT_FX)},
+    {"RISER", {NZ_ANLG, 64, 30, 80, 0, 0, 0, 0}, {100, 90, 127, 60}, 0, 1, FX(0, 30, 40, 80), MORE({P_LSYNC, 1}, {P_LWAVE, 2}, {P_LD_FLT, 60}), TAG(PT_FX), TRIM(32)},
     {"VOID WIND", {NZ_META, 20, 50, 100, 60, 30, 110, 0}, {90, 90, 120, 95}, 0, 0, FX(0, 40, 30, 100), MORE({P_LRATE, 30}, {P_LD_FLT, 25}), TAG(PT_FX)},
-    {"DUST", {NZ_DUST, 80, 90, 20, 0, 40, 30, 0}, {40, 90, 120, 80}, 0, 0, FX(0, 20, 30, 70), TAG(PT_FX)},
+    {"DUST", {NZ_DUST, 80, 90, 20, 0, 40, 30, 0}, {40, 90, 120, 80}, 0, 0, FX(0, 20, 30, 70), TAG(PT_FX), TRIM(32)},
     /* (GruselCore) 2026-11-02, round 2: atmospheres in the way of VOID WIND, FOREST AIR, GHOST CLOUD */
     {"STORM HOWL", {NZ_ANLG, 70, 70, 115, 64, 0, 90, 0}, {90, 90, 120, 95}, 0, 0, FX(0, 40, 30, 95), MORE({P_LRATE, 35}, {P_LD_FLT, 18}, {P_LWAVE, 1}), TAG(PT_FX)},
     {"SPECTRE", {NZ_META, 30, 60, 90, 80, 50, 100, 0}, {90, 90, 120, 95}, 0, 0, FX(0, 50, 40, 100), MORE({P_LRATE, 30}, {P_LD_PIT, 4}), TAG(PT_FX)},

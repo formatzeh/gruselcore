@@ -257,6 +257,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "chord keys: diatonic and fixed chords, voicings, MONO root, releases, recording, ARP, MIDI IN, kits" "$OUT/chord_test"
     $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/follow_test" tests/follow_test.c -lm
     run "(2.1) chord follow: roots, KEY SCALE FIT, NOTE, the tick order, ties, keys MIDI ARP, recording, STOP, kits, ids" "$OUT/follow_test"
+    $CC -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/preset_loudness" tests/preset_loudness.c -lm
+    run "(GruselCore) every sound's loudness in a mix against the kits' (TRIM): within -13 .. +7 dB" "$OUT/preset_loudness"
     $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/evolve_test" tests/evolve_test.c -lm
     run "(GruselCore) EVOLVE: own steps kept, PROTECT, breakdowns, valid copies, seed, edits, SCOPE, KEEP, STOP" "$OUT/evolve_test"
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/speaker_test" tests/speaker_test.c -lm

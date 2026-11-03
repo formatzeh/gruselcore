@@ -439,24 +439,24 @@ static void grain_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 
 static const preset_t GRAIN_PRESETS[] = {
     /* name, {SRC, POS, SIZE, DENS, PTCH, SPRD, RAND, TONE}, {A D S R}, fenv, mono */
-    {"CLOUD PAD", {2, 50, 92, 88, 0, 40, 14, 100}, {70, 90, 120, 90}, 0, 0, FX(0, 40, 25, 85), TAG(PT_PAD)},
+    {"CLOUD PAD", {2, 50, 92, 88, 0, 40, 14, 100}, {70, 90, 120, 90}, 0, 0, FX(0, 40, 25, 85), TAG(PT_PAD), TRIM(-8)},
     {"FROZEN", {0, 40, 108, 72, 0, 0, 10, 92}, {50, 100, 127, 100}, 0, 0, FX(0, 30, 20, 95), TAG(PT_PAD)},
-    {"SHIMMER", {0, 30, 70, 100, 12, 30, 24, 110}, {30, 90, 110, 90}, 0, 0, FX(0, 50, 40, 90), TAG(PT_PAD)},
+    {"SHIMMER", {0, 30, 70, 100, 12, 30, 24, 110}, {30, 90, 110, 90}, 0, 0, FX(0, 50, 40, 90), TAG(PT_PAD), TRIM(-10)},
     /* (Skiff phase 9) more for every engine: basses, kits */
-    {"PIANO HAZE", {0, 20, 100, 80, 0, 50, 20, 90}, {70, 90, 120, 100}, 0, 0, FX(0, 50, 30, 90), TAG(PT_PAD)},
-    {"SAX DRONE", {3, 60, 120, 90, -12, 20, 10, 80}, {90, 90, 127, 100}, 0, 0, FX(0, 40, 20, 90), TAG(PT_PAD)},
-    {"SCATTER", {2, 64, 40, 70, 12, 50, 0, 110}, {0, 70, 100, 50}, 0, 0, FX(0, 20, 45, 60), TAG(PT_FX)},
+    {"PIANO HAZE", {0, 20, 100, 80, 0, 50, 20, 90}, {70, 90, 120, 100}, 0, 0, FX(0, 50, 30, 90), TAG(PT_PAD), TRIM(-9)},
+    {"SAX DRONE", {3, 60, 120, 90, -12, 20, 10, 80}, {90, 90, 127, 100}, 0, 0, FX(0, 40, 20, 90), TAG(PT_PAD), TRIM(-6)},
+    {"SCATTER", {2, 64, 40, 70, 12, 50, 0, 110}, {0, 70, 100, 50}, 0, 0, FX(0, 20, 45, 60), TAG(PT_FX), TRIM(-24)},
     /* (GruselCore) 2026-11-02: dark, hypnotic sounds for the genres; jungle / DnB basses */
-    {"GHOST CLOUD", {1, 60, 100, 80, -12, 60, 40, 60}, {80, 90, 120, 95}, 0, 0, FX(0, 40, 30, 90), TAG(PT_PAD)},
-    {"FOREST AIR", {2, 40, 70, 90, 12, 70, 50, 90}, {60, 90, 115, 90}, 0, 0, FX(0, 50, 50, 90), MORE({P_LRATE, 40}, {P_LD_SHP, 20}), TAG(PT_PAD)},
+    {"GHOST CLOUD", {1, 60, 100, 80, -12, 60, 40, 60}, {80, 90, 120, 95}, 0, 0, FX(0, 40, 30, 90), TAG(PT_PAD), TRIM(-15)},
+    {"FOREST AIR", {2, 40, 70, 90, 12, 70, 50, 90}, {60, 90, 115, 90}, 0, 0, FX(0, 50, 50, 90), MORE({P_LRATE, 40}, {P_LD_SHP, 20}), TAG(PT_PAD), TRIM(-11)},
     /* (GruselCore) 2026-11-02, round 2: atmospheres in the way of VOID WIND, FOREST AIR, GHOST CLOUD */
-    {"ABYSS", {3, 50, 120, 70, -24, 40, 20, 50}, {100, 90, 120, 98}, 0, 0, FX(0, 30, 20, 100), MORE({P_LRATE, 20}, {P_LD_SHP, 25}), TAG(PT_PAD)},
-    {"MIST VEIL", {2, 30, 110, 90, 0, 80, 30, 70}, {90, 90, 120, 95}, 0, 0, FX(0, 60, 30, 95), TAG(PT_PAD)},
-    {"SPORE DRIFT", {2, 60, 40, 60, 12, 100, 60, 80}, {70, 90, 110, 90}, 0, 0, FX(0, 30, 60, 90), MORE({P_LRATE, 25}, {P_LD_SHP, 30}), TAG(PT_PAD)},
-    {"DEAD PIANO", {0, 70, 100, 70, -12, 50, 30, 45}, {80, 90, 120, 95}, 0, 0, FX(0, 40, 30, 100), TAG(PT_PAD)},
-    {"MOSS BED", {2, 45, 90, 85, -12, 60, 15, 60}, {90, 90, 120, 95}, 0, 0, FX(0, 70, 20, 90), MORE({P_LRATE, 15}, {P_LD_FLT, 15}), TAG(PT_PAD)},
-    {"WRAITH", {3, 20, 70, 80, -5, 90, 80, 55}, {90, 90, 120, 95}, 0, 0, FX(0, 40, 40, 100), TAG(PT_PAD)},
-    {"STAR DUST", {2, 80, 30, 98, 24, 110, 50, 100}, {60, 90, 110, 90}, 0, 0, FX(0, 40, 70, 90), TAG(PT_PAD)},
+    {"ABYSS", {3, 50, 120, 70, -24, 40, 20, 50}, {100, 90, 120, 98}, 0, 0, FX(0, 30, 20, 100), MORE({P_LRATE, 20}, {P_LD_SHP, 25}), TAG(PT_PAD), TRIM(-11)},
+    {"MIST VEIL", {2, 30, 110, 90, 0, 80, 30, 70}, {90, 90, 120, 95}, 0, 0, FX(0, 60, 30, 95), TAG(PT_PAD), TRIM(-23)},
+    {"SPORE DRIFT", {2, 60, 40, 60, 12, 100, 60, 80}, {70, 90, 110, 90}, 0, 0, FX(0, 30, 60, 90), MORE({P_LRATE, 25}, {P_LD_SHP, 30}), TAG(PT_PAD), TRIM(-9)},
+    {"DEAD PIANO", {0, 70, 100, 70, -12, 50, 30, 45}, {80, 90, 120, 95}, 0, 0, FX(0, 40, 30, 100), TAG(PT_PAD), TRIM(-9)},
+    {"MOSS BED", {2, 45, 90, 85, -12, 60, 15, 60}, {90, 90, 120, 95}, 0, 0, FX(0, 70, 20, 90), MORE({P_LRATE, 15}, {P_LD_FLT, 15}), TAG(PT_PAD), TRIM(-23)},
+    {"WRAITH", {3, 20, 70, 80, -5, 90, 80, 55}, {90, 90, 120, 95}, 0, 0, FX(0, 40, 40, 100), TAG(PT_PAD), TRIM(-11)},
+    {"STAR DUST", {2, 80, 30, 98, 24, 110, 50, 100}, {60, 90, 110, 90}, 0, 0, FX(0, 40, 70, 90), TAG(PT_PAD), TRIM(-11)},
 };
 
 static const engine_t ENG_GRAIN = {

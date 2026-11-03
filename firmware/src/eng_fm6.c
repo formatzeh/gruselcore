@@ -391,12 +391,12 @@ static const preset_t FM6_PRESETS[] = {
     /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
     {"GLASS KEYS", {0, 0, 8, 0, 0, 0, 24, 0}, {0, 0, 127, 0}, 0, 0, FX(0, 75, 30, 45), TAG(PT_KEYS)},
     {"ISOTOPE", {0, 0, 14, 2, -10, 0, 50, 1}, {0, 0, 127, 0}, 0, 0, FX(0, 20, 50, 70), TAG(PT_KEYS)},
-    {"DARK MATTER", {0, 4, 16, 0, 10, 0, 0, 2}, {0, 0, 127, 0}, 0, 1, FX(8, 0, 0, 10), TAG(PT_BASS)},
+    {"DARK MATTER", {0, 4, 16, 0, 10, 0, 0, 2}, {0, 0, 127, 0}, 0, 1, FX(8, 0, 0, 10), TAG(PT_BASS), TRIM(4)},
     /* (Skiff phase 9) more for every engine: basses, kits */
-    {"PICK BASS", {0, 2, 12, 0, 16, 2, 0, 7}, {0, 0, 127, 0}, 0, 1, FX(0, 0, 5, 10), TAG(PT_BASS)},
-    {"GROWL BASS", {0, 5, 8, 0, 20, 0, 8, 3}, {0, 0, 127, 0}, 20, 1, FX(30, 0, 5, 5), MORE({P_LD_FLT, 36}, {P_LRATE, 80}, {P_DTYPE, 2}), TAG(PT_BASS)},
+    {"PICK BASS", {0, 2, 12, 0, 16, 2, 0, 7}, {0, 0, 127, 0}, 0, 1, FX(0, 0, 5, 10), TAG(PT_BASS), TRIM(6)},
+    {"GROWL BASS", {0, 5, 8, 0, 20, 0, 8, 3}, {0, 0, 127, 0}, 20, 1, FX(30, 0, 5, 5), MORE({P_LD_FLT, 36}, {P_LRATE, 80}, {P_DTYPE, 2}), TAG(PT_BASS), TRIM(8)},
     /* (GruselCore) 2026-11-02: dark, hypnotic sounds for the genres; jungle / DnB basses */
-    {"FM PSYBASS", {0, 3, 10, 0, -30, 0, 0, 2}, {0, 0, 127, 0}, 0, 1, FX(10, 0, 0, 0), TAG(PT_BASS)},
+    {"FM PSYBASS", {0, 3, 10, 0, -30, 0, 0, 2}, {0, 0, 127, 0}, 0, 1, FX(10, 0, 0, 0), TAG(PT_BASS), TRIM(13)},
     {"FM HYPNO", {0, 3, 8, 2, -20, 0, 10, 7}, {0, 0, 127, 0}, 0, 0, FX(0, 20, 70, 50), TAG(PT_PLUCK)},
     {"METAL PERC", {0, 7, 20, 5, -30, 0, 0, 5}, {0, 0, 127, 0}, 0, 0, FX(0, 0, 40, 30), TAG(PT_DRUM)},
     {"DARK BELL", {0, 2, 10, 3, 10, 0, 30, 1}, {0, 0, 127, 0}, 0, 0, FX(0, 30, 60, 80), TAG(PT_KEYS)},

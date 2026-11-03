@@ -977,12 +977,24 @@ static __attribute__((noinline)) void track_insert(track_t *t, int32_t *b, uint3
  * what its left channel loses to the lanes panned right, e (lpan_buf) what the right loses to those panned left, each
  * through the same gains as d is; then the track's PAN over both. The kit's DRIVE, INSERT and sends hear b as before. (A
  * SPREAD a kit kept from another engine, hidden, spreads its hits as in 1.x until a lane is panned) */
+/* (GruselCore) a track's LEVEL as a gain (Q12), its sound's TRIM in it (core.h preset_t: a factory sound's loudness
+ * evened out; a user sound's none), at most LEVEL 127's: the mix's products stay where LEVEL alone took them */
+static const uint16_t TRIM_Q12[65] = {649, 688, 728, 772, 817, 866, 917, 971, 1029, 1090, 1154, 1223, 1295, 1372, 1453, 1539, 1631, 1727, 1830, 1938, 2053, 2175, 2303, 2440, 2584, 2738, 2900, 3072, 3254, 3446, 3651, 3867, 4096, 4339, 4596, 4868, 5157, 5462, 5786, 6129, 6492, 6876, 7284, 7715, 8173, 8657, 9170, 9713, 10289, 10898, 11544, 12228, 12953, 13720, 14533, 15394, 16306, 17273, 18296, 19380, 20529, 21745, 23034, 24398, 25844};   /* -16 .. +16 dB */
+static inline int32_t trk_lvl(const track_t *t)
+{
+    const engine_t *e = t->engine < NENGINES ? ENGINES[t->engine] : 0;   /* (no divide: the audio ISR) */
+    int32_t l = LEVEL_Q12[t->p[P_LEVEL] & 127], tr = t->user || !e || t->preset >= e->npresets ? 0 : e->presets[t->preset].trim;
+    if (!tr)
+        return l;
+    l = (l * TRIM_Q12[clamp(tr, -32, 32) + 32]) >> 12;
+    return l < LEVEL_Q12[127] ? l : LEVEL_Q12[127];
+}
 /* .. (2.0, #36) a panned kit's end: each channel less its far side's sum (d the left's, e the right's), then the track's
  * PAN; the sends from b, mono, as mix_part's */
 static __attribute__((noinline)) void lpan_mix(track_t *t, const int32_t *b, const int32_t *d, const int32_t *e,
                                                uint32_t n SM_DECL)
 {
-    int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] & 127], pan = t->p[P_PAN];
+    int32_t lvl = trk_lvl(t), pan = t->p[P_PAN];
     int32_t gl = 4096 - (pan > 0 ? pan * 64 : 0), gr = 4096 + (pan < 0 ? pan * 64 : 0);
     int32_t c = t->p[P_CHOR] * 258, dl = t->p[P_DLY] * 258, r = t->p[P_REV] * 258, pk = t->peak;
     int32_t xmax = c > dl ? c : dl;
@@ -1008,7 +1020,7 @@ static __attribute__((noinline)) void mix_spread(track_t *t, int32_t *b, uint32_
 {
     int32_t *d = SPREAD_BUF(t), *e = t->lpan_on ? LPAN_BUF(t) : 0;
     uint32_t i, k = (uint32_t)(t - trk);
-    int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] & 127], pan = t->p[P_PAN], s = (t->p[P_SPRD] + 1) >> 1;
+    int32_t lvl = trk_lvl(t), pan = t->p[P_PAN], s = (t->p[P_SPRD] + 1) >> 1;
     int32_t pa = clamp(pan - s, -64, 63), pb = clamp(pan + s, -64, 63);
     int32_t gla = 4096 - (pa > 0 ? pa * 64 : 0), gra = 4096 + (pa < 0 ? pa * 64 : 0);
     int32_t glb = 4096 - (pb > 0 ? pb * 64 : 0), grb = 4096 + (pb < 0 ? pb * 64 : 0);
@@ -1086,7 +1098,7 @@ static __attribute__((noinline)) void smx_render(track_t *t, voice_t *v, uint32_
     n = n > CTL ? CTL : n;                              /* (a block, as SPREAD's buffer) */
     spread_clear(vb);
     ENGINES[t->engine]->render(t, v, vb, n, vmod_level(m, &ml, sx[-16]));
-    g = (LEVEL_Q12[t->p[P_LEVEL] & 127] * (32768 - sl[k].gc)) >> 15;   /* Q12 */
+    g = (trk_lvl(t) * (32768 - sl[k].gc)) >> 15;   /* Q12 */
     g = (g * (32768 - sl[k].w)) >> 15;
     g = (g * pf.mg[k]) >> 15;
     g = (g * (32768 - duck[k].r1)) >> 15;
@@ -1143,7 +1155,7 @@ static void mix_part(track_t *t, uint32_t n SM_DECL)
         return;
     }
     {
-        int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] & 127], pan = t->p[P_PAN];
+        int32_t lvl = trk_lvl(t), pan = t->p[P_PAN];
         int32_t gl = 4096 - (pan > 0 ? pan * 64 : 0), gr = 4096 + (pan < 0 ? pan * 64 : 0);
         int32_t c = t->p[P_CHOR] * 258, d = t->p[P_DLY] * 258, r = t->p[P_REV] * 258, pk = t->peak;
         int32_t xmax = c > d ? c : d;

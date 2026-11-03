@@ -318,10 +318,14 @@ typedef struct {
     struct { uint8_t id; int8_t v; } more[4];   /* (Skiff) up to four more of the sound's values, {P_* id, value}: the
                                   * LFO, GLIDE, ENV -> PITCH (sound parameters only, never param_kept's: editor_test); id 0 ends */
     uint8_t tag;                 /* (Skiff phase 9) its type, PT_*: PRESETS' LIST shows one (ui.c preset_in_list) */
+    int8_t trim;                 /* (GruselCore) its loudness evened out with the others', in LEVEL's 0.5 dB steps
+                                  * (-32..32: fx.c trk_lvl); 0: as it is. Not a parameter: never saved, the track's LEVEL
+                                  * stays the track's (tests/preset_loudness.c measures them) */
 } preset_t;
 #define FX(d, c, dl, r) .fx = {(d) + 1, (c) + 1, (dl) + 1, (r) + 1}
 #define MORE(...) .more = {__VA_ARGS__}
 #define TAG(t) .tag = (t)
+#define TRIM(h) .trim = (h)      /* (GruselCore) half dB */
 enum { PT_NONE, PT_BASS, PT_LEAD, PT_PAD, PT_KEYS, PT_PLUCK, PT_DRUM, PT_FX, PT_TEST, PT_N };   /* (stored: the LIST setting); (GruselCore) PT_TEST: new sounds on trial, LIST TESTING */
 #define PT_HIDE 0x80u            /* (GruselCore) or-ed into a tag: never listed (ui.c preset_skip), still loads as a default */
 

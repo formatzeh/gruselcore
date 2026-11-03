@@ -26,6 +26,10 @@ The earlier GruselCore (on X0X) is kept on the branch `x0x-base`.
 - **Tempo to 300 BPM** (was 240), for mentalcore and tribecore; MIDI clock in follows up to 300 too.
 - **Measured genre notes:** `design/GENRES.md` (from the user's 65 examples, `tools/genre_analyze.py`): tempo, step
   patterns, kick, bass, key and breaks per genre, and a GruselCore recipe for each.
+- **Sounds evened out against the kits:** 51 factory sounds that were far quieter or louder than the drum kits in a mix
+  (measured: `tests/preset_loudness.c`) have a TRIM, a fixed loudness correction applied with the track's LEVEL. LEVEL,
+  the tone and the save formats stay as they were; a user sound keeps none. Every listed sound is now within -13 .. +7
+  dB of the kits (the test fails otherwise); most within 6.
 - **Identity:** `FM-1_966` (development builds on GitHub `FM-1_9669` + the run number, releases `FM-1_966XXYYZZ`),
   packages `gruselcore-*.fwsc`.
 

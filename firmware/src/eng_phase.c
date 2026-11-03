@@ -294,19 +294,19 @@ static void phase_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 
 static const preset_t PHASE_PRESETS[] = {
     /* name, {WAVE, WAVE2, DCW, ENV, DTN, LINE, SUB, FOLD}, {A D S R}, fenv, mono */
-    {"PD BRASS", {0, 0, 30, 90, 0, 0, 0, 0}, {8, 70, 90, 40}, 0, 0, FX(0, 20, 20, 40), TAG(PT_LEAD)},
-    {"PD ORGAN", {3, 0, 40, 0, 0, 0, 0, 0}, {0, 127, 127, 30}, 0, 0, FX(0, 40, 0, 30), TAG(PT_KEYS)},
+    {"PD BRASS", {0, 0, 30, 90, 0, 0, 0, 0}, {8, 70, 90, 40}, 0, 0, FX(0, 20, 20, 40), TAG(PT_LEAD), TRIM(-10)},
+    {"PD ORGAN", {3, 0, 40, 0, 0, 0, 0, 0}, {0, 127, 127, 30}, 0, 0, FX(0, 40, 0, 30), TAG(PT_KEYS), TRIM(-14)},
     {"PD STRINGS", {0, 4, 50, 40, 12, 0, 0, 0}, {40, 90, 100, 70}, 0, 0, FX(0, 50, 20, 60), TAG(PT_PAD)},
     {"WIRE", {4, 7, 70, 40, 7, 0, 0, 0}, {10, 80, 80, 60}, 0, 0, FX(15, 30, 30, 40), TAG(PT_LEAD)},
     /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
     {"NEUTRINO", {3, 0, 20, 70, 0, 0, 0, 0}, {0, 80, 0, 75}, 0, 0, FX(0, 10, 75, 55), TAG(PT_PLUCK)},
     /* (GruselCore) 2026-11-02: dark, hypnotic sounds for the genres; jungle / DnB basses */
-    {"PD PSY BASS", {0, 0, 40, 80, 0, 0, 60, 0}, {0, 50, 0, 18}, 0, 1, FX(10, 0, 0, 0), TAG(PT_BASS)},
+    {"PD PSY BASS", {0, 0, 40, 80, 0, 0, 60, 0}, {0, 50, 0, 18}, 0, 1, FX(10, 0, 0, 0), TAG(PT_BASS), TRIM(14)},
     {"PD ACID", {5, 0, 50, 100, 0, 0, 0, 20}, {0, 55, 20, 30}, 0, 1, FX(20, 0, 40, 10), MORE({P_GLIDE, 25}), TAG(PT_BASS)},
-    {"PD MENTAL", {7, 0, 60, 90, 0, 0, 0, 80}, {0, 48, 0, 25}, 0, 1, FX(40, 0, 30, 10), MORE({P_DTYPE, 2}), TAG(PT_BASS)},
+    {"PD MENTAL", {7, 0, 60, 90, 0, 0, 0, 80}, {0, 48, 0, 25}, 0, 1, FX(40, 0, 30, 10), MORE({P_DTYPE, 2}), TAG(PT_BASS), TRIM(7)},
     {"PD DARK BEL", {4, 5, 70, 60, 10, 1, 0, 0}, {0, 80, 0, 70}, 0, 0, FX(0, 30, 60, 80), TAG(PT_PLUCK)},
     {"PD DRONE", {6, 7, 40, 0, 20, 1, 30, 30}, {100, 90, 120, 95}, 0, 0, FX(0, 50, 30, 90), MORE({P_LSYNC, 2}, {P_LD_SHP, 30}), TAG(PT_PAD)},
-    {"PD FOLD BAS", {0, 2, 60, 70, 5, 0, 50, 60}, {0, 64, 127, 20}, 0, 1, FX(20, 0, 0, 5), MORE({P_LSYNC, 8}, {P_LD_SHP, 40}), TAG(PT_BASS)},
+    {"PD FOLD BAS", {0, 2, 60, 70, 5, 0, 50, 60}, {0, 64, 127, 20}, 0, 1, FX(20, 0, 0, 5), MORE({P_LSYNC, 8}, {P_LD_SHP, 40}), TAG(PT_BASS), TRIM(-4)},
     {"PD WOBBLE", {1, 0, 50, 0, 8, 0, 70, 30}, {0, 64, 127, 20}, 0, 1, FX(30, 0, 0, 5), MORE({P_LSYNC, 6}, {P_LD_SHP, 50}, {P_DTYPE, 1}), TAG(PT_BASS)},
 };
 
