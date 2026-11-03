@@ -195,12 +195,25 @@ static __attribute__((noinline)) int launch_step(track_t *t, uint32_t len, uint3
     if (!launch_q[k].armed || !launch_due(t, len, period))
         return 0;
     launch_swap(t);
+    evo_play[k] = 0;                               /* (GruselCore) EVOLVE: the new pattern's own steps (evolve.c) */
     take_p0[k] = take_pass[k];                     /* (phase 5) its passes from the next on (a song's repeats) */
     if (!now) {
         t->seq_idx = (uint16_t)(t->p[P_SLEN] > 1 ? t->p[P_SLEN] - 1 : 0);
         t->seq_cnt = 0;
     }
     return 1;
+}
+/* (GruselCore) EVOLVE's next bar comes in (evolve.c evo_next_bar staged it): seq.c seq_enter, the first track entering
+ * a step once launch_clock has counted the bar's first 1/16 (not in launch_clock: the audio ISR's own code keeps its
+ * shape, tests/target_budget.py) */
+static __attribute__((noinline)) void evo_bar_in(void)
+{
+    uint32_t k;
+    evo_at = 0;
+    evo_mute = evo_mute_nx;
+    evo_fill = evo_fill_nx;
+    for (k = 0; k < NTRK; k++)
+        evo_trn[k] = evo_trn_nx[k];
 }
 /* each block, before the tracks tick: the 1/16 steps as a 1/16 track (and the click: click_tick) counts them, PLAY's
  * first block step 0 (seq_start), the remainder kept (BAR / BEAT launches) */

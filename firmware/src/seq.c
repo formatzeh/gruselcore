@@ -307,6 +307,26 @@ static __attribute__((noinline)) uint32_t seq_next(track_t *t, uint32_t len)
 
 #include "take.c"                                   /* Skiff: TAKES' log (input_on/off, the arp, motion_capture) */
 static volatile uint8_t seq_fill;                   /* Skiff: FILL held (GLO + F4, ui_layer.c): the FILL steps play */
+/* (GruselCore) EVOLVE (evolve.c): a track whose evo_play byte is set plays evo_step, an evolved copy of its pattern, in
+ * place of its own steps (seq_st); the track's steps, what is edited, shown and kept into the bank, are never touched.
+ * The main loop writes evo_step[k] only with the ISR held off (on the track's last step, so a new version comes in
+ * with its next pass). A pattern switched in (launch.c launch_step) drops it: the track plays its own steps until the
+ * main loop has copied the new ones */
+static step_t evo_step[NTRK][NSTEP];
+static volatile uint8_t evo_play[NTRK];
+/* .. ROOT: each track's notes moved (a melodic track's: evolve.c), FILL: the FILL steps play (ARRANGE's phrase end);
+ * these and the mutes come in on a bar: the main loop sets the next ones and the 1/16 they start on (evo_at, 0 none),
+ * launch.c launch_clock puts them on there */
+static volatile int8_t evo_trn[NTRK];
+static volatile uint8_t evo_fill;
+static volatile int8_t evo_trn_nx[NTRK];
+static volatile uint8_t evo_fill_nx, evo_mute_nx;
+static volatile uint32_t evo_at;
+static inline const step_t *seq_st(const track_t *t, uint32_t i)
+{
+    uint32_t k = trk_index(t);
+    return evo_play[k] ? &evo_step[k][i % NSTEP] : &t->step[i % NSTEP];
+}
 /* Skiff: step s of track t passes its trig condition (core.h TC_*) on this pass of the track's loop (take_pass: the
  * first pass since PLAY is 1; ahead 1: the next pass, a step played early (NUDGE) before its pass starts); a step
  * without one always does. No random number taken (the CHANCE roll after it).
@@ -319,7 +339,7 @@ static __attribute__((noinline)) int step_cond_ok(const track_t *t, const step_t
     if (c == TC_NONE || c >= TC_COUNT)
         return 1;
     if (c == TC_FILL || c == TC_NFILL)
-        return (c == TC_FILL) == (seq_fill != 0u);
+        return (c == TC_FILL) == ((seq_fill | evo_fill) != 0u);
     p = take_pass[trk_index(t)] + ahead;
     return p > 0u && (p - 1u) % B[c] + 1u == A[c];
 }
@@ -1244,7 +1264,8 @@ static uint32_t seq_ties_of(track_t *t, const step_t *s, uint32_t qseq, int32_t 
     for (i = 0; ties && i < s->n && i < 4u; i++) {
         if (!((ties >> i) & 1u))
             continue;
-        x = qseq ? (uint32_t)clamp(scale_snap(t, (int32_t)s->note[i] + qtrn), 0, 127) : s->note[i];
+        x = (uint32_t)clamp((int32_t)s->note[i] + evo_trn[trk_index(t)], 0, 127);   /* ((GruselCore) ROOT) */
+        x = qseq ? (uint32_t)clamp(scale_snap(t, (int32_t)x + qtrn), 0, 127) : x;
         for (j = 0; j < t->seq_n; j++)
             if (t->seq_notes[j] == x)
                 m |= 1u << j;
@@ -1306,7 +1327,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     /* (Skiff) the step after it in its direction (played early by its NUDGE, it is the one after the playing one) */
     uint32_t nx = f == t->seq_idx ? seq_peek(t, len) : seq_after((uint32_t)t->p[P_DIR], f % len, f < t->seq_idx, len);
     /* ((2.0, #44) a LOOP switch at its end, a chain's next part: that pattern's first, so a note goes on across it) */
-    const step_t *ns = f == t->seq_idx ? launch_next(t, len, &t->step[nx]) : &t->step[nx];
+    const step_t *ns = f == t->seq_idx ? launch_next(t, len, seq_st(t, nx)) : seq_st(t, nx);
     uint32_t next_tie = ns->time == ST_TIE;
     uint32_t hits = step_ratchet(s), grace = (s->flags & SF_FLAM) && !(skip & SEQ_REP);   /* (Skiff) FLAM */
     uint8_t nn[4 + NLANE], vv[4 + NLANE];           /* the notes it plays: its notes, then its hits */
@@ -1362,7 +1383,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         t->rat_left = 1;
     }
     for (i = 0; i < s->n && i < 4u; i++) {
-        uint32_t x = s->note[i];
+        uint32_t x = (uint32_t)clamp((int32_t)s->note[i] + evo_trn[k], 0, 127);   /* ((GruselCore) EVOLVE's ROOT) */
         if (qseq) {                                 /* QNT SEQ: onto the scale now; two notes snapping */
             x = (uint32_t)clamp(scale_snap(t, (int32_t)x + qtrn), 0, 127);   /* together play once */
             for (j = 0; j < m && nn[j] != x; j++)
@@ -1476,7 +1497,7 @@ static __attribute__((noinline)) void seq_audition(void)
  * source in a song) ends the repeats */
 static __attribute__((noinline)) void seq_ratchet(track_t *t, uint32_t period)
 {
-    const step_t *s = &t->step[t->fire_idx];
+    const step_t *s = seq_st(t, t->fire_idx);
     uint32_t hits = step_ratchet(s);
     if (s->flags & SF_FLAM) {                     /* (Skiff) FLAM: the full hit once the grace has had its time */
         if (t->rat_pos < flam_at(t, period))
@@ -1499,7 +1520,7 @@ static __attribute__((noinline)) void seq_ratchet(track_t *t, uint32_t period)
  * automation and locks, then its notes (seq_step) */
 static __attribute__((noinline)) void seq_fire(track_t *t, uint32_t idx, uint32_t period, uint32_t ahead)
 {
-    const step_t *s = &t->step[idx];
+    const step_t *s = seq_st(t, idx);
     uint32_t skip = SEQ_ROLLED, i, k;
     t->fire_idx = (uint8_t)idx;
     /* the chance first (the one roll, as seq_step made it): a step that does not play applies no lock; the
@@ -1535,16 +1556,19 @@ static int32_t step_nudge(const step_t *s) { return s->time == ST_NOTE ? s->nudg
  * that plays something, x1; its VEL and first note are the sources' VEL and KEY (mod.c mod_time) */
 static __attribute__((noinline)) uint32_t seq_time(track_t *t, uint32_t idx, uint32_t cur)
 {
-    const step_t *s = &t->step[idx];
+    const step_t *s = seq_st(t, idx);
     uint32_t vel = (s->flags & SF_ACCENT) ? 127u : (s->vel ? s->vel : 96u);
     if (s->time != ST_NOTE || (!s->n && !s->hit) || step_ratchet(s) != 1u)
         return 0;
     return mod_time(t, s->n ? s->note[0] : DRUM_LANE_NOTE[__builtin_ctz(s->hit) & (NLANE - 1u)], vel, cur);
 }
+static void evo_bar_in(void);
 static __attribute__((noinline)) void seq_enter(track_t *t, uint32_t period, uint32_t len)
 {
     uint32_t i = t->seq_idx, cur = step_samples(t, period, i), h;
-    int32_t d = step_nudge(&t->step[i]);
+    if (evo_at && launch_steps >= evo_at)
+        evo_bar_in();                               /* ((GruselCore) EVOLVE's next bar: its mutes, FILL, ROOT) */
+    int32_t d = step_nudge(seq_st(t, i));
     if ((t->nud & NUD_DONE) && t->early_idx == i) {
         /* played early */
     } else if ((h = (d > 0 ? (uint32_t)nudge_samples(d, cur) : 0u) + seq_time(t, i, cur)) != 0u) {   /* ((1.3) and
@@ -1558,7 +1582,7 @@ static __attribute__((noinline)) void seq_enter(track_t *t, uint32_t period, uin
     t->nud &= (uint8_t)~(NUD_EARLY | NUD_DONE);
     if (t->p[P_DIR] != DIR_RAND && !launch_ahead(t, len)) {
         uint32_t nx = seq_peek(t, len);
-        d = step_nudge(&t->step[nx]);
+        d = step_nudge(seq_st(t, nx));
         if (d < 0) {
             uint32_t e = (uint32_t)-nudge_samples(d, step_samples(t, period, nx));
             t->early_idx = (uint8_t)nx;

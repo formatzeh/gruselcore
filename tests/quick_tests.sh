@@ -39,6 +39,8 @@ $CC -o "$OUT/input_test" tests/input_test.c
 run "keys and buttons" "$OUT/input_test"
 $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/ui_test" tests/ui_test.c -lm
 run "UI: sounds, steps, undo, recording, drum grid" "$OUT/ui_test"
+$CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/evolve_test" tests/evolve_test.c -lm
+run "EVOLVE (GruselCore): own steps kept, PROTECT, breakdowns, valid copies, seed, edits, SCOPE, KEEP, STOP" "$OUT/evolve_test"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drum_test" tests/drum_test.c -lm
 run "DRUM (GruselCore kits): every kit and lane sounds, ends, no clipping, level; choke, controls" "$OUT/drum_test"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/regress" tests/regress.c -lm

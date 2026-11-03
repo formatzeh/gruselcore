@@ -570,6 +570,7 @@ static int32_t ink_w(const aafont_t *f, const char *s)
 enum { LAYER_NONE, LAYER_FX, LAYER_GLO, LAYER_SCL, LAYER_EDIT, LAYER_SEQ, LAYER_REC, LAYER_PERF, LAYER_N };   /* (Skiff:
                                    * PERF, ARP held: the bank's patterns live, ui_layer.c) */
 static void draw_layer(void);
+static const char *evo_head(void);                  /* ((GruselCore) evolve.c: PERFORM's header in KEYS EVOLVE) */
 static void draw_shift(void);
 static const char *layer_head(void);
 static int layer_locked(void);

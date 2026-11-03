@@ -1718,6 +1718,39 @@ static void song_tag(char *b, uint32_t k, uint32_t e)
     b[3] = (char)('A' + e % NENT);
     b[4] = 0;
 }
+/* (GruselCore) EVOLVE's KEEP: steps st (track k's evolved copy, with the track's LEN .. DIR and automation) as a new
+ * pattern in the first empty entry after the one the track is on (its sound with it), the track left on its own (the
+ * original stays as it was). Playing, the pattern waits and is written at STOP (pat_keep_now). 0 done (*ent: the
+ * entry), 1 no empty entry, 4 PATTERNS FULL */
+static int bank_keep_steps(uint32_t k, const step_t *st, uint32_t *ent)
+{
+    const track_t *t = &trk[k % NTRK];
+    int16_t tv[5];
+    uint32_t i, e, f, id, o;
+    k %= NTRK;
+    e = lists.cur[k] % NENT;
+    if (!BK_ON)
+        return 4;
+    bank_poll();
+    f = ent_free_after(k, e);
+    for (i = 0; f == NENT && i < NENT; i++)            /* (none after it: the first empty one) */
+        if (i != e && !ent_on(k, i))
+            f = i;
+    if (f == NENT)
+        return 1;
+    o = ent_pat(k, e);
+    id = o != PAT_NONE ? pool_alloc_after(o) : pool_alloc();
+    for (i = 0; i < 5u; i++)
+        tv[i] = motion_base_value(t, BK_TIME[i]);
+    if (id == NPAT || !bk_pack_raw(bk_rec, k, st, tv, &motion, motion_enabled(t)) || pat_keep_now(id, bk_rec))
+        return 4;
+    lists.ent[k][f][0] = (uint8_t)(id + 1u);
+    lists.ent[k][f][1] = 0;
+    memcpy(lists.snd[k][f], lists.snd[k][e], 2);
+    bk.gen++;
+    *ent = f;
+    return 0;
+}
 /* OCT+: KNOB 2's pick into the entry (a pattern; the track on the entry: it comes in, at once stopped, at LAUNCH
  * playing), COPY: a new pattern, a copy of the entry's (the track's edits in it first), the entry's then (the track on
  * it: on the copy); no pick: the entry played (entry_ui). What happened, said. (2.0, #32, the user's pick 1A) NEW: a

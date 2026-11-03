@@ -41,6 +41,8 @@
 #                   exactly what its key / MIDI note started, recording, the ARP, MIDI IN, kits ignore CHRD.
 # FOLLOW (tests/follow_test.c, 2.1): the chord follow (src/follow.c): roots, KEY / SCALE / FIT, NOTE, the order the
 #                   tracks tick in, ties, keys / MIDI IN / ARP ending exactly, recording, STOP, kits, stored ids.
+# EVOLVE (tests/evolve_test.c, GruselCore): generative playback (src/evolve.c): the tracks' own steps never changed,
+#                   PROTECT (kick, snare), breakdowns, valid steps in the scale, AMOUNT 0, the seed, edits, SCOPE, KEEP, STOP.
 # RATCH (tests/ratchet_test.c): a step's ratchet (x1..x4): its parts in the sequencer (equal, gated, chords and drum
 #                   hits whole, one chance roll, swing, no slide or tie out, STOP), FUN8 round trip and older projects x1,
 #                   user preset patterns, SEQ > CHANCE KNOB 3 and the roll / grid drawing.
@@ -255,6 +257,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "chord keys: diatonic and fixed chords, voicings, MONO root, releases, recording, ARP, MIDI IN, kits" "$OUT/chord_test"
     $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/follow_test" tests/follow_test.c -lm
     run "(2.1) chord follow: roots, KEY SCALE FIT, NOTE, the tick order, ties, keys MIDI ARP, recording, STOP, kits, ids" "$OUT/follow_test"
+    $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/evolve_test" tests/evolve_test.c -lm
+    run "(GruselCore) EVOLVE: own steps kept, PROTECT, breakdowns, valid copies, seed, edits, SCOPE, KEEP, STOP" "$OUT/evolve_test"
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/speaker_test" tests/speaker_test.c -lm
     run "SPEAKER EQ: FLAT / LOWCUT / BASS+ responses, BASS+ harmonics of the bass, the sub cut, no offset after" "$OUT/speaker_test"
     run "DSP render (ANALOG preset 0)" "$OUT/hostsim" 0 0 1 "$OUT/render.wav"

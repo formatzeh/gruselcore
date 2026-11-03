@@ -17,6 +17,12 @@ The earlier GruselCore (on X0X) is kept on the branch `x0x-base`.
   last session, which stays as it was. Two failed starts in a row: SAFE MODE by itself (four: the chip's update mode).
   The update loader is Skiff 2.1.1's, unchanged (`tests/loader_guard.sh` fails on any change). Skiff's own: the
   watchdog, the crash screen, no session restored after a crash, OCT− + OCT+ held 5 s: update mode.
+- **EVOLVE (generative playback):** hold ARP (PERFORM), turn PRESETS to KEYS EVOLVE, let go: the EVOLVE screen stays
+  (ARP tapped brings it back from any page, ARP held on it closes it). F3 on: the patterns evolve, each track by its
+  own AMOUNT; tracks drop out and come back, breakdowns and drops (ARRANGE); the sounds drift (DRIFT). EVOLVE 2:
+  SWEEP, PHASE (polymeter), GATE and ROOT (key moves). The kick, snare and the notes on the beats stay (PROTECT), the
+  original patterns never change (G4 HOME plays them; KEEP stores what you hear as a new entry). DESIGN.md has the
+  details.
 - **Identity:** `FM-1_966` (development builds on GitHub `FM-1_9669` + the run number, releases `FM-1_966XXYYZZ`),
   packages `gruselcore-*.fwsc`.
 

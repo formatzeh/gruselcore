@@ -55,8 +55,8 @@ duck_block 123
 duck_apply 13
 launch_step 28
 launch_swap 68
-throw_on 187
-throw_off 15
+throw_on 208
+throw_off 28
 mix_part 778
 mix_split 42
 track_insert 3

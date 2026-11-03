@@ -809,6 +809,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_SONG_CHAINS, S_SONG_CHAIN_COPY,                                                      /* (2.0, #44's box) */
        S_DRUM_KIT_USR, S_LANES_USR,                                                           /* (2.0, #35) */
        S_FOLLOW, S_FOLLOW_SCALE, S_FOLLOW_FIT, S_FOLLOW_OFF, S_FOLLOW_WAIT,                   /* (2.1) */
+       S_PERF_EVOLVE, S_PERF_EVOLVE_OFF, S_PERF_EVOLVE2,                                      /* (GruselCore) */
        S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "project", "lanes", "step", "pattern", "chance", "motion", "drum",
@@ -842,7 +843,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "notes_range", "notes_pick", "feel_range", "notes_overlap", "momentary", "pool_empty", "pool_unused", "confirm_empty",
     "song_once", "song_new", "song_copyplus", "song_chain", "song_chain3", "notes_chain", "lane_mix", "lane_mix_dx",
     "song_sound", "song_sounds", "song_chains", "song_chain_copy", "drum_kit_usr", "lanes_usr",
-    "follow", "follow_scale", "follow_fit", "follow_off", "follow_wait", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
+    "follow", "follow_scale", "follow_fit", "follow_off", "follow_wait", "perform_evolve", "perform_evolve_off", "perform_evolve_2", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
 
 /* the scenes of the UI design screens: the state the UI-redesign
  * prototype drew them from (its setup(): two pattern tracks, the drum pattern on track 4, a synthetic scope),
@@ -992,6 +993,11 @@ static void setup(int s)
 {
     memset(kb_chn, 0, sizeof kb_chn);               /* no key held (roll_playing holds one) */
     fm1_in.buttons = 0;                             /* (no button held: momentary holds LFO) */
+    evo.keys = evo.on = 0;                          /* ((GruselCore) EVOLVE off, PERFORM's KEYS its own) */
+    evo_mute = 0;
+    evo.plen = 0;
+    memset((void *)evo_play, 0, sizeof evo_play);
+    memset((void *)evo_trn, 0, sizeof evo_trn);
     if (s >= S_MOCK_HOME) {
         mock_state(s);
         return;
@@ -1474,6 +1480,31 @@ static void setup(int s)
             dx_kit[DV_KICK].mode = (uint8_t)((dx_kit[DV_KICK].mode & ~0x60u) | DXM_LONG << 5 | DX_DRIVE);
         go_title("SOUND");
         ui.hot_col = s == S_DX_SOUND ? 1 : s == S_DX_SOUND2 ? 0 : 3; ui.hot_t = 30;
+        break;
+    case S_PERF_EVOLVE:                             /* (GruselCore) PERFORM, KEYS EVOLVE: on, playing, T5's AMOUNT OFF, */
+    case S_PERF_EVOLVE_OFF:                         /* T3 taken out by ARRANGE, T2 selected, phrase 5 of 8; (OFF) off, */
+    case S_PERF_EVOLVE2:                            /* stopped; (2) EVOLVE 2: SWEEP PHASE GATE on some, ROOT I-IV-V +5 */
+        {
+            uint32_t k;
+            static const uint8_t A[NTRK] = {60, 40, 100, 25, 0, 80}, F[NTRK] = {25, 0, 50, 100, 0, 10};
+            evo.keys = s == S_PERF_EVOLVE2 ? 2u : 1u;
+            evo.on = s != S_PERF_EVOLVE_OFF;
+            evo.rate = 2; evo.arrange = 2; evo.root = s == S_PERF_EVOLVE2 ? 3u : 0u;
+            for (k = 0; k < NTRK; k++) {
+                evo.amt[k] = A[k]; evo.dft[k] = F[k];
+                evo.swp[k] = (uint8_t)(k & 1u ? 70u : 0u); evo.phs[k] = (uint8_t)(k == 2u ? 2u : 0u);
+                evo.gat[k] = (uint8_t)(k == 0u ? 45u : 0u);
+                evo_trn[k] = (int8_t)(s == S_PERF_EVOLVE2 && k != 3u && k != 5u ? 5 : 0);
+            }
+            evo.protect = 1; evo.freeze = 0; evo.brk = 0; evo.home = 0;
+            evo.plen = s == S_PERF_EVOLVE_OFF ? 0u : 8u; evo.ppos = 5;
+            evo_mute = s == S_PERF_EVOLVE ? 1u << 2 : 0u;
+            memset((void *)evo_play, s != S_PERF_EVOLVE_OFF, sizeof evo_play);
+            evo_play[4] = 0;
+            song.playing = s != S_PERF_EVOLVE_OFF;
+            sel_set(1);
+            go_home(); ui.layer = LAYER_PERF;
+        }
         break;
     case S_PERF_SCENES:                             /* (Skiff) PERFORM, KEYS SCENE: 1 3 5 kept, 3 recalled with its */
         song.playing = 0;                           /* patterns still to come (NEXT); the entries: A C on T1 */

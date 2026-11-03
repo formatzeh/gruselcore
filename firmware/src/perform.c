@@ -255,7 +255,7 @@ static void perf_buf_select(uint32_t e)
  * Returns 1 when a stage has something to do */
 static __attribute__((noinline)) AUDIO_RAM int perf_begin(uint32_t n)
 {
-    uint32_t held = perf_kill ? 0u : (perf_held | perf_latched | (uint32_t)perf_cut << PF_M1 |
+    uint32_t held = perf_kill ? 0u : (perf_held | perf_latched | (uint32_t)(perf_cut | evo_mute) << PF_M1 |
                     (perf_solo ? (~(uint32_t)perf_solo & ((1u << NTRK) - 1u)) << PF_M1 : 0u)) & AUDIO_FAR(perf_avail)();
     uint32_t q, k, ph0, bnd;
     int32_t m;

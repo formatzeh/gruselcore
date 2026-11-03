@@ -315,6 +315,17 @@ static uint32_t div_samples(uint32_t div)
     return div < 6u ? quarter / DIV_DEN[div] : div < 10u ? quarter << (div - 5u) : quarter / DIV_DEN[div % 6u];
 }
 
+/* (GruselCore) EVOLVE (evolve.c, the main loop): the tracks its arrangement takes out (cut as a black key held:
+ * perform.c perf_begin), and its modulations (DRIFT SWEEP GATE PHASE): offsets the audio ISR puts over the parameters
+ * for each block and takes off after it, as the throws (throw.c), never saved. The main loop writes the list with the
+ * ISR held off */
+static volatile uint8_t evo_mute;
+#define EVO_MODS 48u
+typedef struct { uint8_t trk, id; int16_t off, min, max; } evo_mod_t;
+static evo_mod_t evo_mod[EVO_MODS];
+static volatile uint8_t evo_mod_n;                      /* entries in use */
+static uint8_t evo_mod_on;                              /* (ISR) those put on this block */
+static int16_t evo_keep[EVO_MODS], evo_put[EVO_MODS];   /* (ISR) the values before, the ones put on */
 #include "perform.c"                                 /* the FX hold layer's effects (the master) */
 #include "click.c"                                   /* the metronome's click (after the master: audio.c) */
 #include "duck.c"                                    /* (Skiff) ducking: a track under another's hits (mix_part) */
@@ -1242,7 +1253,7 @@ static void mix_block(int32_t *out, uint32_t n)
     int32_t mg = fx_usb_fixed ? MASTER_FULL : (int32_t)song.master_q12;   /* (USB LEVEL FIXED: MASTER after) */
     for (i = 0; i < n; i++)
         send_c[i] = send_d[i] = send_r[i] = mix_l[i] = mix_r[i] = 0;
-    if (thr_out)
+    if (thr_out | evo_mod_n)
         throw_on(n);                                    /* (Skiff) the throws on for the block, its events too */
     events_block(n);
     duck_block(n);                                      /* (Skiff) the ducking's gains (duck.c) */
@@ -1275,7 +1286,7 @@ static void mix_block(int32_t *out, uint32_t n)
     for (i = 0; i < NPART; i++)
         mix_part(&trk[i], n);
 #endif
-    if (thr_on)
+    if (thr_on | evo_mod_on)
         throw_off();                                    /* (Skiff) .. and off: nothing else sees them */
     if (perf)
         AUDIO_FAR(perf_pre)(mix_l, mix_r, send_d, send_r, n);

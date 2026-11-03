@@ -114,7 +114,9 @@ static void draw_head_blocks(void)
     lx = x;                                            /* (where the transport's half ends) */
     if (msg && !ui.msg_t) {                           /* a layer: its title at the right, as the mockup's PERFORM BAR, */
         char h[24];                                    /* in words ([GLO] SET: GLO SET); PERFORM: when a switch comes */
-        if (ui.layer == LAYER_PERF) {                  /* in (LAUNCH); locked: the lock before it */
+        if (ui.layer == LAYER_PERF && evo_head()) {    /* ((GruselCore) KEYS EVOLVE: EVOLVE, EVOLVE 2) */
+            str_cpy(h, evo_head(), sizeof h);
+        } else if (ui.layer == LAYER_PERF) {           /* in (LAUNCH); locked: the lock before it */
             str_cpy(h, "PERFORM ", sizeof h);
             str_cpy(h + 8, LAUNCH_NAME[launch_mode()], sizeof h - 8u);
         } else {

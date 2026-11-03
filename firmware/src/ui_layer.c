@@ -44,6 +44,7 @@
  * its button closes it (the press hands it back to the button: held on, a peek; let go, closed; never a tap), so does
  * SHIFT + its button, another page button, SAVE, SEQ (each then acting as always), the menu, a dialog, NAME. */
 #include "ui_tools.c"                                   /* SEQ TOOLS' actions */
+#include "evolve.c"                                     /* (GruselCore) EVOLVE: PERFORM, KEYS EVOLVE */
 enum { LK_HOLD, LK_SET };
 typedef struct {
     uint8_t btn, kind, fam;            /* the button, HOLD / SET, the family whose first page KNOB 1..4 edit */
@@ -191,8 +192,11 @@ static void layer_lock_input(uint32_t pressed)
                     (ui.lock == LAYER_PERF && perf_scenes() ? 1u << panel.btn[B_SAVE] : 0u);
     if (!ui.lock)
         return;
-    if (pressed & ly_bit(ui.lock))
+    if (pressed & ly_bit(ui.lock)) {
+        if (ui.lock == LAYER_PERF && evo.screen)        /* ((GruselCore) ARP on the EVOLVE screen: held, it closes */
+            evo.press_t = fm1_ms | 1u;                  /* (layer_gesture), a tap keeps it) */
         ui.lock = 0;
+    }
     else if (pressed & ~keep & ~(1u << panel.btn[B_HOME]))
         layer_let_go(1);
 }
@@ -224,6 +228,19 @@ static void layer_shift_lock(uint32_t pressed, uint32_t now)
     layer_opened(l);
 }
 static void layer_unlock(void) { if (ui.lock) layer_let_go(1); }   /* (HOME tapped: ui_input) */
+/* ((GruselCore) the EVOLVE screen: PERFORM open and locked (ARP let go after a hold, or tapped while the screen stays:
+ * evolve.c evo.screen), as SHIFT + ARP locks it */
+static void evo_screen_lock(void)
+{
+    if (!(ui.ly_t0 & LY_OPEN)) {
+        ui.ly_t0 |= 1u | LY_OPEN;
+        layer_opened(LAYER_PERF);
+    }
+    ui.ly = LAYER_PERF;
+    ui.lock = LAYER_PERF;
+    ui.entry_open = 0;
+    ui.force = 1;
+}
 /* (#13) a layer's button held, then HOME: locked, as SHIFT + the button (the press is a combo: the map opens this pass,
  * its snapshot kept if it was open). REC never: it is never armed held (ly_avail); a dead one never */
 static void layer_home_lock(void)
@@ -291,6 +308,19 @@ static uint32_t layer_gesture(uint32_t now, uint32_t combo)
             (combo || now - (*t0 & ~15u) >= (uint32_t)HOLD_MS[settings_hold % 4u] * 1000u * FM1_TICKS_PER_US)) {
             *t0 |= LY_OPEN | (combo ? LY_COMBO : 0u);
             layer_opened(l);
+        }
+        if ((*t0 & LY_OPEN) && l == LAYER_PERF && evo.keys)
+            evo.screen = 1;                             /* ((GruselCore) the EVOLVE screen: it stays when let go */
+        return 0;
+    }
+    if (l == LAYER_PERF && evo.screen && !(*t0 & LY_DEAD)) {   /* ((GruselCore) ARP let go, the EVOLVE screen: */
+        uint32_t t = evo.press_t;                       /* pressed on it and held, it closes; else (a tap there, a */
+        evo.press_t = 0;                                /* tap or a hold on another page) it is up, locked */
+        if (t && fm1_ms - t >= (uint32_t)HOLD_MS[settings_hold % 4u]) {
+            evo.screen = 0;
+            layer_let_go(1);
+        } else {
+            evo_screen_lock();
         }
         return 0;
     }
@@ -491,11 +521,19 @@ static void perf_encoders(int32_t ls, int32_t lp)
         ui.force = 1;
         ui_say("LAUNCH ", LAUNCH_NAME[m]);
     }
-    if (lp && (lp > 0) != perf_scenes()) {
-        ui_perf_keys = (uint8_t)(lp > 0);
-        lys.rp_dirty = 1;
-        ui.force = 1;
-        ui_say("KEYS ", perf_scenes() ? "SCENE" : "TRACK");
+    if (lp) {                                           /* ((GruselCore) TRACK, SCENE, EVOLVE: evolve.c, not saved) */
+        uint32_t was = evo.keys ? 1u + evo.keys : (uint32_t)perf_scenes(),
+                 to = (uint32_t)clamp((int32_t)was + (lp > 0 ? 1 : -1), 0, 3);
+        if (to != was) {
+            evo.keys = (uint8_t)(to >= 2u ? to - 1u : 0u);
+            evo.screen = evo.keys != 0u;                /* (the EVOLVE screen stays: layer_gesture) */
+            if (to < 2u && (uint32_t)perf_scenes() != to) {
+                ui_perf_keys = (uint8_t)to;
+                lys.rp_dirty = 1;
+            }
+            ui.force = 1;
+            ui_say("KEYS ", to == 3u ? "EVOLVE 2" : to == 2u ? "EVOLVE" : to ? "SCENE" : "TRACK");
+        }
     }
 }
 
@@ -585,7 +623,11 @@ static void layer_key(uint32_t l, uint32_t k)
         if (!key_black(k) && p < 4u)
             rec_key(p);
     } else if (l == LAYER_PERF) {                       /* (Skiff) the white keys: the list's A..P or (KEYS SCENE) the */
-        if (!key_black(k) && p < BANK_SLOTS && perf_scenes())   /* scenes, SAVE held: stored (bank.c); the black */
+        if (!key_black(k) && evo.keys) {                /* ((GruselCore) KEYS EVOLVE: evolve.c) */
+            if (p == EVO_KEY_ALL)
+                evo.all_k |= 1u << k;                   /* (ALL: while held, layer_keys) */
+            evo_key(p);
+        } else if (!key_black(k) && p < BANK_SLOTS && perf_scenes())   /* scenes, SAVE held: stored (bank.c); the black */
             scene_key(p, (fm1_in.buttons >> panel.btn[B_SAVE]) & 1u);   /* keys 1..6 the tracks' MUTEs, staged */
         else if (!key_black(k) && p < BANK_SLOTS)
             perf_slot_key(k, p);                        /* ((2.0) the black keys: mute_keys) */
@@ -613,6 +655,7 @@ static void layer_keys(uint32_t keys)
     perf_solo = (uint8_t)s;
     lys.fill &= kb_layer;                               /* (Skiff) FILL: while its key is held in the layer */
     seq_fill = lys.fill != 0u;
+    evo.all_k &= kb_layer;                             /* ((GruselCore) EVOLVE: ALL while its key is held */
 }
 
 /* KNOB 1..4 in the open layer: its own (FX macros, GLO levels, EDIT's sound), else the four of its page */
@@ -639,6 +682,8 @@ static void layer_knob(uint32_t k, int32_t s)
             edit_load(NENGINES, s);
         else if (k == 2u)
             preset_mark(s > 0);
+    } else if (l == LAYER_PERF && evo.keys) {           /* ((GruselCore) KEYS EVOLVE: AMOUNT RATE ARRANGE DRIFT) */
+        evo_knob(k, s);
     } else if (l == LAYER_PERF) {                       /* (Skiff) KNOB 1..4: throws, CUT VERB DLY DRV (throw.c) */
         const param_desc_t *d = track_desc(TSEL, throw_id(TSEL, k));
         throw_turn(song.sel, k, accel(EN_K1 + k, s, d->max - d->min));
@@ -816,6 +861,8 @@ static uint32_t layer_leds(uint32_t *br)
         } else if (l == LAYER_PERF && b && p < NTRK) {  /* (Skiff) a track sounding lit; a muted one, a staged one */
             on = !trk[p].p[P_MUTE] && !mute_arm[p] && !trk_cut(p);   /* breathe ((2.0) a hold cutting too) */
             can = 1;
+        } else if (l == LAYER_PERF && !b && evo.keys) {   /* ((GruselCore) KEYS EVOLVE) */
+            on = evo_led(p, &can);
         } else if (l == LAYER_PERF && !b && p < BANK_SLOTS && perf_scenes()) {   /* (Skiff) the scene recalled or */
             on = p == scene_now();                      /* stored last lit, the other kept ones breathe */
             can = scene_used(p);
@@ -1118,6 +1165,75 @@ static void layer_perf(void)
             cv_frame(PS_X(p), PR_Y(NTRK) + (PR_H - PR_TH) / 2, PR_W, PR_TH, T_DIM);
     }
 }
+/* ((GruselCore) PERFORM, KEYS EVOLVE / EVOLVE 2) each track's row: its number, the key that picks it, its settings
+ * on this page and what EVOLVE does to it; the last row: on or off, the phrase (ARRANGE, ROOT), PROTECT / FREEZE */
+static void evo_pct(char *b, const char *tag, uint32_t v)   /* "AMT 40", "AMT --" */
+{
+    str_cpy(b, tag, 8);
+    if (v)
+        fmt_int(b + str_len(b), (int32_t)v);
+    else
+        str_cpy(b + str_len(b), "--", 4);
+}
+static void layer_evo(void)
+{
+    static const char *const KN[NTRK] = {"G3", "A3", "B3", "C4", "D4", "E4"};
+    uint32_t k, two = evo.keys == 2u;
+    char b[24];
+    int32_t ly = PR_Y(NTRK) + CAP_IN(S, PR_H);
+    cv_rect(0, 0, 240, H_GRAPH + (int32_t)foot_less(), T_BG);
+    cv_bg = T_BG;
+    for (k = 0; k < NTRK; k++) {
+        int32_t y = PR_Y(k), ty = y + CAP_IN(S, PR_H);
+        int out = (evo_mute >> k) & 1u, band = k == song.sel % NTRK, drum = drum_track(&trk[k]);
+        uint16_t col = T_TRK(k), g = band ? T_RAISE : T_BG;
+        char d[2] = {(char)('1' + k), 0};
+        const char *what = !evo.on ? "READY" : evo.home ? "HOME" : !evo.amt[k] ? "ORIGINAL" : out ? "OUT"
+                         : drum && evo.brk ? "BREAK" : evo.freeze ? "FROZEN" : evo_play[k] ? "EVOLVING" : "WAITING";
+        if (band)
+            cv_rrect(3, y, 234, PR_H, 3, T_RAISE, T_BG);
+        GFX_HOOK_ALIGN(0, y, 0, y + PR_H, AL_V, "evolve track number on its row's middle");
+        cv_text_on(6, y + CAP_IN(M, PR_H), &AF_M, d, col, g);
+        cv_text_on(20, ty, &AF_S, KN[k], T_MID, g);
+        if (two) {
+            evo_pct(b, "SWP ", evo.swp[k]);
+            cv_text_on(42, ty, &AF_S, b, evo.swp[k] ? T_TEXT : T_DIM, g);
+            str_cpy(b, "PHS ", sizeof b);
+            if (evo.phs[k]) {
+                b[4] = '-';
+                fmt_int(b + 5, evo.phs[k]);
+            } else {
+                str_cpy(b + 4, "--", 4);
+            }
+            cv_text_on(90, ty, &AF_S, b, evo.phs[k] ? T_TEXT : T_DIM, g);
+            evo_pct(b, "GATE ", evo.gat[k]);
+            cv_text_on(136, ty, &AF_S, b, evo.gat[k] ? T_TEXT : T_DIM, g);
+            if (evo_trn[k]) {
+                b[0] = evo_trn[k] < 0 ? '-' : '+';
+                fmt_int(b + 1, evo_trn[k] < 0 ? -evo_trn[k] : evo_trn[k]);
+                cv_text_on(196, ty, &AF_S, b, T_TEXT, g);
+            }
+        } else {
+            evo_pct(b, "AMT ", evo.amt[k]);
+            cv_text_on(42, ty, &AF_S, b, evo.amt[k] ? T_TEXT : T_DIM, g);
+            evo_pct(b, "DRF ", evo.dft[k]);
+            cv_text_on(90, ty, &AF_S, b, evo.dft[k] ? T_TEXT : T_DIM, g);
+            cv_text_on(136, ty, &AF_S, what, evo.on && evo.amt[k] && !evo.home ? (out ? T_REC : T_TEXT) : T_MID, g);
+            if (evo.protect && evo.amt[k])
+                cv_text_on(196, ty, &AF_S, drum ? "BD SD" : "BEATS", T_DIM, g);
+        }
+    }
+    cv_text_on(6, ly, &AF_S, evo.on ? "F3 ON" : "F3 OFF", evo.on ? T_TEXT : T_MID, T_BG);
+    if (evo.on && evo.plen && !evo.home) {
+        str_cpy(b, evo.brk ? "BREAK " : evo_fill ? "FILL " : "PHRASE ", sizeof b);
+        fmt_int(b + str_len(b), evo.ppos);
+        str_cpy(b + str_len(b), "/", sizeof b - str_len(b));
+        fmt_int(b + str_len(b), evo.plen);
+        cv_text_on(50, ly, &AF_S, b, T_TEXT, T_BG);
+    }
+    cv_text_on(136, ly, &AF_S, two ? (evo.freeze ? "D5 FROZEN" : "D5 FREEZE") : evo.protect ? "C5 PROTECT" : "C5 FREE",
+               two ? (evo.freeze ? T_TEXT : T_MID) : evo.protect ? T_TEXT : T_MID, T_BG);
+}
 /* what the PERFORM map shows of every track and the scenes (draw_layer: redrawn when it changes) */
 static uint32_t perf_sig(void)
 {
@@ -1282,6 +1398,33 @@ static void layer_cards(uint32_t l)
         }
     } else if (l == LAYER_EDIT) {
         engine_columns();
+    } else if (l == LAYER_PERF && evo.keys) {           /* ((GruselCore) KEYS EVOLVE: AMOUNT RATE ARRANGE DRIFT) */
+        uint32_t sk = song.sel % NTRK;                  /* (AMOUNT DRIFT SWEEP PHASE GATE: the selected track's) */
+        if (evo.keys == 2u) {                           /* EVOLVE 2: SWEEP PHASE GATE ROOT */
+            fmt_int(val, evo.swp[sk]);
+            draw_column(0, "SWEEP", evo.swp[sk] ? val : "OFF", evo.swp[sk] ? "%" : "", evo.swp[sk] ? VR_LIVE : VR_DIM,
+                        evo.swp[sk] * 10, ICON_SWEEP);
+            val[0] = '-';
+            fmt_int(val + 1, evo.phs[sk]);
+            draw_column(1, "PHASE", evo.phs[sk] ? val : "OFF", evo.phs[sk] ? "STEPS" : "", evo.phs[sk] ? VR_LIVE : VR_DIM,
+                        evo.phs[sk] * 250, ICON_PHASE);
+            fmt_int(val, evo.gat[sk]);
+            draw_column(2, "GATE", evo.gat[sk] ? val : "OFF", evo.gat[sk] ? "%" : "", evo.gat[sk] ? VR_LIVE : VR_DIM,
+                        evo.gat[sk] * 10, ICON_GATE);
+            draw_column(3, "ROOT", EVO_ROOT[evo.root % EVO_ROOTS], "", evo.root ? VR_LIVE : VR_DIM, evo.root * 250,
+                        ICON_TRANSPOSE);
+        } else {                                        /* EVOLVE: AMOUNT EVERY ARRANGE DRIFT */
+            fmt_int(val, evo.amt[sk]);
+            draw_column(0, "AMOUNT", evo.amt[sk] ? val : "OFF", evo.amt[sk] ? "%" : "", evo.amt[sk] ? VR_LIVE : VR_DIM,
+                        evo.amt[sk] * 10, ICON_MOD);
+            fmt_int(val, EVO_RATE[evo.rate % EVO_RATES]);
+            draw_column(1, "EVERY", val, evo.rate ? "LOOPS" : "LOOP", VR_LIVE, (int32_t)evo.rate * 250, ICON_RATE);
+            draw_column(2, "ARRANGE", EVO_ARR[evo.arrange % 3u], "", evo.arrange ? VR_LIVE : VR_DIM, evo.arrange * 500,
+                        ICON_X_SONG);
+            fmt_int(val, evo.dft[sk]);
+            draw_column(3, "DRIFT", evo.dft[sk] ? val : "OFF", evo.dft[sk] ? "%" : "", evo.dft[sk] ? VR_LIVE : VR_DIM,
+                        evo.dft[sk] * 10, ICON_SWEEP);
+        }
     } else if (l == LAYER_PERF) {                       /* (Skiff) the throws as the B mockup shows them: how far */
         static const char *const TL[4] = {0, "REVERB", "DELAY", "DIST"};   /* each is out now (+0 at rest, in the knob's */
         for (c = 0; c < 4u; c++) {                      /* steps), the gauge from its middle; KNOB 1 the sound's own */
@@ -1340,7 +1483,8 @@ static void draw_layer(void)
         sig += (uint32_t)ui_rec_prefs * 31u + (uint32_t)rec_clearable() * 5u + song.sel * 977u;
     else if (l == LAYER_PERF)                           /* (Skiff) */
         sig += bank_gen() * 31u + launch_mode() * 5u + song.sel * 977u + perf_sig() * 131u +
-               perf_scenes() * 1299709u + (scene_now() + 1u) * 15485863u + (uint32_t)stage_pending() * 32452843u;
+               perf_scenes() * 1299709u + (scene_now() + 1u) * 15485863u + (uint32_t)stage_pending() * 32452843u +
+               (evo.keys ? evo_sig() * 7919u + 1u : 0u);   /* ((GruselCore) KEYS EVOLVE) */
     else if (l == LAYER_SEQ)
         sig += (uint32_t)drum_track(TSEL) * 31u + ui.lane * 5u + (uint32_t)TSEL->p[P_E0] * 131u + song.sel * 977u +
                (eu.on ? 7u + eu.hits * 13u + eu.steps * 1031u + eu.rot * 65537u + (uint32_t)TSEL->p[P_SLEN] * 257u : 0u);
@@ -1365,6 +1509,8 @@ static void draw_layer(void)
             layer_seq();
         else if (l == LAYER_REC)
             layer_rec();
+        else if (l == LAYER_PERF && evo.keys)
+            layer_evo();                               /* ((GruselCore) KEYS EVOLVE) */
         else if (l == LAYER_PERF)
             layer_perf();
         else
@@ -1379,6 +1525,9 @@ static void draw_layer(void)
         cv_begin(240, foot_h(), T_BG);
         if (rs) {                                       /* ((2.0) FX's macros, a throw out: LET GO .., OCT+: KEEP) */
             ret_hints(rs, foot_line_y());
+        } else if (l == LAYER_PERF && evo.keys) {       /* ((GruselCore) KEYS EVOLVE) */
+            cv_free_hint(8, foot_line_y(), "F4 ALL G4 HOME", T_MID, T_BG, 100);
+            cv_free_hint(232 - head_hint_w("A4 KEEP B4 NEW", 110), foot_line_y(), "A4 KEEP B4 NEW", T_MID, T_BG, 110);
         } else if (l == LAYER_PERF) {                   /* (Skiff) as the B mockup: what the keys do, on the names' */
             const char *r = perf_scenes() ? "[SAVE] + WHITE: STORE" : "BLACK: MUTE";   /* line (SCENE: storing) */
             cv_free_hint(8, foot_line_y(), perf_scenes() ? "WHITE: SCENE" : "WHITE: PATTERN", T_MID, T_BG, 110);

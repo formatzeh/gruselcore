@@ -49,11 +49,25 @@ static __attribute__((noinline)) void throw_on(uint32_t n)
         on |= 1u << i;
     }
     thr_on = on;
+    for (i = 0, m = evo_mod_n; i < m && i < EVO_MODS; i++) {   /* ((GruselCore) EVOLVE's DRIFT SWEEP GATE PHASE: over */
+        const evo_mod_t *e = &evo_mod[i];               /* the throws, the main loop's list: fx.c) */
+        int16_t *p = &trk[e->trk].p[e->id];   /* (trk < NTRK: evolve.c) */
+        evo_keep[i] = *p;
+        *p = evo_put[i] = (int16_t)clamp(*p + e->off, e->min, e->max);
+    }
+    evo_mod_on = (uint8_t)i;
 }
 /* the parts mixed: the throws off again (a value written meanwhile kept) */
 static __attribute__((noinline)) void throw_off(void)
 {
     uint32_t i, m = thr_on;
+    for (i = evo_mod_on; i--;) {                        /* ((GruselCore) EVOLVE's first, the other way round: two */
+        const evo_mod_t *e = &evo_mod[i];               /* on one parameter go back as they went on) */
+        int16_t *p = &trk[e->trk].p[e->id];   /* (trk < NTRK: evolve.c) */
+        if (*p == evo_put[i])
+            *p = evo_keep[i];
+    }
+    evo_mod_on = 0;
     for (i = 0; m; i++, m >>= 1)
         if ((m & 1u) && trk[i >> 2].p[thr[i].id] == thr[i].put)
             trk[i >> 2].p[thr[i].id] = thr[i].keep;

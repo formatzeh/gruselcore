@@ -1944,6 +1944,7 @@ static uint32_t layer_gesture(uint32_t now, uint32_t combo);
 static void layer_show(void);
 static void layer_tap(uint32_t l);
 static void layer_keys(uint32_t keys);
+static void evo_poll(void);
 static void perf_encoders(int32_t ls, int32_t lp); /* (Skiff) ui_layer.c */
 static void layer_knob(uint32_t k, int32_t s);
 static int layer_play(void);
@@ -2098,6 +2099,7 @@ static void ui_input(void)
     clock_wait_poll();                                  /* (PLAY on an external clock that sends nothing: say so) */
     bank_poll();                                        /* (Skiff) a pattern switched in live: what went out kept */
     song_poll();                                        /* (Skiff phase 5) SONG: each track's next entry staged */
+    evo_poll();                                         /* (GruselCore) EVOLVE: the next versions (evolve.c) */
 #if !FELUCCA_FM4 && FELUCCA_LEGACY
     for (k = 0; k < NTRK; k++)                          /* a DIGITAL sound any other way (the paths convert it */
         if (trk[k].eng_req == ENGI_DIGITAL)             /* already): FM6 (fm4_convert.c) */
