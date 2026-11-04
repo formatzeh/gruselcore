@@ -23,6 +23,11 @@ The earlier GruselCore (on X0X) is kept on the branch `x0x-base`.
   SWEEP, GATE (length breathing), ROOT (key moves) and CHORD (thirds, fifths, octaves coming and going). The kick, snare and the notes on the beats stay (PROTECT), the
   original patterns never change (G4 HOME plays them; KEEP stores what you hear as a new entry). DESIGN.md has the
   details.
+- **SYNC (GLO + PLAY while playing):** tracks of different LENGTHs (or a LENGTH changed while playing) drift apart, one
+  at 1.1 while another is at 3.1. GLO + PLAY now brings them together without stopping: playback goes on, nothing is
+  cut, and on the next bar line every track starts its step 1 (its first in its direction) at once (the header says
+  SYNC: NEXT BAR). It works with an external clock too. Stopped, GLO + PLAY plays as before; with SONG ON it still
+  starts every track from its first entry.
 - **Tempo to 300 BPM** (was 240), for mentalcore and tribecore; MIDI clock in follows up to 300 too.
 - **Measured genre notes:** `design/GENRES.md` (from the user's 65 examples, `tools/genre_analyze.py`): tempo, step
   patterns, kick, bass, key and breaks per genre, and a GruselCore recipe for each.
@@ -477,8 +482,8 @@ The notes live in **patterns**, and a project says which ones each track plays:
   pass end; an empty entry between two patterns is a **rest**, silent for its REPS passes of the track's length
   (1.2.1); the empty ones after the last end the list, and after the last comes the first. KNOB 2 also picks
   **REST** for an entry anywhere in the list, so a track can start later or end sooner without an empty pattern. Tracks of different
-  lengths move on at different times. **SONG OFF:** each track loops its entry. GLO + PLAY starts every track from
-  its first entry. **SONG ONCE** (2.0): PLAY starts every track from its first entry, each plays its list once, then
+  lengths move on at different times. **SONG ON:** GLO + PLAY starts every track from its first entry. **SONG OFF:** each track loops its
+  entry; GLO + PLAY while playing (SYNC) starts every track on its step 1 at the next bar, playing on. **SONG ONCE** (2.0): PLAY starts every track from its first entry, each plays its list once, then
   goes quiet, and when the last one ends the transport stops.
 - **A chain** (2.0): KNOB 3 below 1x is CHAIN, the entry going on into the next. Entries on CHAIN with the one they
   end on are one pattern wherever the track plays them, each part with its own LENGTH, DIV and SWING: the header names

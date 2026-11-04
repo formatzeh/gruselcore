@@ -76,7 +76,8 @@ static volatile uint8_t kb_asleep;       /* MENU > SCREEN OFF (ui.c): the screen
 static uint8_t last_note = 60;
 static uint8_t last_hits __attribute__((section(".pool")));   /* ((2.0) the notes struck, counted: the same key again
                                                                 * picks its lane again too, ui.c lane_follow) */
-static volatile uint8_t transport_req;   /* 1 start, 2 stop, 3 restart (from the UI) */
+static volatile uint8_t transport_req;   /* 1 start, 2 stop, 3 restart, 4 SYNC: every track on its step 1 at the
+                                          * next bar, playing on (launch.c sync_arm; from the UI) */
 static volatile uint8_t panic_req;       /* bit per track: release every sounding note (preset / engine change) */
 static volatile uint8_t midi_hint;       /* MIDI IN played track n - 1, which is not the selected one (the UI says so) */
 
@@ -486,6 +487,12 @@ static __attribute__((noinline)) uint32_t arp_pick(track_t *t, uint32_t *list, u
  * gate counts down by (real time when the external transport stops: a tapped or latched note still ends) */
 static volatile uint32_t beat_pos, beat_n;      /* samples into the beat, the beat of the bar (0..3) */
 static volatile uint32_t launch_steps;          /* (Skiff) 1/16 steps since PLAY (launch.c launch_clock: BAR / BEAT) */
+/* (GruselCore) SYNC (GLO + PLAY playing, SONG off: transport_req 4): every track's next pass starts on the bar line
+ * sync_at (launch_steps, as a BAR launch's), playing on: LENGTHs changed while playing put the tracks' passes apart, and
+ * this brings them all to 1.1 together without a stop. One byte a track, set by events_block, cleared by the ISR as it
+ * lands (launch_step) or by PLAY / STOP */
+static volatile uint8_t sync_arm[NTRK];
+static uint32_t sync_at;
 static uint32_t launch_pos;                     /* (Skiff) .. samples into the one now (counted before the tracks tick) */
 
 /* the metronome (click.c) and the count-in (1.1, Discussion #131). The click follows the song tempo's quarter notes
@@ -1199,6 +1206,7 @@ static void seq_start(void)
         t->rskip_n = 0;
         t->rh_n = 0;
         t->rat_left = 0;
+        sync_arm[i] = 0;                           /* ((GruselCore) a SYNC pending: PLAY is one) */
         if (t->p[P_LTRIG] && t->p[P_LSYNC])        /* (#16) LFO 2 FREE + SYNC: in time with the bars from PLAY */
             t->lfo_ph = (uint32_t)t->p[P_LPHASE] << 25;
     }
@@ -1302,6 +1310,7 @@ static void seq_stop(void)
         trk[i].rh_n = 0;                           /* a recorded note held over the stop: as far as it got */
         trk[i].rat_left = 0;
         trk[i].nud = 0;                            /* (Skiff) no NUDGE pending */
+        sync_arm[i] = 0;                           /* ((GruselCore) no SYNC pending) */
     }
     memset(fol_src, 0, sizeof fol_src);            /* ((2.1) no chords: the followers as written until theirs play) */
     motion_end();
@@ -1643,8 +1652,9 @@ static void seq_tick(track_t *t, uint32_t n)
             seq_fire(t, t->seq_idx, period, 0u);
         }
         t->seq_pos = t->seq_pos >= 0x7FFFFFFFu ? 0u : t->seq_pos - cur_len;
-        if ((launch_q[trk_index(t)].armed | mute_arm[trk_index(t)]) && launch_step(t, ln, period)) {   /* (Skiff) a
-                                                     * pattern from the bank came in (a mute: launch_step turns it) */
+        if ((launch_q[trk_index(t)].armed | mute_arm[trk_index(t)] | sync_arm[trk_index(t)]) &&
+            launch_step(t, ln, period)) {           /* (Skiff) a pattern from the bank came in (a mute: launch_step
+                                                     * turns it; (GruselCore) SYNC: a new pass from the bar) */
             period = div_samples((uint32_t)t->p[P_SDIV]);
             len = (uint32_t)t->p[P_SLEN];
             ln = len ? len : 1u;
@@ -1790,10 +1800,17 @@ static void events_block(uint32_t n)
     } else if (transport_req == 2u) {
         seq_stop();
         transport_req = 0;
-    } else if (transport_req == 3u) {                 /* GLO + PLAY: from the top without stopping (INT clock) */
+    } else if (transport_req == 3u) {                 /* the editor's RESTART: from the top without stopping (INT clock) */
         if (!clock_mode) {
             seq_stop();
             seq_start();
+        }
+        transport_req = 0;
+    } else if (transport_req == 4u) {                 /* (GruselCore) GLO + PLAY playing: SYNC on the next bar */
+        if (song.playing) {
+            sync_at = (launch_steps / 16u + 1u) * 16u;   /* (as bank.c launch_at's BAR) */
+            for (i = 0; i < NTRK; i++)
+                sync_arm[i] = 1;
         }
         transport_req = 0;
     }

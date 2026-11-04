@@ -31,7 +31,7 @@
  * Held past HOLD alone: the map (a peek), letting go does nothing. A key, a knob or a button meanwhile: a combo,
  * the map at once, no tap. Keys pressed with the button down are the layer's (seq.c keyboard_block): silent, no
  * MIDI, never recorded; keys held before stay notes. Only one layer at a time: a second layer button is ignored.
- * PLAY and REC work in every layer (GLO held + PLAY: RESTART; GLO's lock: PLAY as always, Felucca #183); SAVE, HOME, SEQ and the other page buttons are swallowed. In SET
+ * PLAY and REC work in every layer (GLO held + PLAY: SYNC, every track on step 1 at the next bar; GLO's lock: PLAY as always, Felucca #183); SAVE, HOME, SEQ and the other page buttons are swallowed. In SET
  * layers OCT± do not shift the octave: OCT- (on release, not with OCT+) puts back what the layer changed since it
  * opened. A HOLD key's effect lasts until the key is let go, the map with it. No layer in the menu, a dialog,
  * NAME or the UPDATE MODE countdown. After a tap, until the layer has been opened once: "HOLD [GLO] QUICK"
@@ -55,7 +55,7 @@ static const layer_t LAYERS[LAYER_N] = {
     {0, 0, 0, "", {{0, 0}, {0, 0}, {0, 0}}},
     {B_FX, LK_HOLD, FAM_HOME, "[FX] HOLD", {{KC_WHITE, "EFFECTS"}, {KC_BLACK, "MUTE"}, {KC_K14, "MACROS"}}},   /* (LET GO: the
                                                      * header's HOLD; (2.0, D 1A) BLACK: GLO's MUTE) */
-    {B_GLO, LK_SET, FAM_HOME, "[GLO] SET", {{KC_PLAY, "RESTART"}, {KC_OCTDN, "UNDO"}, {KC_GLO, "DONE"}}},
+    {B_GLO, LK_SET, FAM_HOME, "[GLO] SET", {{KC_PLAY, "SYNC"}, {KC_OCTDN, "UNDO"}, {KC_GLO, "DONE"}}},
     {B_SCL, LK_SET, FAM_SCL, "[SEL] SET", {{KC_KEYS, "ROOT"}, {KC_OCTDN, "UNDO"}, {KC_SCL, "DONE"}}},
     {B_EDIT, LK_SET, FAM_HOME, "[EDIT] SET", {{KC_KEYS, "ENGINE"}, {KC_OCTDN, "UNDO"}, {KC_EDIT, "DONE"}}},
     {B_SEQ, LK_SET, FAM_SEQ, "[SEQ] TOOLS", {{KC_KEYS, "TOOLS"}, {KC_OCTDN, "UNDO"}, {KC_SEQ, "DONE"}}},
@@ -711,22 +711,24 @@ static void layer_knob(uint32_t k, int32_t s)
     }
 }
 
-/* PLAY with GLO held open: RESTART (from the top, playing on); stopped: PLAY. (Skiff phase 5) SONG on: each track
- * from its list's first entry (bank.c song_top). 1 = done here. GLO's lock is not held: PLAY starts and stops there
- * as in every layer (Felucca #183: locked, PLAY restarted and never stopped) */
+/* PLAY with GLO held open: (GruselCore) SYNC, every track on its step 1 at the next bar, playing on (seq.c
+ * transport_req 4: launch.c launch_step; an external clock's bars too); stopped: PLAY. (Skiff phase 5) SONG on: each
+ * track from its list's first entry (bank.c song_top). 1 = done here. GLO's lock is not held: PLAY starts and stops
+ * there as in every layer (Felucca #183: locked, PLAY restarted and never stopped) */
 static int layer_play(void)
 {
     if (layer_open() != LAYER_GLO || !(fm1_in.buttons & ly_bit(LAYER_GLO)))
         return 0;
-    if (song.g[G_CLOCK] && song.playing) {
+    if (lists.song && song.g[G_CLOCK] && song.playing) {
         ui_message("RESTART: CLOCK EXTERNAL");
         return 1;
     }
     if (lists.song)
         song_top();
-    else if (song.playing)
-        transport_req = 3;
-    else {
+    else if (song.playing) {
+        transport_req = 4;
+        ui_message("SYNC: NEXT BAR");
+    } else {
         chain_top();                                  /* ((2.0, #44) a chain from its first part) */
         transport_req = 1;
     }

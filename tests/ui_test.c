@@ -3630,15 +3630,15 @@ static int test_quick_layers(void)
     }
     song.playing = 1; transport_req = 0;
     btn_down(B_GLO); frame(); press(B_PLAY);
-    ok = transport_req == 3u;
+    ok = transport_req == 4u && msg_is("SYNC: NEXT BAR");
     events_block(CTL);
-    ok &= song.playing && transport_req == 0u;
+    ok &= song.playing && transport_req == 0u && sync_arm[0] && sync_arm[NTRK - 1u];
     btn_up(B_GLO); frame();
     stop_transport();
     btn_down(B_GLO); frame(); press(B_PLAY);
     ok &= transport_req == 1u;
     btn_up(B_GLO); frame(); transport_req = 0;
-    bad += check("GLO + PLAY: RESTART playing (from the top, not stopped); stopped: PLAY", ok);
+    bad += check("GLO + PLAY: SYNC playing (every track on step 1 at the next bar, not stopped); stopped: PLAY", ok);
     {   /* (Skiff phase 5) SONG on: each track on its list's first entry (bank.c song_top), from the top */
         track_defaults_steps(&trk[0]);
         trk_pid[0] = 0;
@@ -8265,7 +8265,7 @@ static int test_u4(void)
 {
     static const char *const M[] = {"SAVE > PATTERNS: CLEAR", "AUTOMATION: DELETE ONE", "GLO + SELECT: TEMPO",
         "UNDO NEEDS PATTERN 07", "DISARM REC FOR A TAKE", "PLAY ONE LOOP FIRST", "NOTHING BEFORE TO JOIN", "STOP TO RENAME",
-        "TAP: CLOCK IS EXTERNAL", "RESTART: CLOCK EXTERNAL", "SLICES NOW MANUAL", "PICK A USR SAMPLE FIRST",
+        "TAP: CLOCK IS EXTERNAL", "RESTART: CLOCK EXTERNAL", "SYNC: NEXT BAR", "SLICES NOW MANUAL", "PICK A USR SAMPLE FIRST",
         "SAVED UNTIL POWER OFF", "RENAMED UNTIL POWER OFF", "ERASED UNTIL POWER OFF", "STORAGE ERROR", "KEYS RECORD LANES",
         "HOLD [GLO]: SHORTCUTS", "HOLD [EDIT]: SHORTCUTS", "SOUND INITIALIZED", "PATTERN 06 CLEARED", "UNDONE: SEQUENCE",
         "SESSION NOT RESTORED", "IT STOPPED BEFORE", "HOLD [SAVE]: UNDO", "PICK WITH A KNOB FIRST", "ONE LAYER AT A TIME",

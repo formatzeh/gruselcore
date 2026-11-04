@@ -180,7 +180,7 @@ static void launch_drop(void)
 {
     uint32_t k;
     for (k = 0; k < NTRK; k++)
-        launch_q[k].armed = launch_q[k].done = mute_arm[k] = 0;
+        launch_q[k].armed = launch_q[k].done = mute_arm[k] = sync_arm[k] = 0;
 }
 /* track t's playing step has just ended, a mute or a pattern staged for it: at its launch point the mute turns; the
  * swap, and (but NOW) its first step next, a new pass. 1: swapped (seq_tick takes its DIV and LEN again). Not
@@ -188,6 +188,13 @@ static void launch_drop(void)
 static __attribute__((noinline)) int launch_step(track_t *t, uint32_t len, uint32_t period)
 {
     uint32_t k = (uint32_t)(t - trk), now = launch_q[k].mode == LAUNCH_NOW;
+    if (sync_arm[k] && launch_here(t, len, period, LAUNCH_BAR, sync_at)) {   /* (GruselCore) SYNC: a new pass now */
+        sync_arm[k] = 0;
+        t->seq_idx = (uint16_t)(len > 1u ? len - 1u : 0u);   /* (seq_next: its first step in its direction) */
+        t->seq_cnt = 0;
+        if (t->p[P_LTRIG] && t->p[P_LSYNC])        /* (#16) LFO 2 FREE + SYNC: from the bar, as from PLAY */
+            t->lfo_ph = (uint32_t)t->p[P_LPHASE] << 25;
+    }
     if (mute_arm[k] && launch_here(t, len, period, mute_mode[k], mute_at[k])) {
         t->p[P_MUTE] = (int16_t)(mute_arm[k] - 1u);
         mute_arm[k] = 0;

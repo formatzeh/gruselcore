@@ -1646,11 +1646,60 @@ static int song_chain(void)
     return bad;
 }
 
+/* ---- (GruselCore) SYNC (GLO + PLAY playing, transport_req 4): every track's step 1 on the next bar, playing on ---- */
+static int sync_test(void)
+{
+    int bad = 0, ok;
+    track_t *a = &trk[0], *b = &trk[1];
+    fresh();
+    simple(0, 40, 16, DIR_FWD);                   /* T1: 16 steps, T2: 12 (its passes apart from T1's after a bar) */
+    simple(1, 60, 12, DIR_FWD);
+    lists.song = 0;
+    transport_req = 1;
+    events_block(1);
+    lv_next(20);                                  /* the run's step 20: bar 2, beat 2 */
+    ok = a->seq_idx == 4u && b->seq_idx == 8u && launch_steps == 20u;
+    transport_req = 4;
+    events_block(1);
+    ok &= song.playing && transport_req == 0u && sync_arm[0] && sync_arm[1] && sync_at == 32u && sounds(44) &&
+          a->seq_n && b->seq_n;                   /* (nothing stopped, nothing cut) */
+    lv_next(11);                                  /* bar 2's last step: both play on as they were */
+    ok &= a->seq_idx == 15u && b->seq_idx == 7u && sounds(55) && sync_arm[1];
+    lv_next(1);                                   /* bar 3's first step: both on their step 1 */
+    ok &= launch_steps == 32u && a->seq_idx == 0u && b->seq_idx == 0u && sounds(40) && b->seq_notes[0] == 60u &&
+          !sync_arm[0] && !sync_arm[1] && song.playing;
+    lv_next(12);
+    ok &= a->seq_idx == 12u && b->seq_idx == 0u;  /* (and on from there, each its own LENGTH) */
+    bad += check("SYNC: playing on, T1 (16) and T2 (12) both on step 1 at the next bar, nothing stopped", ok);
+
+    transport_req = 2;
+    events_block(1);
+    b->p[P_DIR] = DIR_REV;
+    transport_req = 1;
+    events_block(1);
+    lv_next(5);
+    transport_req = 4;
+    events_block(1);
+    lv_next(10);
+    ok = sync_arm[1] != 0;                       /* (bar 1's last step: still to come) */
+    lv_next(1);
+    ok &= launch_steps == 16u && a->seq_idx == 0u && b->seq_idx == 11u && !sync_arm[1];
+    bad += check("  a track playing backwards: on its last step (its first in its direction)", ok);
+
+    transport_req = 4;
+    events_block(1);
+    transport_req = 2;
+    events_block(1);
+    ok = !sync_arm[0] && !sync_arm[1];
+    bad += check("  STOP drops a SYNC pending", ok);
+    return bad;
+}
+
 int main(void)
 {
     int bad = layout() + fidelity() + keep() + entries() + staged_all() + last_track() + torn() + wear_and_wrap() +
               playing() + live() + scenes() + scenes_six() + song_test() + song_six() + song_rest() + song_once() +
-              song_chain() + song_sound() + song_same() + song_next_edit() + migrate() + dx_kit_project();
+              song_chain() + song_sound() + song_same() + song_next_edit() + sync_test() + migrate() + dx_kit_project();
     printf("%s\n", bad ? "BANK TEST FAILED" : "pattern bank tests passed");
     return bad != 0;
 }
