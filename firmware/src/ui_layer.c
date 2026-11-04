@@ -1058,15 +1058,20 @@ static void layer_glo(void)
     l6_wide(1, "F", ICON_DRUM, "FILL", seq_fill ? LS_HELD : LS_OFF);
     l6_wide(2, "G", ICON_TEMPO, "TAP", song.g[G_CLOCK] ? LS_DIM : LS_OFF);
 }
-static void layer_scl(void)                             /* KNOB 2's scales, 4 x 4, the one now selected */
+/* KNOB 2's scales in its order (params.c SCALE_ORDER), 4 a row, the one now selected: (GruselCore) the minor and dark
+ * ones in the first four rows (15 and a gap), the others in the two under them, 3 px further down; 17 px cells, 19 apart
+ * (were 4 x 4 of 25 px, 29 apart) */
+#define LSC_H 17
+static void layer_scl(void)
 {
     uint32_t i, sc = (uint32_t)TSEL->p[P_SCALE];
-    for (i = 0; i < 16u && i <= (uint32_t)TP[P_SCALE].max; i++) {
-        int32_t x = LC_X(i % 4u), y = 4 + 29 * (int32_t)(i / 4u);
-        uint16_t ink, fill = lc_fill(i == sc ? LS_SEL : LS_OFF, &ink);
-        fill = lc_box(x, y, LC_W, 25, fill);
-        GFX_HOOK_ALIGN(x, y, x + LC_W, y + 25, AL_HV, "scale cell name centred");
-        cv_text_in(x, y + CAP_IN(S, 25), LC_W, &AF_S, TP[P_SCALE].names[i], ink, fill);
+    for (i = 0; i < SCALE_N; i++) {
+        uint32_t j = i < SCALE_MINOR ? i : i - SCALE_MINOR + 16u, s = SCALE_ORDER[i];   /* (the others: row 5 on) */
+        int32_t x = LC_X(j % 4u), y = 4 + 19 * (int32_t)(j / 4u) + (j >= 16u ? 3 : 0);
+        uint16_t ink, fill = lc_fill(s == sc ? LS_SEL : LS_OFF, &ink);
+        fill = lc_box(x, y, LC_W, LSC_H, fill);
+        GFX_HOOK_ALIGN(x, y, x + LC_W, y + LSC_H, AL_HV, "scale cell name centred");
+        cv_text_in(x, y + CAP_IN(S, LSC_H), LC_W, &AF_S, TP[P_SCALE].names[s], ink, fill);
     }
 }
 /* (Skiff) PERFORM, as the chosen mockup draws it (design/mock.py, B perform): a row per track, its number in its

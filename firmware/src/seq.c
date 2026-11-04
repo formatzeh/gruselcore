@@ -30,6 +30,14 @@ static const uint16_t SCALE_MASK[] = {
     (1 << 0) | (1 << 2) | (1 << 4) | (1 << 6) | (1 << 8) | (1 << 10),              /* WHOLE */
     (1 << 0) | (1 << 1) | (1 << 3) | (1 << 4) | (1 << 6) | (1 << 7) | (1 << 9) | (1 << 10), /* DIMHW */
     (1 << 0) | (1 << 2) | (1 << 3) | (1 << 5) | (1 << 6) | (1 << 8) | (1 << 9) | (1 << 11), /* DIMWH */
+    /* (GruselCore) appended, so stored values stay: the dark ones (params.c SCALE_ORDER shows the minor ones first) */
+    (1 << 0) | (1 << 1) | (1 << 4) | (1 << 5) | (1 << 7) | (1 << 8) | (1 << 10),   /* PDOM (Phrygian dominant) */
+    (1 << 0) | (1 << 2) | (1 << 3) | (1 << 6) | (1 << 7) | (1 << 8) | (1 << 11),   /* HUNG (Hungarian minor) */
+    (1 << 0) | (1 << 1) | (1 << 4) | (1 << 5) | (1 << 7) | (1 << 8) | (1 << 11),   /* DHARM (double harmonic) */
+    (1 << 0) | (1 << 1) | (1 << 3) | (1 << 5) | (1 << 7) | (1 << 8) | (1 << 11),   /* NEAP (Neapolitan minor) */
+    (1 << 0) | (1 << 2) | (1 << 3) | (1 << 7) | (1 << 8),                          /* HIRA (Hirajoshi) */
+    (1 << 0) | (1 << 1) | (1 << 5) | (1 << 7) | (1 << 10),                         /* INSEN (In-sen) */
+    (1 << 0) | (1 << 2) | (1 << 3) | (1 << 7) | (1 << 9),                          /* KUMOI (Kumoi) */
 };
 
 #define KB_SILENT 255u

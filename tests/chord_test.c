@@ -117,6 +117,29 @@ static int theory(void)
                 }
         bad += check("DIA3 / DIA7 of every scale and root: 3 / 4 notes, every one in key", ok);
     }
+    {   /* (GruselCore) the dark scales appended (stored 16..22), their notes; KNOB 2 and the SEL grid: the minor ones first */
+        static const char *const NM[7] = {"PDOM", "HUNG", "DHARM", "NEAP", "HIRA", "INSEN", "KUMOI"};
+        static const uint16_t PC[7] = {0x5B3, 0x9CD, 0x9B3, 0x9AB, 0x18D, 0x4A3, 0x28D};   /* (bit n: n semitones up) */
+        uint32_t s, seen = 0;
+        ok = TP[P_SCALE].max == 22;
+        for (s = 0; s < 7u; s++) {
+            t->p[P_SCALE] = (int16_t)(16u + s);
+            ok &= scale_mask(t) == PC[s] && str_eq(TP[P_SCALE].names[16u + s], NM[s]);
+        }
+        bad += check("PDOM HUNG DHARM NEAP HIRA INSEN KUMOI: stored 16..22, their notes", ok);
+        t->p[P_SCALE] = 16; t->p[P_ROOT] = 4; t->p[P_CHRD] = CH_DIA3;   /* E Phrygian dominant: E G# B */
+        bad += check("E PDOM DIA3 on E: E G# B", chord_is(64, (const uint8_t[]){64, 68, 71, 0}));
+        for (s = 0; s < SCALE_N; s++)
+            seen |= 1u << SCALE_ORDER[s];
+        ok = seen == (1u << SCALE_N) - 1u;
+        for (s = 0; s < SCALE_MINOR; s++)                 /* (every minor one has a minor third, or b2 / b6 for the dark) */
+            ok &= ((SCALE_MASK[SCALE_ORDER[s]] >> 3) & 1u) || ((SCALE_MASK[SCALE_ORDER[s]] >> 1) & 1u);
+        bad += check("SCALE_ORDER: every scale once, the minor ones first", ok);
+        ok = param_turn(&TP[P_SCALE], 2, 1) == 6 && param_turn(&TP[P_SCALE], 6, -1) == 2 &&   /* MIN -> MPEN and back */
+             param_turn(&TP[P_SCALE], 2, -1) == 2 && param_turn(&TP[P_SCALE], 22, 1) == 0 &&  /* KUMOI -> CHR */
+             param_turn(&TP[P_SCALE], 15, 1) == 15 && enum_rank(&TP[P_SCALE], 2) == 0 && enum_rank(&TP[P_SCALE], 15) == 22;
+        bad += check("KNOB 2: MIN first, KUMOI then CHR, DIMWH last; stored values unchanged", ok);
+    }
     return bad;
 }
 

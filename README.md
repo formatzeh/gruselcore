@@ -158,7 +158,7 @@ Edge, over USB MIDI).
 | **Automation** | knob moves and parameter locks (hold a step, turn a knob), 64 records, listed and edited on SEQ › AUTOMATION |
 | **Patterns and songs** | a pool of 64 patterns shared by every project; each track a list of 16 entries (A–P), each a pattern played 1–16 times, or chained into the next as one long pattern; SONG walks each track down its list, round and round or once |
 | **Performance** | PERFORM: launch any track's entries and stage mutes on LOOP, BAR, BEAT or NOW; 16 scenes; throws (CUTOFF, REVERB, DELAY, DIST) that glide back, or stay; one mute a track on the black keys of GLO, FX and PERFORM (a tap latches it, held it cuts); the FX layer: repeat, reverse, filter sweeps, tape stop, freeze, harmonizer, gate, dub echo, flanger, vinyl |
-| **Sound** | per track: an envelope (in milliseconds or note values) and a second one for modulation (ENV 2), an LFO (free or synced to the tempo), one MOD page for where they go (the LFO's four depths, the envelope's three, a 4-slot modulation matrix), DIST in five types (INSERT's SOFT, HARD, FOLD, CRUSH, FUZZ) with a TONE, an INSERT (drives, a bitcrusher, phaser, flanger, chorus) with MIX, the SLICER (16 patterns), DUCK (sidechain), SPREAD (the voices across the stereo field); a drum kit's lanes tuned, their decay set and (2.0) panned one by one; arpeggiator (14 modes), chord keys (9 chords, 5 voicings), 16 scales; MONO, LEGATO, UNISON, glide |
+| **Sound** | per track: an envelope (in milliseconds or note values) and a second one for modulation (ENV 2), an LFO (free or synced to the tempo), one MOD page for where they go (the LFO's four depths, the envelope's three, a 4-slot modulation matrix), DIST in five types (INSERT's SOFT, HARD, FOLD, CRUSH, FUZZ) with a TONE, an INSERT (drives, a bitcrusher, phaser, flanger, chorus) with MIX, the SLICER (16 patterns), DUCK (sidechain), SPREAD (the voices across the stereo field); a drum kit's lanes tuned, their decay set and (2.0) panned one by one; arpeggiator (14 modes), chord keys (9 chords, 5 voicings), 23 scales; MONO, LEGATO, UNISON, glide |
 | **Effects** | chorus (CHORUS, FLANGER or PHASER, with FEEDBACK), delay and reverb (ROOM, SPRING or a stereo HALL) as sends |
 | **Memory** | 4 projects, 32 user sounds, 3 user sample slots; the music comes back at power-on (RESTORE LAST); 8 levels of undo |
 | **Screen** | 240 × 240 colour; a graph on every page; HOME held shows every control's job; 6 themes and colours of your own; LARGE mode with tall cards |
@@ -411,7 +411,7 @@ Felucca) first, and lists what it converted.
   with an A and a B patch and MORPH between them, one kit per project, edited a sound at a time on EDIT › SOUND;
   eight kits come as presets (1.2), each loading its own (FACTORY, DEEP, CLICK, INDUSTRIAL, SOFT, GLITCH, TRIBAL, LASER)
 - **Chord keys, arpeggiator, scales:** in-key chords with voicings; an arpeggiator with 14 modes, CHANCE,
-  SWING and HOLD; 16 scales with a white-key mode; MONO, LEGATO, UNISON and glide. (2.0.3) A chord goes whole into the
+  SWING and HOLD; 23 scales (the minor ones first) with a white-key mode; MONO, LEGATO, UNISON and glide. (2.0.3) A chord goes whole into the
   arpeggiator on MONO, LEGATO and UNISON sounds too. **KBD HOLD** (2.0.3): ARP 2 › HOLD ON with the ARP's MODE OFF
   holds the notes you play without an arpeggio: let go and they go on sounding; the next key you press with no key
   down starts a new chord, keys pressed while others are still down join it. HOLD off, the ARP on or another track
@@ -725,9 +725,13 @@ doesn't hold it, and pressing one leaves the held chord sounding (the SMK-37's s
 with the ARP on it sounds directly, and is recorded so, while the white keys' chords go into the arpeggio. SCALE
 LEDS light the black keys too. A Skiff before 2.1 opens a SOLO track as SEQ+T: every key snapped to the scale.
 
-Scales: chromatic (CHR), major (MAJ), natural minor (MIN), Dorian (DOR), Mixolydian (MIX), major pentatonic (PEN),
-minor pentatonic (MPEN), harmonic minor (HARM), Phrygian (PHRY), Lydian (LYD), Locrian (LOC), ascending melodic minor
-(MEL), minor blues (BLUES), whole tone (WHOLE), half-whole diminished (DIMHW) and whole-half diminished (DIMWH). Scales
+Scales (23), in the order KNOB 2 and the SEL layer show them: first the minor and dark ones, natural minor (MIN),
+minor pentatonic (MPEN), harmonic minor (HARM), ascending melodic minor (MEL), Dorian (DOR), Phrygian (PHRY), Locrian
+(LOC), minor blues (BLUES), Neapolitan minor (NEAP), Hungarian minor (HUNG), Phrygian dominant (PDOM), double harmonic
+(DHARM), Hirajoshi (HIRA), In-sen (INSEN) and Kumoi (KUMOI); then chromatic (CHR), major (MAJ), Mixolydian (MIX), major
+pentatonic (PEN), Lydian (LYD), whole tone (WHOLE), half-whole diminished (DIMHW) and whole-half diminished (DIMWH).
+The seven from NEAP on are GruselCore's; a firmware without them opens such a track as DIMWH. MENU › CONTROL › SCALE
+LEDS ON keeps the selected track's scale lit on the keys, its root brighter. Scales
 with other than seven notes continue across the white keys without repeating notes. Drum kits and incoming MIDI keep
 their own note mapping. Press **SEL** again for the **CHORD** page: CHRD picks the chord keys (OFF, the scale's triads
 or sevenths, or a fixed shape) and VOIC the voicing.

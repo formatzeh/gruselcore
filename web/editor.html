@@ -2141,7 +2141,7 @@ function makeMockDevice(opt = {}) {
     D("PITCH", F.BIPCT, -64, 63, 0), D("CUTOFF", F.BIPCT, -64, 63, 0), D("SHAPE", F.BIPCT, -64, 63, 0), D("AMP", F.PCT, 0, 127, 0),
     E("MODE", ["OFF", "UP", "DN", "UPDN", "RND", "ORD", "REPEAT", "DNUP", "UP+8", "CONV", "DIVG", "PINKY", "THUMB", "WALK", "CHORD"], 0), E("RATE", NDIV, 2), D("OCTAVE", F.INT, 1, 4, 1), D("GATE", F.PCT, 1, 127, 64),
     D("SWING", F.PCT, 0, 100, 0), D("CHANCE", F.PCT, 0, 127, 127), E("HOLD", NONOFF, 0), E("ORDER", ["NOTE", "PLAYED"], 0),
-    D("ROOT", F.NOTE, 0, 11, 0), E("SCALE", ["CHR", "MAJ", "MIN", "DOR", "MIX", "PEN", "MPEN", "HARM", "PHRY", "LYD", "LOC", "MEL", "BLUES", "WHOLE", "DIMHW", "DIMWH"], 0), E("QUANTIZE", ["OFF", "SNAP", "WHITE", "SEQ", "SEQ+T", "SOLO"], 0), D("TRANSP", F.SEMI, -24, 24, 0),
+    D("ROOT", F.NOTE, 0, 11, 0), E("SCALE", ["CHR", "MAJ", "MIN", "DOR", "MIX", "PEN", "MPEN", "HARM", "PHRY", "LYD", "LOC", "MEL", "BLUES", "WHOLE", "DIMHW", "DIMWH", "PDOM", "HUNG", "DHARM", "NEAP", "HIRA", "INSEN", "KUMOI"], 0), E("QUANTIZE", ["OFF", "SNAP", "WHITE", "SEQ", "SEQ+T", "SOLO"], 0), D("TRANSP", F.SEMI, -24, 24, 0),
     D("LENGTH", F.STEPS, 1, 64, 16), E("DIV", NDIV, 2), D("SWING", F.PCT, 0, 100, 0), D("GATE", F.PCT, 1, 127, 127),   /* ((2.0) 1 STEP) */
     D("DIST", F.PCT, 0, 127, 0), D("CHORUS", F.PCT, 0, 127, 0), D("DELAY", F.PCT, 0, 127, 0), D("REVERB", F.PCT, 0, 127, 0),
     E("VOICE", ["POLY", "MONO", "LEG", "UNI"], 0), D("GLIDE", F.TIME, 0, 127, 0), D("PAN", F.BIPCT, -64, 63, 0), E("MUTE", NONOFF, 0),

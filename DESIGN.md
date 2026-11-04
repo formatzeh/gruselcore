@@ -56,7 +56,7 @@ Things to avoid:
 | SAVE | Its page family (PRESETS, USER, PATTERNS, PROJECT): the page it was left on, USER the first time (U3) | **UNDO**, one level back (8 levels kept) | — |
 | FX | FX pages | FX layer: effects on the white keys; on the black the tracks' MUTE as GLO's ((2.0, D 1A): a tap latches it, held the track is cut; see One mute), macros on K1–K4 | Lock the layer open; locked, it latches (U2: MENU > FX LATCH retired) |
 | GLO | MIXER, DELAY, REVERB, CHORUS, GLOBAL (U3: the buses, FX's before; SYSTEM gone) | GLO layer: mutes, solos, tap tempo; with SELECT: tempo | Lock |
-| SEL | SCALE, CHORD (1.2.1, #8: the button is printed SEL; the page was SCL) | SEL layer: root on the keys | Lock |
+| SEL | SCALE, CHORD (1.2.1, #8: the button is printed SEL; the page was SCL) | SEL layer: root on the keys; (GruselCore) the 23 scales 4 a row, the 15 minor and dark ones in rows 1–4, the others in rows 5–6 | Lock |
 | EDIT | EDIT pages, on every page (U2; on NOTES with REC armed it clears the cursor step, with a step held its locks) | EDIT layer: engine on the keys | Lock |
 | SEQ | SEQ pages | SEQ TOOLS, on every page (U2) | Lock |
 | REC | Arm, on the press (U2); on an armed track every track disarmed (1.4.1) | — | REC layer, locked: CLEAR (held), CLICK, COUNT-IN, LEVEL, FEEL |

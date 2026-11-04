@@ -3671,13 +3671,13 @@ static int test_quick_layers(void)
 
     /* SCL: a key is ROOT, KNOB 2 the scale, the LEDs, OCT- */
     ui_power_on();
-    TSEL->p[P_ROOT] = 0; TSEL->p[P_SCALE] = 1;                     /* C MAJ */
+    TSEL->p[P_ROOT] = 0; TSEL->p[P_SCALE] = 6;                     /* C MPEN ((GruselCore) KNOB 2 left of it: MIN) */
     lay_combo(B_SCL, black(4));                                    /* D#4 */
     ok = TSEL->p[P_ROOT] == 3 && ui.layer == LAYER_SCL && !gates();
     key_up(black(4)); frame();
     key_down(white(1)); key_up(white(1)); frame();                  /* G3 */
     ok &= TSEL->p[P_ROOT] == 7;
-    turn(EN_K2, 1);
+    turn(EN_K2, -1);
     ok &= TSEL->p[P_SCALE] == 2;
     a = leds_at(0); b2 = leds_at(250);
     ok &= ((a & b2) >> white(1)) & 1u && ((a & b2) >> white(8)) & 1u;   /* G3 G4: the root, lit */
@@ -3687,7 +3687,7 @@ static int test_quick_layers(void)
     bad += check("SCL + D#4, then G3: ROOT D#, G (latched); KNOB 2: SCL; LEDs: root lit, the scale breathes", ok &&
                  TSEL->p[P_ROOT] == 7 && TSEL->p[P_SCALE] == 2 && ui.home);
     btn_down(B_SCL); frame(); key_down(white(4)); key_up(white(4)); frame(); turn(EN_K2, 3);
-    ok = TSEL->p[P_ROOT] == 0 && TSEL->p[P_SCALE] == 5;
+    ok = TSEL->p[P_ROOT] == 0 && TSEL->p[P_SCALE] == 11;          /* (MIN MPEN HARM MEL: params.c SCALE_ORDER) */
     oct_back();
     btn_up(B_SCL); frame();
     bad += check("  OCT- in SCL: ROOT and SCL as the layer opened", ok && TSEL->p[P_ROOT] == 7 && TSEL->p[P_SCALE] == 2);
@@ -6915,8 +6915,8 @@ static int test_div_order(void)
             const param_desc_t *d;
             ui_power_on();
             ui.home = 0; ui.page = (uint8_t)id; page_entered();
-            if (!page_visible(id) || !(d = page_desc(cur_page(), c, &vp)) || !vp || !enum_order(d))
-                continue;
+            if (!page_visible(id) || !(d = page_desc(cur_page(), c, &vp)) || !vp || !enum_order(d) || d->names == N_SCALE)
+                continue;                           /* ((GruselCore) SCALE's order: chord_test.c) */
             found++;
             *vp = d->names == N_DIV || d->names == N_DTIME ? 2 : 1;   /* 1/16 */
             turn(EN_K1 + c, 1);

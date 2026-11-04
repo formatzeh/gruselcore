@@ -11,7 +11,9 @@ static const char *const N_DIV[] = {"1/4", "1/8", "1/16", "1/32", "8T", "16T", "
 static const char *const N_DTIME[] = {"1/4", "1/8", "1/16", "1/32", "8T", "16T", "1/2", "1/1", "2BAR", "4BAR",
                                       "1/8D", "1/16D", "1/4D"};
 static const char *const N_SCALE[] = {"CHR", "MAJ", "MIN", "DOR", "MIX", "PEN", "MPEN", "HARM",
-                                    "PHRY", "LYD", "LOC", "MEL", "BLUES", "WHOLE", "DIMHW", "DIMWH"};
+                                    "PHRY", "LYD", "LOC", "MEL", "BLUES", "WHOLE", "DIMHW", "DIMWH",
+                                    /* (GruselCore) appended (stored values stay; SCALE_ORDER shows them) */
+                                    "PDOM", "HUNG", "DHARM", "NEAP", "HIRA", "INSEN", "KUMOI"};
 static const char *const N_ONOFF[] = {"OFF", "ON"};
 /* seq.c kb_map; 1 = SNAP (stored projects: the former ON); 3 = SEQ: SNAP, and the sequencer's notes snap too as
  * they play (seq.c seq_step; the steps keep what was written). Append-only: older projects hold 0..2. (2.1, #74) SOLO:
@@ -321,9 +323,18 @@ static const uint8_t DIV_ORDER[10] = {9, 8, 7, 6, 0, 1, 4, 2, 5, 3};   /* 4BAR 2
 static const uint8_t SLDIV_ORDER[6] = {0, 3, 1, 4, 2, 5};              /* 1/8 8T 1/16 16T 1/32 32T */
 static const uint8_t DTIME_ORDER[13] = {9, 8, 7, 6, 12, 0, 10, 1, 11, 4, 2, 5, 3};   /* 4BAR 2BAR 1/1 1/2 1/4D 1/4 1/8D
                                                                                       * 1/8 1/16D 8T 1/16 16T 1/32 */
+/* (GruselCore) the scales: the minor and dark ones first (SCALE_MINOR of them), then the others; the stored values (N_SCALE
+ * indices) stay. The SEL layer's grid draws them in this order too (ui_layer.c layer_scl) */
+#define SCALE_N 23u
+#define SCALE_MINOR 15u
+static const uint8_t SCALE_ORDER[SCALE_N] = {2, 6, 7, 11, 3, 8, 10, 12, 19, 17, 16, 18, 20, 21, 22,   /* MIN MPEN HARM MEL DOR PHRY
+                                                                 * LOC BLUES NEAP HUNG PDOM DHARM HIRA INSEN KUMOI */
+                                      0, 1, 4, 5, 9, 13, 14, 15};   /* CHR MAJ MIX PEN LYD WHOLE DIMHW DIMWH */
+_Static_assert(NELEM(N_SCALE) == SCALE_N, "a shown place for every scale");
 static const uint8_t *enum_order(const param_desc_t *d)
 {
-    return d->names == N_DIV ? DIV_ORDER : d->names == N_SLDIV ? SLDIV_ORDER : d->names == N_DTIME ? DTIME_ORDER : 0;
+    return d->names == N_DIV ? DIV_ORDER : d->names == N_SLDIV ? SLDIV_ORDER : d->names == N_DTIME ? DTIME_ORDER :
+           d->names == N_SCALE ? SCALE_ORDER : 0;
 }
 static int32_t enum_rank(const param_desc_t *d, int32_t v)   /* v's place in the shown order (+ min): the gauges */
 {
