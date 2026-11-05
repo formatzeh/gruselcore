@@ -1452,12 +1452,12 @@ static int test_preset_tags(void)
     {   /* (GruselCore) the factory sounds kept (2026-11-02; the genre sounds of the same day), in the PRESETS list's order: nothing else listed */
         static const char *const KEEP[] = {
             "SAW LEAD", "SOFT PAD", "SQR BASS", "PWM STR", "ACID", "RAVE", "SYNTH BRASS", "WIND SWEEP", "STRINGS",
-            "WAR HORN", "NEON LEAD", "SUNSET PAD", "HERO BRASS", "QUANTA", "REESE", "DRIVE BASS", "HARD SYNC", "SUB SAW", "PROG BASS", "HARDTEK BAS", "MENTAL ACID", "MENTAL STAB", "TRIBE PLUCK", "RUMBLE", "DUB STAB", "DARK DRONE", "INDUS LEAD", "HYPNO SEQ", "TRANCE SAW", "SAW PLUCK", "GATE PAD", "SQUELCH", "ZAP", "DEEP SPACE", "CHILL PAD", "DNB REESE", "WOBBLE 8", "WOBBLE 8T", "WOBBLE 16", "WUB SLOW", "JUNGLE SUB", "BOOM SUB", "PUNCH BASS", "KNOCK BASS",
+            "WAR HORN", "NEON LEAD", "SUNSET PAD", "HERO BRASS", "QUANTA", "REESE", "DRIVE BASS", "HARD SYNC", "SUB SAW", "PROG BASS", "HARDTEK BAS", "MENTAL ACID", "MENTAL STAB", "TRIBE PLUCK", "RUMBLE", "DUB STAB", "DARK DRONE", "INDUS LEAD", "HYPNO SEQ", "TRANCE SAW", "SAW PLUCK", "GATE PAD", "SQUELCH", "ZAP", "DEEP SPACE", "CHILL PAD", "DNB REESE", "WOBBLE 8", "WOBBLE 8T", "WOBBLE 16", "WUB SLOW", "JUNGLE SUB", "BOOM SUB", "PUNCH BASS", "KNOCK BASS", "SWELL SUB", "GROWL WOB", "HOLLOW 8", "LASER DIVE", "NEURO MID", "YOY BASS", "SCOOP CHOP", "SUB DRONE",
             "FM MARIMBA", "NYLON PICK", "GLASS KEYS", "ISOTOPE", "DARK MATTER", "PICK BASS", "GROWL BASS", "FM PSYBASS", "FM HYPNO", "METAL PERC", "DARK BELL", "FM DRONE", "FM DNB BASS", "FM WOBBLE", "FM WOB 8T", "FM NEURO",
             "PD BRASS", "PD ORGAN", "PD STRINGS", "WIRE", "NEUTRINO", "PD PSY BASS", "PD ACID", "PD MENTAL", "PD DARK BEL", "PD DRONE", "PD FOLD BAS", "PD WOBBLE",
             "ARP 8BIT", "WAVE LEAD", "STEP LEAD", "TRI BASS", "CHIP BELL", "CRUSH BASS", "1BIT DRONE",
             "CHOIR AAH", "VOX LEAD", "WOW BASS", "WHISPER", "CRYPT CHOIR", "MONK CHANT", "DREAM CHOIR", "TALK WOBBLE", "DARK CHANT",
-            "FAT BASS", "ARP LEAD", "SYNC LEAD", "NEON ARP", "DIRTY BASS", "TRIBE BASS", "MENTAL SAW", "SYNC SCREAM", "RING DARK", "DARK FIFTH", "TRIO SUPER", "HOOVER", "TRIO REESE", "TRIO WOBBLE", "BP WOBBLE", "PWM WOBBLE",
+            "FAT BASS", "ARP LEAD", "SYNC LEAD", "NEON ARP", "DIRTY BASS", "TRIBE BASS", "MENTAL SAW", "SYNC SCREAM", "RING DARK", "DARK FIFTH", "TRIO SUPER", "HOOVER", "TRIO REESE", "TRIO WOBBLE", "BP WOBBLE", "PWM WOBBLE", "GATE REESE", "DARK AIR",
             "FULL ORGAN",
             "CLOUD PAD", "FROZEN", "SHIMMER", "PIANO HAZE", "SAX DRONE", "SCATTER", "GHOST CLOUD", "FOREST AIR", "ABYSS", "MIST VEIL", "SPORE DRIFT", "DEAD PIANO", "MOSS BED", "WRAITH", "STAR DUST",
             "PLUCK", "BOWED METAL", "UPRIGHT", "TRIBE DRUM", "KALIMBA DRK", "DARK PLUCK", "SITAR DRONE",
@@ -3274,10 +3274,10 @@ static int test_sample_alert(void)
     frame();
     ok = msg_is(nf);
     frames(1500);
-    TSEL->p[P_E0] = 4;                               /* PIANO: there (the CC0 build) */
+    TSEL->p[P_E0] = 4;                               /* (GruselCore) once PIANO: USR1, empty here: said as USR1 */
     frame();
-    ok &= !ui.msg_t && !snd_missing(TSEL, &i) == (SLC_PIANO.len != 0u);
-    bad += check("SLICE on an empty USR3: said; PIANO: not (it has its sample)", ok);
+    ok &= msg_is(nf) && snd_missing(TSEL, &i) && str_eq(snd_missing(TSEL, &i), "USR1");
+    bad += check("SLICE on an empty USR3: said; SRC 4 (once PIANO) is USR1: said too", ok);
     frames(1500);
 #endif
     /* a project with an empty slot: said after LOADED */
@@ -3302,7 +3302,7 @@ static int test_sample_alert(void)
 
 #if FELUCCA_SLICE
 /* SLICES (EDIT family, a SLICE track: ui_slice.c; the MAN slices of eng_slice.c, ported from hugelton/Felucca#27 by
- * andreahaku): in the EDIT cycle after EDIT 2 on SLICE only; BREAK shows its slices, edits need a user slot; the first
+ * andreahaku): in the EDIT cycle after EDIT 2 on SLICE only; an empty slot has none to edit (says so); the first
  * edit takes the slices shown (8 equal) as MAN and sets DIV MAN; KNOB 1 the marker (then END), KNOB 2 moves it,
  * KNOB 3 / 4 pick SPLIT / JOIN and OCT+ does it (it stays picked), OCT- drops the pick, then goes HOME; a key picks
  * its slice and the keys of the selected slice are lit; the slot is marked for the store; another engine: EDIT 1 */
@@ -3333,28 +3333,27 @@ static int test_slices(void)
     int bad = 0, ok;
     uint32_t n, j, p0, k, note;
     ui_power_on();
-    set_engine_of(TSEL, 13u);                        /* SLICE CHOP: BREAK, 16 */
+    set_engine_of(TSEL, 13u);                        /* SLICE CHOP: USR1 (empty here), 16 */
     bad += check("SLICES: SLICE's EDIT cycle EDIT 1 EDIT 2 SLICES VOICE VOICE 2 EDIT 1", engine_cycle(CYC_S, NELEM(CYC_S)));
     go_page(GR_SLICES); frame();
-    n = slice_count();
     p0 = TSEL->p[P_E1];
-    turn(EN_K1, 2); turn(EN_K2, 3);
-    ok = n == 16u && slice_sel() == 2u && TSEL->p[P_E1] == p0 && msg_is("PICK A USR SAMPLE FIRST") && !slice_act_ready(2);
-    bad += check("SLICES on BREAK: its 16 slices shown, KNOB 1 picks; edits need USR1-3 (DIV unchanged)", ok);
+    turn(EN_K2, 1);
+    ok = slice_count() == 0u && TSEL->p[P_E1] == p0 && msg_is("USR1 EMPTY");
+    bad += check("SLICES on CHOP's empty USR1: no slices; edits: \"USR1 EMPTY\" (DIV unchanged)", ok);
+    frames(1500);
     TSEL->p[P_E0] = 2;                               /* SRC USR2, empty: no slices (a sine plays): NO SAMPLE */
     frame();
     ok = slice_count() == 0u && (msg_is(MSG_NO_SAMPLE) || str_eq(ui.msg2, MSG_NO_SAMPLE));
     turn(EN_K2, 1);
     ok &= TSEL->p[P_E1] == p0 && msg_is("USR2 EMPTY");
-    TSEL->p[P_E0] = 0;
     bad += check("SLICES on an empty USR2: NO SAMPLE, no slices; edits: \"USR2 EMPTY\"", ok);
-    TSEL->p[P_E0] = 4;                               /* SRC PIANO: its 16 slices shown, no edits */
+    frames(1500);
+    TSEL->p[P_E0] = 4;                               /* (GruselCore) SRC 4, once PIANO: USR1 */
     frame();
     turn(EN_K2, 1);
-    ok = slice_count() == 16u && TSEL->p[P_E1] == p0 && msg_is("PICK A USR SAMPLE FIRST");
-    TSEL->p[P_E0] = 0;
-    frame();
-    bad += check("SLICES on PIANO: its 16 slices shown; edits need USR1-3 (DIV unchanged)", ok);
+    ok = slice_count() == 0u && TSEL->p[P_E1] == p0 && msg_is("USR1 EMPTY");
+    bad += check("SLICES on SRC 4 (once PIANO): USR1's (empty: \"USR1 EMPTY\")", ok);
+    frames(1500);
 
     host_slot_make(0);
     smp_user_scan(0);
@@ -3362,6 +3361,7 @@ static int test_slices(void)
     TSEL->p[P_E1] = 1;
     frame();
     n = slice_count();
+    turn(EN_K1, -20); turn(EN_K1, 2);                /* KNOB 1 picks slice 3 */
     p0 = slice_mark(2);
     turn(EN_K2, 5);
     ok = n == 8u && TSEL->p[P_E1] == SLC_DIV_MAN && msg_is("SLICES NOW MANUAL") && slice_count() == 8u && slice_sel() == 2u &&
@@ -3517,6 +3517,97 @@ static int test_samples_page(void)
     smp_user_scan(0);
     smx_save = 0;
     set_engine_of(TSEL, 0); frame();
+    return bad;
+}
+
+/* (GruselCore) the SLICE grid: SEQ > NOTES on a SLICE track (ui.c sgrid_on). A white key selects its step, a black key
+ * then puts its slice there (one slice a step, another replaced) or, the slice it has, takes it away; all silent; KNOB 1
+ * SLICE one a detent, 2 RATCH, 3 RANDOM; black 9 the next eight slices */
+static int test_slice_grid(void)
+{
+    int bad = 0, ok;
+    track_t *t;
+    uint32_t i, v, n;
+    ui_power_on();
+    host_slot_make(0);
+    smp_user_scan(0);
+    t = TSEL;
+    set_engine_of(t, ENGI_SLICE);
+    t->engine = t->eng_req;
+    t->p[P_E0] = 1;                                     /* USR1, DIV 8 */
+    t->p[P_E1] = 1;
+    for (i = 0; i < NSTEP; i++)
+        step_clear(&t->step[i]);
+    t->p[P_SLEN] = 16;
+    open_family(FAM_SEQ);
+    frame();
+    bad += check("SLICE GRID: SEQ > NOTES on a SLICE track is the SLICE grid (keys to the UI, silent)",
+                 sgrid_on() && !grid_on() && song.grid == 3u && cur_page()->scope == SC_STEP);
+    tap_key(key_at(0, 4));                              /* white 5: step 5 selected, nothing written */
+    ok = ui.cursor == 4u && t->step[4].time == ST_REST && ((sgrid_leds() >> key_at(0, 4)) & 1u);
+    bad += check("  a white key selects its step (lit), writes nothing", ok);
+    tap_key(key_at(1, 2));                              /* black 3: slice 3 on step 5, silent */
+    for (n = 0, v = 0; v < NVOICE; v++)
+        n += t->v[v].active;
+    ok = sg_of(t, &t->step[4]) == 2 && t->step[4].n == 1u && !n && ((sgrid_leds() >> key_at(1, 2)) & 1u);
+    bad += check("  then a black key puts its slice on the step (its key lit) and plays nothing", ok);
+    tap_key(key_at(1, 6));                              /* black 7: replaced, one slice */
+    ok = sg_of(t, &t->step[4]) == 6 && t->step[4].n == 1u;
+    tap_key(key_at(1, 6));                              /* black 7 again: taken away */
+    ok &= t->step[4].time == ST_REST && !t->step[4].n;
+    bad += check("  another black key replaces the slice (one a step); the step's own slice again takes it away", ok);
+    tap_key(key_at(0, 0)); tap_key(key_at(1, 0));       /* slice 1 on steps 1 and 3 */
+    tap_key(key_at(0, 2)); tap_key(key_at(1, 0));
+    turn(EN_K1, 1); frame();
+    ok = sg_of(t, &t->step[2]) == 1 && sg_of(t, &t->step[0]) == 0 && sg_slice == 1u;
+    turn(EN_K1, -1); frame();
+    turn(EN_K1, -1); frame();
+    ok &= sg_of(t, &t->step[2]) == 7;                   /* (back past slice 1: the last) */
+    bad += check("  KNOB 1 SLICE: the cursor step one slice on or back a detent (wrapping), its row shown", ok);
+    turn(EN_K2, 1); frame();
+    ok = step_ratchet(&t->step[2]) == 2u;
+    turn(EN_K2, -1); frame();
+    ok &= step_ratchet(&t->step[2]) == 1u;
+    bad += check("  KNOB 2 RATCH: x2 and back", ok);
+    {   /* RANDOM: right new slices on the steps that have one (none set or cleared), left the original back; an edit by
+         * hand in between: that is the original then */
+        int32_t a0 = sg_of(t, &t->step[0]), a2 = sg_of(t, &t->step[2]);
+        turn(EN_K3, 1); frame();
+        ok = sg_of(t, &t->step[0]) >= 0 && sg_of(t, &t->step[0]) != a0 && sg_of(t, &t->step[2]) >= 0 &&
+             sg_of(t, &t->step[2]) != a2 && sg_of(t, &t->step[0]) < 8 && sg_of(t, &t->step[2]) < 8;
+        for (i = 0; i < 16u; i++)
+            if (i != 0u && i != 2u)
+                ok &= t->step[i].time == ST_REST && !t->step[i].n;
+        turn(EN_K3, 1); frame();
+        turn(EN_K3, -1); frame();
+        ok &= sg_of(t, &t->step[0]) == a0 && sg_of(t, &t->step[2]) == a2 && t->step[1].time == ST_REST;
+        bad += check("  KNOB 3 RANDOM right: new slices on the steps that have one (none set or cleared); left: the original back", ok);
+        turn(EN_K3, 1); frame();                        /* random, then step 1 set by hand: that is the original now */
+        tap_key(key_at(0, 0)); tap_key(key_at(1, 4));
+        a2 = sg_of(t, &t->step[2]);
+        turn(EN_K3, -1); frame();
+        ok = sg_of(t, &t->step[0]) == 4 && sg_of(t, &t->step[2]) == a2 && msg_is("ORIGINAL ALREADY");
+        turn(EN_K3, 1); frame();
+        turn(EN_K3, -1); frame();
+        ok &= sg_of(t, &t->step[0]) == 4 && sg_of(t, &t->step[2]) == a2;
+        bad += check("  .. an edit by hand after it: the steps as they are then the original (left keeps them)", ok);
+        cursor_set(2);
+    }
+    t->p[P_E1] = 2;                                     /* DIV 16: black 9 the next eight */
+    frame();
+    tap_key(key_at(0, 9));                              /* step 10, empty */
+    tap_key(key_at(1, 8));                              /* the eight from 9 shown */
+    ok = sg_base == 8u;
+    tap_key(key_at(1, 3));                              /* slice 12 on step 10 */
+    ok &= sg_of(t, &t->step[9]) == 11 && sg_base == 8u;
+    tap_key(key_at(1, 8));                              /* past the last eight: the first */
+    ok &= sg_base == 0u && sg_of(t, &t->step[9]) == 11;
+    bad += check("  DIV 16: black key 9 the next eight slices (12 put on step 10), again: the first eight", ok);
+    for (i = 0; i < NSTEP; i++)
+        step_clear(&t->step[i]);
+    memset(host_slots, 0, sizeof host_slots);
+    smp_user_scan(0);
+    set_engine_of(t, 0); frame();
     return bad;
 }
 #endif
@@ -9851,6 +9942,7 @@ int main(void)
     bad += test_fm6_lab();
 #if FELUCCA_SLICE
     bad += test_slices();
+    bad += test_slice_grid();
     bad += test_samples_page();
 #endif
     bad += test_sample_alert();

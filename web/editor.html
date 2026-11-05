@@ -2259,10 +2259,10 @@ function makeMockDevice(opt = {}) {
       presets: [P("FM MARIMBA", [0, 0, 0, 0, 0, 0, 0, 5], [0, 0, 127, 0], 0, 3), P("NYLON PICK", [0, 0, 0, 0, 0, 0, 0, 7], [0, 0, 127, 0], 0, 13), P("GLASS KEYS", [0, 0, 8, 0, 0, 0, 24, 0], [0, 0, 127, 0]), P("ISOTOPE", [0, 0, 14, 2, -10, 0, 50, 1], [0, 0, 127, 0]), P("DARK MATTER", [0, 4, 16, 0, 10, 0, 0, 2], [0, 0, 127, 0], 1),
         /* (Skiff phase 9) more for every engine (src/eng_*.c) */
         P("PICK BASS", [0, 2, 12, 0, 16, 2, 0, 7], [0, 0, 127, 0], 1), P("GROWL BASS", [0, 5, 8, 0, 20, 0, 8, 3], [0, 0, 127, 0], 1, 0, [[14, 36], [9, 80], [95, 2]])] },
-    { name: "SLICE", titles: ["SLICE", "PLAYBACK"], edit: [E("SOURCE", ["BREAK", "USR1", "USR2", "USR3", "PIANO", "FUNK"], 0),
+    { name: "SLICE", titles: ["SLICE", "PLAYBACK"], edit: [E("SOURCE", ["USR1", "USR1", "USR2", "USR3", "USR1", "USR1"], 1),   /* (GruselCore) 0, 4, 5 retired: USR1 */
         E("DIV", ["4", "8", "16", "32", "AUTO", "MAN"], 2), D("START", F.INT, 0, 31, 0), D("PITCH", F.SEMI, -24, 24, 0),
         E("MODE", ["ONE", "GATE", "LOOP"], 0), E("RVRS", ["OFF", "ON"], 0), D("DECAY", F.TIME, 0, 127, 127), D("CUTOFF", F.INT, 0, 127, 127)],
-      presets: [P("CHOP", [0, 2, 0, 0, 0, 0, 127, 127], [0, 127, 127, 30], 0, 9)] },
+      presets: [P("CHOP", [1, 2, 0, 0, 0, 0, 127, 127], [0, 127, 127, 30], 0, 9)] },
     { name: "DRUM-X", titles: ["KIT", "HIT"], edit: [D("MORPH", F.PCT, 0, 127, 64), D("PITCH", F.ST16, 0, 127, 64),   /* (Skiff: JIANT FM's) */
         D("COLOR", F.PCT, 0, 127, 64), D("DECAY", F.PCT, 0, 127, 64), D("NOISE", F.PCT, 0, 127, 64), D("FM", F.PCT, 0, 127, 0),
         D("FOLD", F.PCT, 0, 127, 0), D("DRIVE", F.PCT, 0, 127, 0)],

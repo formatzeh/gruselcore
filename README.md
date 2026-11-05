@@ -21,8 +21,19 @@ The earlier GruselCore (on X0X) is kept on the branch `x0x-base`.
   (ARP tapped brings it back from any page, ARP held on it closes it). F3 on: the patterns evolve, each track by its
   own AMOUNT; tracks drop out and come back, breakdowns and drops (ARRANGE); the sounds drift (DRIFT). EVOLVE 2:
   SWEEP, GATE (length breathing), ROOT (key moves) and CHORD (thirds, fifths, octaves coming and going). The kick, snare and the notes on the beats stay (PROTECT), the
-  original patterns never change (G4 HOME plays them; KEEP stores what you hear as a new entry). DESIGN.md has the
-  details.
+  original patterns never change (G4 HOME plays them; KEEP stores what you hear as a new entry). OCT- held + KNOB 1
+  to the left: the track's AMOUNT off at once (with F4 ALL: every track's). DESIGN.md has the details.
+- **EVOLVE on a SLICE track: a break generator.** Load a break into a user slot (USR1-USR3, the web editor's Samples
+  tab), put SLICE on a track (SOURCE that slot, DIV 8 or 16) and play the slices in order, or leave the track empty: it
+  plays the loop in order by itself. With EVOLVE on, its AMOUNT chops it: slices swapped, rolled, walked, jumped,
+  retriggered (RATCH x2), never left out: from close to the loop (low) to a busy jungle break (high), after BB Gen's slice choice
+  (schwung-breakbeat by mestela, via X0X and FMX). PROTECT keeps the slices on the beats; ARRANGE adds retriggered
+  fills in each phrase's last bar; CHORD and ROOT leave it alone. Step by step: the [GruselCore guide](web/guide/index.html).
+- **The SLICE grid:** SEQ › NOTES on a SLICE track is a grid like the DRUM grid: a white key selects a step, then black
+  keys 1-8 put that slice on it (silently; one slice a step, another one replaced, its own one again removes it), black 9
+  shows the next eight; KNOB 1 SLICE (one a
+  detent), 2 RATCH, 3 RANDOM (right: the steps with a slice new random ones, no step set or cleared; left: your own order back), 4 VELOCITY. SLICE plays one slice at a time: a new slice cuts the one before, so a slice
+  on every step gives clean stutters.
 - **SYNC (GLO + PLAY while playing):** tracks of different LENGTHs (or a LENGTH changed while playing) drift apart, one
   at 1.1 while another is at 3.1. GLO + PLAY now brings them together without stopping: playback goes on, nothing is
   cut, and on the next bar line every track starts its step 1 (its first in its direction) at once (the header says
@@ -567,8 +578,9 @@ In the order the device lists them:
 - **GRAIN**: granular textures from the built-in samples or a user slot
 - **PHYS**: physical models: modal resonators, strings, struck membranes, sympathetic strings
 - **NOISE**: noise from analog to digital: colours, crackle, shift-register and metallic tones
-- **SLICE**: two drum breaks, a piano note (all built in) or your own sample cut into slices, one per key;
-  set the slices by hand on the SLICES page
+- **SLICE**: your own sample (a user slot, USR1-USR3) cut into slices, one per key; set the slices by hand on the
+  SLICES page. (GruselCore) The built-in BREAK, FUNK and PIANO were removed: sounds and projects that used them
+  play USR1
 - **DRUM**: an 8-lane kit of Felucca's own drum voices on the General MIDI key map. KIT picks the
   standard kit or one of five virtual-analog (VA) kits in the manner of
   classic analog drum machines (the numbers are a hint), every lane its own voice: **80** (deep sine kick with a long decay, noisy snare,
@@ -830,8 +842,7 @@ Skiff stands on Felucca. If it is useful to you, support Felucca's author:
 - Fonts: [Barlow Condensed](https://github.com/jpt/barlow) by The Barlow Project Authors (the screen and the editor),
   [SIL OFL 1.1](LICENSES/OFL-BarlowCondensed.txt); [Inter Tight](https://github.com/rsms/inter-tight) by The Inter Project Authors (the control card), [SIL OFL 1.1](LICENSES/OFL-InterTight.txt);
   the browser emulator's labels: [DotGothic16](https://github.com/fontworks-fonts/DotGothic16) by The DotGothic16 Project Authors, [SIL OFL 1.1](LICENSES/OFL-DotGothic16.txt)
-- Samples: [Versilian Studios](https://versilian-studios.com/) [VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE) and [VCSL](https://github.com/sgossner/VCSL), CC0 1.0: the SAMPLE sets, also SLICE's PIANO ([attribution](assets/samples-cc0/ATTRIBUTION.txt))
-- SLICE's BREAK and FUNK: made with [YuE2](https://github.com/multimodal-art-projection/YuE) by Multimodal Art Projection ([how](assets/breaks/ATTRIBUTION.txt))
+- Samples: [Versilian Studios](https://versilian-studios.com/) [VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE) and [VCSL](https://github.com/sgossner/VCSL), CC0 1.0: the SAMPLE sets ([attribution](assets/samples-cc0/ATTRIBUTION.txt))
 - VOICE engine: after [klattsch](https://github.com/tgies/klattsch) by Tony Gies (MIT); formant data from Klatt (1980) and Hillenbrand et al. (1995)
 - PHYS engine: models ported from [DaisySP](https://github.com/electro-smith/DaisySP) by Electrosmith and Emilie Gillet ([MIT](LICENSES/MIT-DaisySP.txt)) and from Emilie Gillet's [eurorack](https://github.com/pichenettes/eurorack) code ([MIT](LICENSES/MIT-Rings.txt))
 - FM6 engine: msfa from [Dexed](https://github.com/asb2m10/dexed) by Google Inc. and Pascal Gauthier ([Apache-2.0](LICENSES/Apache-2.0-msfa.txt))

@@ -622,9 +622,9 @@ static void draw_foot(void)
     const engine_t *e = ENGINES[TSEL->eng_req % NENGINES];
     const char *ename = e->name;
     int32_t x, ly = foot_line_y();                     /* (BLOCKS: the one line) */
-    int tiles = !ui.home && !grid_on() &&              /* ((Skiff 2.0) NOTES, FEEL, PATTERN: their hints; (issue #3) not */
+    int tiles = !ui.home && !grid_on() && !sgrid_on() &&              /* ((Skiff 2.0) NOTES, FEEL, PATTERN: their hints; (issue #3) not */
                 (pg->graph == GR_ROLL || pg->graph == GR_FEEL || pg->graph == GR_STEPS);   /* under HOME's */
-    int hints = act_cols() || ((grid_on() || tiles) && !ui_hints_off);   /* (the line says them, not the
+    int hints = act_cols() || ((grid_on() || sgrid_on() || tiles) && !ui_hints_off);   /* (the line says them, not the
                                                        * sound; (Skiff U4) MENU > HINTS OFF: the sound) */
     uint32_t ret = mom_down() && mom_held(0) ? 1u + ret_mode() : 0u;   /* ((2.0, D 2A) MOMENTARY: how its values */
                                                        /* come back, OCT+ KEEP, for the whole line */
@@ -721,13 +721,13 @@ static void draw_foot(void)
                 x1 = 8 + w;
             cv_key_row(8, x1, ly - KC_TY, kh, 2, act_ready() ? 3u : 2u, T_BG);
         }
-    } else if (grid_on() && !ui_hints_off) {          /* row 1: the page, and what the keys do */
+    } else if ((grid_on() || sgrid_on()) && !ui_hints_off) {   /* row 1: the page, and what the keys do */
         char b[16];
         uint32_t all, off = step_off(&all, 16);         /* ((2.0, #44) a chain's pages counted on: PAGE 5/8) */
         str_cpy(b, "PAGE ", sizeof b);
         fmt_kn(b + 5, (int32_t)(off + ui.bank) + 1, (int32_t)all);
         x = cv_text(8, ly, &AF_S, b, T_THEME) + 10;   /* (Skiff) the page, then the keys, on the line */
-        if (black_held(GK_ACC))
+        if (grid_on() && black_held(GK_ACC))
             cv_text(x, ly, &AF_S, "ACCENT", T_ACCENT);
         else
             cv_key_hint(x, ly - KC_TY, KC_KEYS, "STEPS", 1, T_BG);
@@ -1041,6 +1041,23 @@ static void draw_columns(void)
         }
         return;
     }
+#if FELUCCA_SLICE
+    if (cur_page()->scope == SC_STEP && sgrid_on()) {   /* (GruselCore) the SLICE grid: the cursor step's SLICE (empty:
+                                                         * the picked one, DIM), RATCH, RANDOM, the selection's VELOCITY */
+        const step_t *st = &TSEL->step[ui.cursor];
+        int32_t j = sg_of(TSEL, st), n = (int32_t)sg_count(TSEL);
+        uint32_t f = sel_first(TSEL), rt = step_ratchet(st);
+        char rv[4] = {'x', (char)('0' + rt), 0, 0};
+        fmt_kn(val, (j >= 0 ? j : (int32_t)sg_slice) + 1, n);
+        draw_column(0, "SLICE", val, "", j >= 0 ? VR_LIVE : VR_DIM, -1, ICON_AUTO);
+        draw_column(1, "RATCH", j >= 0 ? rv : "--", "", j >= 0 && rt > 1u ? VR_LIVE : VR_DIM, -1, ICON_AUTO);
+        draw_column(2, "RANDOM", "ORIG RND", "", VR_LIVE, -1, ICON_AUTO);   /* (left: the original; right: new) */
+        fmt_int(val, f < NSTEP ? (int32_t)step_vel(&TSEL->step[f]) : 0);
+        draw_column(3, "VELOCITY", f < NSTEP ? val : "--", "", f < NSTEP ? VR_LIVE : VR_DIM,
+                    f < NSTEP ? (int32_t)step_vel(&TSEL->step[f]) * 1000 / 127 : -1, ICON_AUTO);
+        return;
+    }
+#endif
     if (cur_page()->scope == SC_STEP && drum_track(TSEL)) {   /* the grid ((2.0) PRESETS the cursor): LANE, the cursor's
                                                          * HIT ACC, the selection's VELOCITY */
         const step_t *st = &TSEL->step[ui.cursor];

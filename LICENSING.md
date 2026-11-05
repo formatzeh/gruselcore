@@ -45,10 +45,8 @@ All by Hügelton Instruments (Leo Kuroshita), in this tree:
 
 Skiff's changes to Felucca, marked (Skiff) in the sources, and its pictures (`docs/skiff.png` from the firmware's
 screen renders, `docs/controls.jpg` and `docs/keystrip.pdf` drawn by `tools/gen_panel_diagram.py`) are GPL-3.0-only
-too. So are SLICE's BREAK and FUNK (`assets/breaks/`, after Skiff 1.1): loops cut from drum takes made with the YuE2 music
-model by Multimodal Art Projection (<https://github.com/multimodal-art-projection/YuE>), under its permission for
-individual creators to publish and distribute what it makes; no YuE2 weights or code are in this tree (how they were
-made: `assets/breaks/ATTRIBUTION.txt`).
+too. (GruselCore) SLICE has no built-in loops any more (Skiff's BREAK and FUNK were removed): it plays the user's
+own samples only.
 
 ## Third-party material
 

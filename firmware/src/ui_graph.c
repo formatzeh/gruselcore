@@ -644,6 +644,58 @@ static void graph_roll(const track_t *t, uint16_t c)
         cv_text_r(PR_X0 + 16 * PR_CW, ybot + 2, &AF_S, sc, T_DIM, T_SURF);
     }
 }
+#if FELUCCA_SLICE
+/* (GruselCore) SEQ > NOTES on a SLICE track: the SLICE grid, the eight slices shown (sg_base ..) x the 16 steps of the
+ * page, drawn as the DRUM grid: a row a slice (its number), a step a rounded square in its slice's row (a RATCH step:
+ * its parts as bars), an empty step a dot; the picked slice's row underlaid RAISE, the cursor framed; a step playing a
+ * slice of another eight: a short bar at the top (lower slices) or the bottom (higher) of its column */
+static void graph_sgrid(const track_t *t, uint16_t c)
+{
+    uint32_t r, i, len = (uint32_t)t->p[P_SLEN], base = ui.bank * 16u, n = sg_count(t);
+    uint64_t locks = motion_lock_steps(trk_index(t));
+    int32_t y0 = 6;
+    char lb[4];
+    for (i = 0; i < 16u && base + i < len; i++) {
+        int32_t j = sg_of(t, &t->step[base + i]), x = 40 + (int32_t)i * 12;
+        if ((locks >> (base + i)) & 1u)                 /* a parameter lock: a mark over the step */
+            cv_rect(x + 1, 1, 8, 2, T_ACCENT);
+        if (j >= 0 && (uint32_t)j < sg_base)            /* a slice of the eights below: a bar at the top */
+            cv_rect(x + 2, y0 + 1, 6, 2, c);
+        else if (j >= 0 && (uint32_t)j >= sg_base + 8u)   /* .. above: at the bottom */
+            cv_rect(x + 2, y0 + 4 + 8 * 14 + 1, 6, 2, c);
+    }
+    for (r = 0; r < 8u && sg_base + r < n; r++) {
+        int32_t y = y0 + 4 + (int32_t)r * 14;
+        int sel = sg_base + r == sg_slice;
+        uint16_t row = sel ? T_RAISE : T_SURF;
+        if (sel)
+            cv_rrect(6, y, 228, 14, 3, T_RAISE, T_SURF);
+        fmt_int(lb, (int32_t)(sg_base + r + 1u));
+        cv_text_on(10, y - 1, &AF_S, lb, sel ? T_ACCENT : T_MID, row);
+        for (i = 0; i < 16u && base + i < len; i++) {
+            const step_t *st = &t->step[base + i];
+            int32_t x = 40 + (int32_t)i * 12, hx = clamp(x + st->nudge * 12 / 64, 40, 220);
+            if (sg_of(t, st) == (int32_t)(sg_base + r)) {
+                if (step_ratchet(st) > 1u)
+                    pr_split(hx, y + 2, 10, 10, sel ? T_ACCENT : c, step_ratchet(st));
+                else
+                    cv_rrect(hx, y + 2, 10, 10, 2, sel ? T_ACCENT : c, row);
+            } else {
+                cv_rect(x + 4, y + 6, 2, 2, i % 4u == 0u || sel ? T_MID : T_DIM);
+            }
+        }
+        if (sel) {                                      /* the cursor (the range): a 1 px frame */
+            int32_t a = (int32_t)sel_lo() - (int32_t)base, b = (int32_t)sel_hi() - (int32_t)base;
+            a = a < 0 ? 0 : a;
+            b = b > 15 ? 15 : b;
+            if (a <= b && base + (uint32_t)a < len)
+                cv_frame(39 + a * 12, y + 1, (b - a) * 12 + 12, 12, ux.neon ? T_ACCENT : ux.crypt ? CR_GOLD : T_TEXT);
+        }
+    }
+    if (song.playing && t->seq_idx < len && t->seq_idx / 16u == ui.bank)
+        cv_rect(40 + (int32_t)(t->seq_idx % 16u) * 12, y0 - 1, 10, 3, T_TEXT);
+}
+#endif
 /* SEQ > NOTES on a DRUM track: the grid, 8 lanes x the 16 steps of the page shown. Lanes by their two-letter
  * names (BD SD CP CH OH TM RS CB; CG CL CY on the other kits). A hit is a rounded square (accented: the
  * accent; a RATCH step's: its 2..4 parts as bars), an empty step a dot (brighter on the beats and on the selected lane); the selected lane is
@@ -1220,7 +1272,7 @@ static void graph_slices(void)
     str_cpy(t + 4, u, sizeof t - 4);
     str_cpy(t + str_len(t), " S", sizeof t - str_len(t));
     cv_text(12, 106, &AF_S, t, T_MID);
-    cv_text_r(228, 106, &AF_S, N_SLC_SRC[src], SLC_SRC_USR(src) ? T_THEME : T_DIM, T_SURF);
+    cv_text_r(228, 106, &AF_S, N_SLC_SRC[src], T_THEME, T_SURF);
 }
 #endif
 
@@ -1516,7 +1568,7 @@ static void page_title(char *ti)
             if (page_order(i) <= page_order(ui.page))
                 k++;
         }
-    str_cpy(ti, pt ? pt : grid_on() ? "GRID" : pg->title, 12);
+    str_cpy(ti, pt ? pt : grid_on() ? "GRID" : sgrid_on() ? "SLICE GRID" : pg->title, 12);
     if (n > 1) {
         str_cpy(ti + str_len(ti), " ", 4);
         fmt_kn(ti + str_len(ti), (int32_t)k, (int32_t)n);
@@ -1667,6 +1719,11 @@ static uint32_t graph_signature(void)
         h ^= steps_hash(t) + ph * 31u + ui.cursor * 7919u + ui.lane * 104723u + ui.bank * 613u +
              drum_mute[trk_index(t)] * 2654435761u + (uint32_t)t->p[P_DIR] * 6007u;   /* ((1.3) the lanes' mutes: the
                                                       * names dim; (2.0) PATTERN's DIR) */
+#if FELUCCA_SLICE
+        h ^= sgrid_on() ? (uint32_t)sg_slice * 0x9E3779B1u + (uint32_t)sg_base * 2246822519u + sg_count(t) * 40503u + (uint32_t)t->p[P_E2] * 7919u +
+                              (uint32_t)t->p[P_ROOT] * 104729u : 0u;   /* ((GruselCore) the SLICE grid: the slice picked,
+                                                      * the slices there are, which note is which slice) */
+#endif
         if (pg->graph != GR_STEPS) {                 /* the parameter locks' marks (the roll, the grid) */
             uint64_t lk = motion_lock_steps(trk_index(t));
             h = (h ^ (uint32_t)lk ^ (uint32_t)(lk >> 32) * 2654435761u) * 16777619u;
@@ -2621,6 +2678,10 @@ static void draw_graph(void)
             cv_oy = pad;
             if (drum_track(t))
                 graph_grid(t, c);
+#if FELUCCA_SLICE
+            else if (sgrid_on())                     /* ((GruselCore) a SLICE track: the SLICE grid) */
+                graph_sgrid(t, c);
+#endif
             else
                 graph_roll(t, c);
             break;

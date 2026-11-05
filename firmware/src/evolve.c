@@ -86,11 +86,21 @@ static int evo_anchor(const step_t *own, uint32_t i)
     return !(i & 3u) && own[i].time == ST_NOTE && own[i].n && !own[i].hit;
 }
 
-/* track k playing its copy from now on: its own steps copied (the ISR held off: seq.c reads either) */
+static int evo_slice(const track_t *t);
+static int evo_no_notes(const step_t *st, uint32_t len);
+#if FELUCCA_SLICE
+static void evo_brk_base(const track_t *t, step_t *b, uint32_t len);
+#endif
+/* track k playing its copy from now on: its own steps copied (the ISR held off: seq.c reads either); (GruselCore) an
+ * empty SLICE track: its loop in order */
 static void evo_reseed(uint32_t k)
 {
     uint32_t f = motion_guard();
     memcpy(evo_step[k], trk[k].step, sizeof evo_step[k]);
+#if FELUCCA_SLICE
+    if (evo_slice(&trk[k]) && evo_no_notes(trk[k].step, tl_len(&trk[k])))
+        evo_brk_base(&trk[k], evo_step[k], tl_len(&trk[k]));
+#endif
     evo_play[k] = 1;
     motion_unguard(f);
     evo.sig[k] = steps_sig(&trk[k]);
@@ -427,6 +437,164 @@ static void evo_chords(const track_t *t, step_t *nx, const step_t *own, uint32_t
     }
 }
 
+/* ------------------------------------------------------------ breaks --- */
+/* (GruselCore) a SLICE track is a break: its notes are slices of a loop (eng_slice.c: note - C4 - ROOT + START, mod the
+ * slices), so a change picks another slice, never a scale step, and CHORD and ROOT leave it alone. The choices follow
+ * BB Gen's slice selection (schwung-breakbeat by mestela, via X0X by charlesvestal and FMX by ErnestoRebane; GPL-3.0,
+ * rewritten here on EVOLVE's ops): a slice swapped for any other, the slice before repeated (a roll), a walk of one,
+ * a jump of 2..4 ahead, a x2 retrigger (RATCH), one more in a rest near it; never a gap, no x3 / x4 (the user wants
+ * jungle, not breakcore). AMOUNT sets how many changes a version makes (up to half the steps) and how few steps go
+ * back to the pattern each time; the moves' mix stays the same. PROTECT keeps the notes on
+ * the beats (the kick and snare of a loop played in order). ARRANGE: retriggered slices on the rests of the last beat
+ * that sound only in the phrase's FILL bar (TC_FILL). An empty SLICE track breaks its loop played in order */
+#if FELUCCA_SLICE
+static int evo_slice(const track_t *t) { return eng_idx(t->eng_req) == ENGI_SLICE; }
+#else
+static int evo_slice(const track_t *t) { (void)t; return 0; }
+#endif
+static int evo_no_notes(const step_t *st, uint32_t len)
+{
+    uint32_t i;
+    for (i = 0; i < len; i++)
+        if (st[i].time != ST_REST || st[i].n || st[i].hit)
+            return 0;
+    return 1;
+}
+#if FELUCCA_SLICE
+/* the note of slice j of n on track t (inside 0..127: whole loops up or down) */
+static uint8_t evo_sl_note(const track_t *t, uint32_t j, uint32_t n)
+{
+    int32_t x = slc_slice0_note(t->p) + (int32_t)(j % n);
+    while (x > 127)
+        x -= (int32_t)n;
+    while (x < 0)
+        x += (int32_t)n;
+    return (uint8_t)x;
+}
+/* track t's loop played in order over len steps (an empty SLICE track's base): slice j on step j * len / n, or (more
+ * slices than steps) step i plays slice i * n / len */
+static void evo_brk_base(const track_t *t, step_t *b, uint32_t len)
+{
+    uint32_t n = slc_sound_slices(t->p), i, j;
+    for (i = 0; i < NSTEP; i++)
+        step_clear(&b[i]);
+    for (i = 0; i < len; i++) {
+        if (n <= len) {
+            if ((i * n) % len >= n)
+                continue;
+            j = i * n / len;
+        } else {
+            j = i * n / len;
+        }
+        b[i].time = ST_NOTE;
+        b[i].n = 1;
+        b[i].note[0] = evo_sl_note(t, j, n);
+    }
+}
+/* the slice step i plays (its first note) */
+static uint32_t evo_sl_of(const track_t *t, const step_t *s, uint32_t n)
+{
+    return slc_note_slice(t->p, s->note[0], n);
+}
+/* step s to slice `to` (its notes moved together: a step of several plays them all) */
+static void evo_sl_set(const track_t *t, step_t *s, uint32_t to, uint32_t n)
+{
+    int32_t d = (int32_t)to - (int32_t)evo_sl_of(t, s, n), x;
+    uint32_t k;
+    for (k = 0; k < s->n && k < 4u; k++) {
+        x = s->note[k] + d;
+        while (x > 127)
+            x -= (int32_t)n;
+        while (x < 0)
+            x += (int32_t)n;
+        s->note[k] = (uint8_t)x;
+    }
+}
+/* one change to a break's copy (own: what it comes from): 1 made. The moves have fixed weights (AMOUNT sets how many
+ * there are, evo_build): no gaps and only x2 retriggers (the user found the breakcore end, gaps and x3 / x4 stutters,
+ * not good) */
+static int evo_brk_op(const track_t *t, step_t *st, const step_t *own, uint32_t len)
+{
+    enum { B_SWAP, B_STAY, B_WALK, B_JUMP, B_RETRIG, B_ADD, B_OPS };
+    static const uint8_t W[B_OPS] = {22, 24, 22, 10, 12, 10};
+    uint32_t n = slc_sound_slices(t->p), i, j, g = 0, op, r, tot = 0, cur, to;
+    step_t *s;
+    if (n < 2u)
+        return 0;
+    for (j = 0; j < len; j++)
+        g += (uint32_t)evo_note_ok(st, own, len, j, 0);
+    if (!g)
+        return 0;
+    for (op = 0; op < B_OPS; op++)
+        tot += W[op];
+    for (r = evo_rnd(tot), op = 0; op < B_OPS - 1u && r >= W[op]; op++)
+        r -= W[op];
+    for (j = evo_rnd(g), i = 0; i < len && (!evo_note_ok(st, own, len, i, 0) || j--); i++)
+        ;
+    if (i >= len)
+        return 0;
+    s = &st[i];
+    cur = evo_sl_of(t, s, n);
+    switch (op) {
+    case B_SWAP:                                        /* any other slice */
+        to = (cur + 1u + evo_rnd(n - 1u)) % n;
+        break;
+    case B_STAY:                                        /* the slice of the note before it again (a roll) */
+        for (j = 1; j < len; j++) {
+            const step_t *p = &st[(i + len - j) % len];
+            if (p->time == ST_NOTE && p->n && !p->hit)
+                break;
+        }
+        if (j >= len || (to = evo_sl_of(t, &st[(i + len - j) % len], n)) == cur)
+            return 0;
+        break;
+    case B_WALK:                                        /* one on or back */
+        to = (cur + (evo_rnd(2) ? 1u : n - 1u)) % n;
+        break;
+    case B_JUMP:                                        /* 2..4 ahead */
+        to = (cur + 2u + evo_rnd(3)) % n;
+        break;
+    case B_RETRIG:                                      /* a x2 roll, or none again */
+        step_set_ratchet(s, step_ratchet(s) > 1u ? 1u : 2u);
+        return 1;
+    default:                                            /* one more in a rest near it: its slice or the next */
+        j = (i + 1u + evo_rnd(3)) % len;
+        if ((evo.protect && !(j & 3u)) || st[j].time != ST_REST || st[j].n || st[j].hit ||
+            st[(j + 1u) % len].time == ST_TIE || step_ties(&st[(j + 1u) % len]))
+            return 0;
+        evo_note_copy(&st[j], s);
+        evo_sl_set(t, &st[j], (cur + evo_rnd(2)) % n, n);
+        return 1;
+    }
+    evo_sl_set(t, s, to, n);
+    return 1;
+}
+/* ARRANGE: on the rests of the copy's last beat, now and then a retriggered slice (of the note before it, or the next)
+ * that plays only in the FILL bar (TC_FILL) */
+static void evo_brk_fill(const track_t *t, step_t *st, uint32_t len, uint32_t amt)
+{
+    uint32_t n = slc_sound_slices(t->p), i, j;
+    if (!evo.arrange || len < 8u || n < 2u)
+        return;
+    for (i = len - 4u; i < len; i++) {
+        step_t *s = &st[i];
+        if (s->time != ST_REST || s->n || s->hit || !evo_open(st, len, i) || evo_rnd(100) >= 30u + amt / 2u)
+            continue;
+        for (j = 1; j < len; j++) {
+            const step_t *p = &st[(i + len - j) % len];
+            if (p->time == ST_NOTE && p->n && !p->hit)
+                break;
+        }
+        if (j >= len)
+            return;
+        evo_note_copy(s, &st[(i + len - j) % len]);
+        evo_sl_set(t, s, evo_rnd(3) ? (evo_sl_of(t, s, n) + 1u) % n : evo_rnd(n), n);
+        step_set_ratchet(s, 2u);                     /* (a x2 roll: no x3 / x4) */
+        s->cond = TC_FILL;
+    }
+}
+#endif
+
 /* ------------------------------------------------------- a new version --- */
 /* step i of the copy back to the original, its ties with it (the run it is part of) */
 static void evo_home_step(step_t *st, const step_t *own, uint32_t len, uint32_t i)
@@ -468,29 +636,46 @@ static void evo_build(uint32_t k)
     static step_t nx[NSTEP];
     const track_t *t = &trk[k];
     uint32_t len = tl_len(t), i, k2, m, tries, f, amt = evo.amt[k], home = 4u + (100u - amt) / 3u;
-    int drum = drum_track(t);
-    memcpy(nx, amt ? evo_step[k] : t->step, sizeof nx);   /* (AMOUNT OFF, CHORD on: the original each time) */
+    int drum = drum_track(t), slc = evo_slice(t);
+    const step_t *own = t->step;                        /* what the copy comes from and goes home to */
+#if FELUCCA_SLICE
+    step_t base[NSTEP];                                 /* (an empty SLICE track: its loop in order; the stack, main loop) */
+    if (slc && evo_no_notes(t->step, len)) {
+        evo_brk_base(t, base, len);
+        own = base;
+    }
+#endif
+    memcpy(nx, amt ? evo_step[k] : own, sizeof nx);     /* (AMOUNT OFF, CHORD on: the original each time) */
     if (amt) {
         for (i = 0; i < len; i++)
             if (evo_rnd(100) < home)
-                evo_home_step(nx, t->step, len, i);
-        m = len * amt / (drum ? 150u : 100u);           /* (lines: as many changes as AMOUNT % of the steps) */
+                evo_home_step(nx, own, len, i);
+        m = len * amt / (drum ? 150u : slc ? 200u : 100u);   /* (lines: as many changes as AMOUNT % of the steps; a
+                                                         * break: half that, up to 8 of 16) */
         for (m = m ? m : 1u, tries = 8u * m; m && tries; tries--)
-            if (drum ? evo_drum_op(nx, len) : evo_mel_op(t, nx, len))
+            if (drum ? evo_drum_op(nx, len) :
+#if FELUCCA_SLICE
+                slc ? evo_brk_op(t, nx, own, len) :
+#endif
+                evo_mel_op(t, nx, len))
                 m--;
+#if FELUCCA_SLICE
+        if (slc)
+            evo_brk_fill(t, nx, len, amt);
+#endif
     }
-    if (!drum && evo.chd[k])
-        evo_chords(t, nx, t->step, len, evo.chd[k]);
+    if (!drum && !slc && evo.chd[k])                    /* (a break: no chords of slices) */
+        evo_chords(t, nx, own, len, evo.chd[k]);
     if (drum)
-        evo_drum_fix(nx, t->step, len);
+        evo_drum_fix(nx, own, len);
     else if (evo.protect)                               /* the anchors the original's (CHORD's notes over them stay) */
         for (i = 0; i < len; i += 4u) {
-            const step_t *o = &t->step[i];
+            const step_t *o = &own[i];
             int keep = nx[i].time == o->time && nx[i].n >= o->n && !nx[i].hit;
             for (k2 = 0; keep && k2 < o->n; k2++)
                 keep = nx[i].note[k2] == o->note[k2];
-            if ((evo_anchor(t->step, i) || nx[i].n) && !keep)
-                evo_home_step(nx, t->step, len, i);
+            if ((evo_anchor(own, i) || nx[i].n) && !keep)
+                evo_home_step(nx, own, len, i);
         }
     f = motion_guard();
     if (evo_play[k])
@@ -691,7 +876,7 @@ static void evo_poll(void)
     evo_mods();
     k = evo.rr++ % NTRK;
     t = &trk[k];
-    if (!evo.amt[k] && (!evo.chd[k] || drum_track(t))) {   /* AMOUNT OFF (no CHORD): its original */
+    if (!evo.amt[k] && (!evo.chd[k] || drum_track(t) || evo_slice(t))) {   /* AMOUNT OFF (no CHORD): its original */
         if (evo_play[k])
             evo_drop(k);
         return;
@@ -783,6 +968,22 @@ static void evo_key(uint32_t p)
         evo.freeze = (uint8_t)!evo.freeze;
         ui_say("FREEZE ", evo.freeze ? "ON" : "OFF");
     }
+    evo.gen++;
+    ui.force = 1;
+}
+/* (GruselCore, the user's wish) OCT- held + KNOB 1 to the left (both EVOLVE pages): the selected track's AMOUNT OFF at
+ * once (ALL held: every track's), its original playing now, not at its next pass (a track CHORD keeps evolving goes on) */
+static void evo_amount_off(void)
+{
+    uint32_t k, sel = evo_sel();
+    for (k = 0; k < NTRK; k++) {
+        if (k != sel && !evo_all())
+            continue;
+        evo.amt[k] = 0;
+        if (evo_play[k] && (!evo.chd[k] || drum_track(&trk[k]) || evo_slice(&trk[k])))
+            evo_drop(k);
+    }
+    ui_say(evo_all() ? "AMOUNT OFF: " : "AMOUNT OFF: T", evo_all() ? "ALL TRACKS" : (const char *[]){"1", "2", "3", "4", "5", "6"}[sel]);
     evo.gen++;
     ui.force = 1;
 }

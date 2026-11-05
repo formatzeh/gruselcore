@@ -277,9 +277,13 @@ static const param_desc_t *param_desc_of(uint32_t e, uint32_t id)
  * stands for */
 static int32_t enum_orig(const param_desc_t *d, int32_t v)
 {
-#if BOARD_SMK37 && FELUCCA_SLICE
-    if (d->names == N_SLC_SRC && (v == 2 || v == 3))  /* (SMK-37: USR2, USR3 have no flash; the knob steps over them) */
-        return 1;
+#if FELUCCA_SLICE
+    if (d->names == N_SLC_SRC)                        /* (GruselCore) BREAK, PIANO, FUNK retired: USR1 (eng_slice.c) */
+#if BOARD_SMK37
+        return v >= 1 && v <= 3 ? 1 : slc_src_alias(v);   /* (SMK-37: USR2, USR3 have no flash; the knob steps over them) */
+#else
+        return (int32_t)slc_src_alias(v);
+#endif
 #endif
     if (d->names == N_DRUM_KIT)                       /* (GruselCore: no retired kits) */
         return v;
@@ -287,11 +291,15 @@ static int32_t enum_orig(const param_desc_t *d, int32_t v)
 }
 
 /* a stored value as the parameter takes it (projects, user presets, motion): inside d's range, and a retired
- * DRUM KIT (1..3) as the kit it plays, so KIT never holds one again. (SAMPLE / GRAIN's aliases keep their
+ * DRUM KIT (1..3) as the kit it plays, so KIT never holds one again; (GruselCore) a retired SLICE SRC as USR1. (SAMPLE / GRAIN's aliases keep their
  * number: they are what the sound was saved with, and play the original anyway) */
 static int32_t param_fit(const param_desc_t *d, int32_t v)
 {
     v = clamp(v, d->min, d->max);
+#if FELUCCA_SLICE
+    if (d->names == N_SLC_SRC)                        /* (GruselCore) a retired SLICE SRC loads as USR1 */
+        return (int32_t)slc_src_alias(v);
+#endif
     return d->names == N_DRUM_KIT ? enum_orig(d, v) : v;
 }
 

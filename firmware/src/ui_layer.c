@@ -683,7 +683,12 @@ static void layer_knob(uint32_t k, int32_t s)
         else if (k == 2u)
             preset_mark(s > 0);
     } else if (l == LAYER_PERF && evo.keys) {           /* ((GruselCore) KEYS EVOLVE: AMOUNT RATE ARRANGE DRIFT) */
-        evo_knob(k, s);
+        if (k == 0u && s < 0 && ((fm1_in.buttons >> panel.btn[B_OCTDN]) & 1u)) {
+            evo_amount_off();                           /* (OCT- held + KNOB 1 left: AMOUNT OFF at once; OCT- let */
+            lys.oct &= (uint8_t)~1u;                    /* go then cancels nothing) */
+        } else {
+            evo_knob(k, s);
+        }
     } else if (l == LAYER_PERF) {                       /* (Skiff) KNOB 1..4: throws, CUT VERB DLY DRV (throw.c) */
         const param_desc_t *d = track_desc(TSEL, throw_id(TSEL, k));
         throw_turn(song.sel, k, accel(EN_K1 + k, s, d->max - d->min));

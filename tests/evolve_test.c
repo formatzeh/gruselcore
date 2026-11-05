@@ -21,6 +21,9 @@
  *   SCREEN    ARP held in KEYS EVOLVE and let go: the screen stays; another page: it goes, EVOLVE runs on; ARP tapped:
  *             back; ARP held on it: closed, a tap then is ARP's page
  *   STOP      nothing left: no copy played, no mute, FILL, ROOT or modulation
+ *   OFF KEY   (GruselCore) OCT- held + KNOB 1 left: the selected track's AMOUNT OFF at once (ALL held: every track)
+ *   BREAK     (GruselCore) a SLICE track: slices swapped, rolled, retriggered (RATCH x2), no gaps, never chords or ROOT, the beats
+ *             kept (PROTECT), fills only in the FILL bar (TC_FILL); an empty one plays its loop in order and evolves it
  * Built and run by tests/run_tests.sh. */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
@@ -165,6 +168,63 @@ static void run_steps(uint32_t steps)                   /* that many 1/16s, the 
     }
 }
 static void run_bars(uint32_t bars) { run_steps(bars * 16u); }
+
+#if FELUCCA_SLICE
+/* (GruselCore) BREAK: T2 a SLICE track on USR1 (ui_test.c host_slot_make), DIV 8, the loop in order (slice j on step
+ * 2j: C4 + j), or (empty) no notes */
+static track_t *S;
+static step_t s0[NSTEP];
+static void setup_slice(int notes)
+{
+    uint32_t i;
+    setup();
+    S = &trk[1];
+    set_engine_of(S, ENGI_SLICE);
+    track_defaults_steps(S);
+    for (i = 0; i < NSTEP; i++)
+        step_clear(&S->step[i]);
+    host_slot_make(0);
+    smp_user_scan(0);
+    S->p[P_E0] = 1;                                     /* USR1 */
+    S->p[P_E1] = 1;                                     /* DIV 8 */
+    S->p[P_E2] = 0;
+    S->p[P_ROOT] = 0;
+    S->p[P_SLEN] = 16;
+    for (i = 0; notes && i < 8u; i++)
+        S->step[2u * i] = (step_t){{(uint8_t)(60u + i)}, 1, ST_NOTE, 0, 100};
+    memcpy(s0, S->step, sizeof s0);
+    evo_reset();
+}
+static struct { int changed, own, range, ratch, chord, root, anchor, fill, swapped, retrig; uint32_t gone; } b;
+static void run_slice_bars(uint32_t bars)              /* the break's copy looked at after every block */
+{
+    uint32_t at, end = bars * 16u * step_len(), i, k;
+    for (at = 0; at < end; at += CTL) {
+        block();
+        b.own |= memcmp(S->step, s0, sizeof s0) != 0;
+        b.root |= evo_trn[1] != 0;
+        if (!evo_play[1])
+            continue;
+        for (i = 0; i < 16u; i++) {
+            const step_t *e = &evo_step[1][i];
+            if (e->time == ST_NOTE)
+                for (k = 0; k < e->n; k++)
+                    b.range |= e->note[k] < 60u || e->note[k] > 67u;   /* (DIV 8 from C4: never moved by octaves) */
+            b.ratch |= step_ratchet(e) > 2u;           /* (x2 rolls only: no breakcore x3 / x4) */
+            b.chord |= e->n > 1u;
+            b.retrig |= step_ratchet(e) > 1u && e->cond != TC_FILL;
+            b.fill |= i >= 12u && e->cond == TC_FILL && step_ratchet(e) > 1u && s0[i].time == ST_REST;
+            b.swapped |= e->time == ST_NOTE && e->n && (s0[i].time != ST_NOTE || e->note[0] != s0[i].note[0]);
+            if (!(i & 3u) && s0[i].time == ST_NOTE)
+                b.anchor |= e->time != ST_NOTE || e->note[0] != s0[i].note[0];
+        }
+        b.changed |= memcmp(evo_step[1], s0, sizeof s0) != 0;
+        for (k = 0, i = 0; i < 16u; i++)                /* the pattern's slices not heard (outside the FILL bar) */
+            k += s0[i].time == ST_NOTE && !(evo_step[1][i].time == ST_NOTE && evo_step[1][i].n && evo_step[1][i].cond != TC_FILL);
+        b.gone = k > b.gone ? k : b.gone;
+    }
+}
+#endif
 static int nothing_left(void) { return !evo_any() && !evo_mute && !evo_fill && !evo_mod_n && !evo_trn[0]; }
 
 int main(void)
@@ -382,6 +442,57 @@ int main(void)
     seq_stop();
     evo_poll();
 
+#if FELUCCA_SLICE
+    setup_slice(1);                                     /* BREAK */
+    evo_set_on(1);
+    evo_seed(4242u);
+    evo.arrange = 1;
+    evo.root = 3;
+    evo.chd[1] = 100;
+    memset(&b, 0, sizeof b);
+    seq_start();
+    run_slice_bars(64);
+    bad += check("BREAK: a SLICE track's copy evolves (slices swapped, retriggered); its own steps unchanged",
+                 b.changed && b.swapped && b.retrig && !b.own);
+    bad += check("  every note a slice of the loop (C4..G4 at DIV 8), retriggers x2 only (no x3 / x4)", !b.range && !b.ratch);
+    bad += check("  CHORD adds no notes, ROOT never moves it; PROTECT: the slices on the beats stay",
+                 !b.chord && !b.root && !b.anchor);
+    bad += check("  ARRANGE: retriggered slices on the last beat's rests, only in the FILL bar (TC_FILL)", b.fill);
+    bad += check("  no gaps: at AMOUNT 100 every slice of its pattern always heard (64 bars)", b.gone == 0u);
+    seq_stop();
+    evo_poll();
+
+    setup_slice(0);                                     /* EMPTY */
+    evo_set_on(1);
+    evo_seed(7u);
+    seq_start();
+    for (k = 0; k < 4u * NTRK && !evo_play[1]; k++)
+        block();
+    for (ok = evo_play[1] != 0, k = 0; k < 16u; k++)
+        ok &= k & 1u ? evo_step[1][k].time == ST_REST
+                     : evo_step[1][k].time == ST_NOTE && evo_step[1][k].n == 1u && evo_step[1][k].note[0] == 60u + k / 2u;
+    memset(&b, 0, sizeof b);
+    run_slice_bars(8);
+    bad += check("EMPTY: an empty SLICE track plays its loop in order at once, then evolves it; its own steps stay empty",
+                 ok && b.changed && !b.own && evo_no_notes(S->step, 16));
+    seq_stop();
+    evo_poll();
+
+    setup_slice(1);                                     /* the same seed: the same break */
+    evo_set_on(1);
+    evo_seed(31337u);
+    evo_reseed(1);
+    evo_build(1);
+    evo_build(1);
+    memcpy(keep, evo_step[1], sizeof keep);
+    evo_seed(31337u);
+    evo_reseed(1);
+    evo_build(1);
+    evo_build(1);
+    bad += check("  the same seed: the same break", !memcmp(keep, evo_step[1], sizeof keep));
+    evo_set_on(0);
+#endif
+
     ui_power_on();                                      /* SCREEN */
     evo_reset();
     evo.keys = 1;
@@ -407,6 +518,32 @@ int main(void)
     press(B_ARP);
     frames(200);
     bad += check("  .. a tap then: ARP's page, no EVOLVE screen", ui.layer != LAYER_PERF && !evo.screen);
+
+    setup();                                            /* (GruselCore) OCT- held + KNOB 1 left: AMOUNT OFF at once */
+    evo_set_on(1);
+    seq_start();
+    run_bars(2);
+    evo.keys = 1;
+    hold(B_ARP);
+    frames(200);
+    sel_set(0);
+    frame();
+    ok = evo_play[0] && evo_play[3] && ui.layer == LAYER_PERF;
+    btn_down(B_OCTDN); frame();
+    turn(EN_K1, -1); frame();
+    ok &= evo.amt[0] == 0u && !evo_play[0] && evo.amt[3] == 100u && evo_play[3];
+    btn_up(B_OCTDN); frames(60);
+    ok &= !msg_is("NOTHING STAGED") && !msg_is("CANCELLED") && song.octave == 0 && evo.amt[0] == 0u;
+    key_down(12u); frame();                             /* F4 (ALL) held: every track */
+    btn_down(B_OCTDN); frame();
+    turn(EN_K1, -1); frame();
+    btn_up(B_OCTDN); frame();
+    key_up(12u); frames(60);
+    for (k = 0; k < NTRK; k++)
+        ok &= evo.amt[k] == 0u && !evo_play[k];
+    bad += check("OCT- held + KNOB 1 left: the track's AMOUNT OFF, its original at once (ALL: every track); OCT- cancels nothing", ok);
+    seq_stop();
+    evo_poll();
 
     printf("evolve: %s\n", bad ? "FAILED" : "all ok");
     return bad ? 1 : 0;

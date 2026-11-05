@@ -106,6 +106,10 @@ static uint32_t key_place(uint32_t k)
     return n;
 }
 enum { GK_ACC = NLANE, GK_PGDN, GK_PGUP };       /* black keys 9..11 on the grid */
+/* (GruselCore) the SLICE grid (song.grid 3, ui.c sgrid_on): black keys 1..8 pick slices sg_base + 0..7 (the first of the
+ * eight shown), silently: no key sounds there, so picking never disturbs the playback (the user's wish) */
+static volatile uint8_t sg_base;
+#define GK_SLICES NLANE                                /* black key 9 there: the next eight slices */
 
 static uint32_t scale_mask(const track_t *t)
 {
@@ -1140,6 +1144,8 @@ static void keyboard_block(void)
                 continue;
             }
             if (song.grid == 2u)                  /* NAME (ui_name.c): every key types, none sounds */
+                kb_note[k] = KB_SILENT;
+            else if (song.grid == 3u)             /* (GruselCore) the SLICE grid: every key the UI's, silent */
                 kb_note[k] = KB_SILENT;
             else if (song.grid)                   /* the DRUM grid: a lane key plays its lane, the rest are the UI's */
                 kb_note[k] = key_black(k) && key_place(k) < NLANE ? DRUM_LANE_NOTE[key_place(k)] : KB_SILENT;

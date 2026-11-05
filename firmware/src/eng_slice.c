@@ -2,22 +2,19 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* SLICE: a sample slicer, played from the keys and the sequencer. Felucca's own design.
  *
- * Material (SRC): the built-in BREAK (tools/gen_samples.py: one bar of 16ths at 120 BPM, stored after
- * the SAMPLE sets; (Skiff phase 9) made with the YuE2 music model, assets/breaks/), a user slot USR1..3 (the
- * same slots as SAMPLE's, eng_sample.c), whose zones are played one after the other as one recording
- * (a zone that shares its data with an earlier one is skipped), PIANO (SRC 4, since 1.0.4: one
- * note, the SAMPLE engine's PIANO zone of middle C, played from its data in SMP_DATA: no copy), or
- * (Skiff phase 9) FUNK (SRC 5: two beats at 86.33 BPM, built in as BREAK is).
- * A source with no material (an empty or invalid slot; PIANO in a build without the CC0 samples)
- * plays a plain sine at the key's pitch (+ PTCH) instead, through DCAY, TONE and the ADSR (MODE ONE
- * acts as GATE there: no slice end), and the UI says so (ui_input.c sample_notice).
+ * Material (SRC): a user slot USR1..3 (the same slots as SAMPLE's, eng_sample.c), whose zones are played one after
+ * the other as one recording (a zone that shares its data with an earlier one is skipped). (GruselCore) The built-in
+ * sources are gone: BREAK and FUNK (Skiff's loops, then GruselCore's from its kits) and PIANO (SAMPLE's middle C).
+ * Their stored numbers (0, 4, 5) stay retired aliases of USR1 (slc_src_of, params.c enum_orig / param_fit), so an
+ * older sound or project plays USR1. A slot with no material (empty or invalid) plays a plain sine at the key's pitch
+ * (+ PTCH) instead, through DCAY, TONE and the ADSR (MODE ONE acts as GATE there: no slice end), and the UI says so
+ * (ui_input.c sample_notice).
  *
  * Slices (DIV): 4 / 8 / 16 / 32 equal ones, AUTO: one per onset, or MAN: set by hand on the EDIT family's SLICES
  * page (ui_slice.c) for a user slot (the built-in ones: MAN plays AUTO). IMA ADPCM can only be entered
  * at a known decoder state, so each source keeps a table (slc_src_t): the states at the 128 grid
  * points k * len / 128 (every equal slice starts on one, and they are the reverse checkpoints) and
- * up to 32 AUTO starts with their states. The built-in sources' tables are written at build time (BREAK's
- * and FUNK's AUTO slices are what slc_scan finds in them; PIANO has one, the attack); a user slot's is computed by slc_scan when the slot becomes valid
+ * up to 32 AUTO starts with their states. A user slot's is computed by slc_scan when the slot becomes valid
  * (smp_user_scan: boot, upload end; main loop, never the audio ISR): two decoding passes; per hop
  * of 32 samples the peak of the first difference (hats, snares, clicks stand out, a kick's tail
  * does not) and the plain peak (low hits); an onset is a hop where either rises 1.75x over its
@@ -32,14 +29,18 @@
  * note-off (then the ADSR release) or the slice end, LOOP repeats the slice while the note is held.
  * REV plays a slice backwards: windows of 64 samples are decoded forwards from the nearest
  * checkpoint (grid point or the slice start) into the voice's own buffer and read from the top
- * down; it costs about (len / 128) / 128 extra decodes per source sample (BREAK: ~3; a full
+ * down; it costs about (len / 128) / 128 extra decodes per source sample (a one-bar loop: ~3; a full
  * 7 s user slot: ~10). DECAY: an exponential fade per slice (127 = none). TONE: a gentle low-pass
  * (SAMPLE's CUT). The last ~1.5 ms of a slice fade out (no click at the cut), a new slice fades in
  * over one block (0.7 ms).
  * Voice state: ph[0] position (reverse: position + 1), ph[1] fraction Q16, ph[2] slice end (reverse:
  * its start), s[0] predictor (reverse: window start), s[1] step index, s[2] / s[3] previous / current
  * sample, s[4] source | segment << 3 | reverse << 7 | slice << 8 | DIV << 16 (source SLC_SINE: the sine, its
- * phase in ph[0]), s[5] DECAY level Q15, s[6] 0 to prime, 1 playing, 3 fading out, 2 ended, s[7] low-pass. */
+ * phase in ph[0]), s[5] DECAY level Q15, s[6] 0 to prime, 1 playing, 3 fading out, 2 ended, 4 cut (a fade, then ended),
+ * s[7] low-pass.
+ * (GruselCore) One slice at a time: a slice starting cuts every other one of its track (the user's wish: a slice on
+ * every step, a RATCH, keys played fast give clean stutters, never two slices over each other). The cut one fades over
+ * the next block (slice_amp 0: the voice's amplitude ramps down, ~0.7 ms) and then ends (slice_render). */
 #define SLC_GRID 128u                /* grid points: decoder states at k * len / SLC_GRID */
 #define SLC_GRID_LOG2 7
 #define SLC_AUTO 32u                 /* AUTO slices at most */
@@ -59,16 +60,13 @@ typedef struct {
     uint32_t apos[SLC_AUTO], ast[SLC_AUTO];   /* AUTO slice starts (apos[0] = 0) and their states */
 } slc_src_t;
 
-static const slc_src_t SLC_BREAK = SLC_BREAK_INIT;
-static const slc_src_t SLC_PIANO = SLC_PIANO_INIT;
-static const slc_src_t SLC_FUNK = SLC_FUNK_INIT;     /* (Skiff phase 9) */
 static slc_src_t slc_usr[SMP_USER_SLOTS];
-/* append-only: stored sounds keep their SRC numbers (1.0.4 added PIANO, Skiff phase 9 FUNK) */
-static const char *const N_SLC_SRC[] = {"BREAK", "USR1", "USR2", "USR3", "PIANO", "FUNK"};
-#define SLC_SRC_PIANO 4u
-#define SLC_SRC_FUNK 5u
+/* append-only: stored sounds keep their SRC numbers. (GruselCore) 0, 4 and 5 (once BREAK, PIANO and FUNK) are retired:
+ * aliases of USR1 (slc_src_alias), named like it so the editor hides them too (web/editor.html aliasOf) */
+static const char *const N_SLC_SRC[] = {"USR1", "USR1", "USR2", "USR3", "USR1", "USR1"};
 #define SLC_NSRC 6
-#define SLC_SRC_USR(src) ((src) - 1u < SMP_USER_SLOTS)   /* (Skiff phase 9) USR1..3; the others are built in */
+#define SLC_SRC_USR1 1u
+#define slc_src_alias(v) ((uint32_t)(v) - 1u < SMP_USER_SLOTS ? (uint32_t)(v) : SLC_SRC_USR1)   /* a retired SRC: USR1 */
 #define SLC_SINE 7u                  /* a voice's source when it has no material: the sine */
 static const char *const N_SLC_DIV[] = {"4", "8", "16", "32", "AUTO", "MAN"};
 static const char *const N_SLC_MODE[] = {"ONE", "GATE", "LOOP"};
@@ -91,20 +89,13 @@ static volatile uint8_t slc_man_cur[SMP_USER_SLOTS];
 static void (*slc_man_load)(uint32_t k);        /* slice_store.c: a slot was read (smp_user_scan): its stored slices */
 static uint8_t slc_man_save;                     /* bit k: slot k's slices changed, to flash (slice_store.c) */
 
-/* the SRC of a part's sound (0..5: a stored value out of range reads as the nearest) */
-static uint32_t slc_src_of(const int16_t *p) { return (uint32_t)clamp(p[P_E0], 0, SLC_NSRC - 1); }
-/* source 0 = BREAK, 1..3 = USR1..3, 4 = PIANO, 5 = FUNK; 0 = no material (an empty or erased slot, no PIANO in
- * the build) */
+/* the SRC of a part's sound: USR1..3 (1..3); a retired or out-of-range stored value reads as USR1 */
+static uint32_t slc_src_of(const int16_t *p) { return slc_src_alias(clamp(p[P_E0], 0, SLC_NSRC - 1)); }
+/* the material of source src (USR1..3: 1..3; anything else: USR1); 0 = none (an empty or erased slot) */
 static const slc_src_t *slc_get(uint32_t src)
 {
-    if (!src)
-        return SLC_BREAK.len ? &SLC_BREAK : 0;
-    if (src == SLC_SRC_PIANO)
-        return SLC_PIANO.len ? &SLC_PIANO : 0;
-    if (src == SLC_SRC_FUNK)
-        return SLC_FUNK.len ? &SLC_FUNK : 0;
-    src--;
-    return src < SMP_USER_SLOTS && usr_nz[src] && slc_usr[src].len ? &slc_usr[src] : 0;
+    src = slc_src_alias(src) - 1u;
+    return usr_nz[src] && slc_usr[src].len ? &slc_usr[src] : 0;
 }
 
 /* ---- the ADPCM decoder over the material (segments one after the other, each from 0 / 0) */
@@ -153,7 +144,7 @@ static inline int32_t slc_dec_next(const slc_src_t *s, slc_dec_t *d)
 }
 
 static inline uint32_t slc_gpos(const slc_src_t *s, uint32_t k) { return (k * s->len) >> SLC_GRID_LOG2; }
-/* the user slot of s (0..2), SMP_USER_SLOTS for BREAK / PIANO; its MAN slices in use, 0 = none (BREAK, PIANO: none) */
+/* the user slot of s (0..2), SMP_USER_SLOTS for none; its MAN slices in use, 0 = none */
 static uint32_t slc_slot_of(const slc_src_t *s)
 {
     return s >= slc_usr && s < slc_usr + SMP_USER_SLOTS ? (uint32_t)(s - slc_usr) : SMP_USER_SLOTS;
@@ -178,6 +169,27 @@ static uint32_t slc_note_slice(const int16_t *p, uint32_t note, uint32_t n)
 {
     int32_t j = ((int32_t)note - SLC_BASE - p[P_ROOT] + p[P_E2]) % (int32_t)n;
     return (uint32_t)(j < 0 ? j + (int32_t)n : j);
+}
+/* (GruselCore) the note that plays slice 0 (C4 + ROOT - START: slc_note_slice's inverse; EVOLVE's breaks) */
+static int32_t slc_slice0_note(const int16_t *p) { return SLC_BASE + p[P_ROOT] - p[P_E2]; }
+/* (GruselCore) the note that plays slice j of n (0..127: whole loops up or down; the SLICE grid, EVOLVE) */
+static uint8_t slc_slice_note(const int16_t *p, uint32_t j, uint32_t n)
+{
+    int32_t x = slc_slice0_note(p) + (int32_t)(j % (n ? n : 1u));
+    while (x > 127)
+        x -= (int32_t)n;
+    while (x < 0)
+        x += (int32_t)n;
+    return (uint8_t)x;
+}
+/* (GruselCore) the slices a SLICE sound's notes play now (EVOLVE's breaks): its slot's at its DIV; an empty slot (it plays
+ * the sine) or AUTO / MAN without hits: DIV's grid, else 16 */
+static uint32_t slc_sound_slices(const int16_t *p)
+{
+    uint32_t div = (uint32_t)clamp(p[P_E1], 0, SLC_DIV_MAN), n;
+    const slc_src_t *s = slc_get(slc_src_of(p));
+    n = s ? slc_count(s, div) : 0u;
+    return n ? n : div < SLC_DIV_AUTO ? 4u << div : 16u;
 }
 
 /* slice j of DIV div: [*a, *b), *st the state at *a */
@@ -442,12 +454,16 @@ static int16_t *slc_rb(track_t *t, voice_t *v)
     return p < NPART && i < NVOICE ? ((int16_t (*)[SLC_RB])eng_part(t))[i] : 0;
 }
 
+#define SLC_CUT 4                                    /* s[6]: cut by a newer slice */
 static void slice_note_on(track_t *t, voice_t *v)
 {
     const int16_t *p = t->p;
     uint32_t src = slc_src_of(p), div = (uint32_t)clamp(p[P_E1], 0, SLC_DIV_MAN), rev = p[P_E5] != 0;
     uint32_t a, b, st, j;
     const slc_src_t *s = slc_get(src);
+    for (j = 0; j < NVOICE; j++)                        /* (GruselCore) one slice at a time: the others cut */
+        if (&t->v[j] != v && t->v[j].active && t->v[j].s[6] != 2)
+            t->v[j].s[6] = SLC_CUT;
     v->ph[1] = 0;
     v->s[2] = v->s[3] = 0;
     v->s[5] = 32767;
@@ -551,7 +567,7 @@ static int32_t slice_amp(track_t *t, voice_t *v, int32_t adsr)
         if (v->s[5] < 8)
             v->s[6] = 2;                                /* faded out: the voice ends */
     }
-    return v->s[6] == 3 ? 0 : mulq15(adsr, v->s[5]);
+    return v->s[6] == 3 || v->s[6] == SLC_CUT ? 0 : mulq15(adsr, v->s[5]);   /* (fading: the block ramps to 0) */
 }
 
 static void slice_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
@@ -565,6 +581,8 @@ static void slice_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     slc_dec_t d;
     if ((pk & 7u) == SLC_SINE && v->s[6] != 2) {        /* no material: the sine at the key's pitch + PTCH */
         smp_sine(out, n, m, p[P_E3] * 16, lp, &v->ph[0], &v->s[7]);
+        if (v->s[6] == SLC_CUT)
+            v->s[6] = 2;                                /* (cut: this block faded it; the next ends it) */
         return;
     }
     if (!s) {                                           /* ended, or its slot was erased */
@@ -613,11 +631,14 @@ static void slice_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         v->s[1] = d.idx;
         v->s[4] = (int32_t)((pk & ~(15u << 3)) | d.seg << 3);
     }
+    if (v->s[6] == SLC_CUT)
+        v->s[6] = 2;                                    /* (GruselCore: cut, this block faded it; the next ends it) */
 }
 
-/* (GruselCore) one factory sound, hidden (PT_HIDE): what choosing SLICE loads, on BREAK (always there); none listed */
+/* (GruselCore) one factory sound, hidden (PT_HIDE): what choosing SLICE loads, on USR1 (empty: the sine, and the UI
+ * says SAMPLE NOT FOUND); none listed */
 static const preset_t SLICE_PRESETS[] = {
-    {"CHOP", {0, 2, 0, 0, SLC_ONE, 0, 127, 127}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 12), TAG(PT_DRUM | PT_HIDE)},
+    {"CHOP", {1, 2, 0, 0, SLC_ONE, 0, 127, 127}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 12), TAG(PT_DRUM | PT_HIDE)},
 };
 
 /* the lowest key is slice 0 (C4 + ROOT), no scale */
@@ -630,7 +651,7 @@ static const engine_t ENG_SLICE = {
     .name = "SLICE",
     .page_title = {"SLICE", "PLAYBACK"},
     .edit = {
-        {"SOURCE", N_SLC_SRC, 0, SLC_NSRC - 1, 0, F_ENUM, 0},
+        {"SOURCE", N_SLC_SRC, 0, SLC_NSRC - 1, 1, F_ENUM, 0},
         {"DIV", N_SLC_DIV, 0, 5, 2, F_ENUM, 0},
         {"START", 0, 0, 31, 0, F_INT, 0},
         {"PITCH", 0, -24, 24, 0, F_SEMI, 0},

@@ -10,6 +10,7 @@
   webapp/editor/index.html    editor.html (+ fukiai.ttf, FUKIAI-LICENSE.txt; (2.0) conv/: conv.js and build/conv/conv.wasm,
                               the converter its Restore and the installer use)
   learn/                      Learn Skiff, the manual in chapters (web/learn, without its local/ review videos)
+  guide/                      (GruselCore) the GruselCore guide: what it adds to Skiff (web/guide)
   try/                        the browser emulator (build/emu from web/emu/build.sh, EMU_PREVIEW=0)
   panel.js, fonts/            the panel's drawing and the fonts the Learn page shares, at the paths it has in web/
   src/                        not touched
@@ -114,6 +115,8 @@ def main(pkg, version, out, *more):
                         ignore=shutil.ignore_patterns("InterTight*"))   # (the Learn page's, not the editor's)
     shutil.rmtree(out / "learn", ignore_errors=True)  # ((Skiff) Learn Skiff: ../panel.js and ../fonts/, as in web/)
     shutil.copytree(HERE / "learn", out / "learn", ignore=shutil.ignore_patterns("local"))
+    shutil.rmtree(out / "guide", ignore_errors=True)  # ((GruselCore) its guide: ../fonts/, as Learn's)
+    shutil.copytree(HERE / "guide", out / "guide")
     shutil.copy(HERE / "panel.js", out / "panel.js")
     shutil.copytree(HERE / "fonts", out / "fonts", dirs_exist_ok=True)
     emu = HERE.parent / "build" / "emu"             # ((Skiff #18) the browser emulator: web/emu/build.sh's, ../panel.js)
@@ -127,7 +130,7 @@ def main(pkg, version, out, *more):
         '<!doctype html><meta charset="utf-8"><title>Skiff</title>'
         '<meta http-equiv="refresh" content="0; url=webapp/installer/">'
         '<a href="webapp/installer/">Skiff installer</a>\n', encoding="utf-8")
-    print(f"site: {out}: webapp/installer ({len(html)} B), webapp/editor, learn, try, "
+    print(f"site: {out}: webapp/installer ({len(html)} B), webapp/editor, learn, guide, try, "
           + ", ".join(f"firmware/{n} ({len(d)} B, {p})" for p, d, n in pkgs))
 
 

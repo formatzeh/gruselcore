@@ -1,0 +1,465 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only
+     (GruselCore) The GruselCore guide: what GruselCore adds to Skiff, chapter by chapter (web/learn is Skiff's own
+     manual). One page; #chapter is the link. Shares ../fonts with the Learn page (web/make_site.py copies both). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GruselCore Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="The GruselCore guide: breaks on the SLICE engine, the SLICE grid, and EVOLVE as a break generator on the M-VAVE FM-1.">
+<style>
+@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-Medium.ttf") format("truetype"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Inter Tight"; src: url("../fonts/InterTight-Latin.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+/* Layout: one reading column with a sticky chapter rail on wide screens; the FM-1's keys drawn as the one figure.
+   The palette and faces are the Learn Skiff page's (web/learn): its six track colours, Barlow Condensed, Inter Tight. */
+:root {
+  --t1: #ff5a36; --t2: #22c3b4; --t3: #ffbf00; --t4: #9580ff; --t5: #ff6fae; --t6: #a3e635;
+  --bg: #f3f2ee; --fg: #121212; --dim: #5f5e63; --line: #d8d6cf; --tile: #e9e7e1; --raise: #ffffff;
+  --acc: #ff5a36; --on-acc: #000000; --note: #fff1ec; --warn: #fff6d6; --warn-line: #e8c55a;
+  --body: #1d1d1f; --keycap: #0c0c0d; --keylabel: #c9c9cd; --white-key: #ecebe6; --white-ink: #1d1d1f;
+  --sans: "Inter Tight", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --cond: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0b0b; --fg: #f1f1f1; --dim: #a09fa4; --line: #2a2a2a; --tile: #161616; --raise: #1c1c1c;
+    --note: #241612; --warn: #221d0c; --warn-line: #6b5a1c; --white-key: #d9d8d3; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0b0b; --fg: #f1f1f1; --dim: #a09fa4; --line: #2a2a2a; --tile: #161616; --raise: #1c1c1c;
+  --note: #241612; --warn: #221d0c; --warn-line: #6b5a1c; --white-key: #d9d8d3; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 var(--sans); -webkit-text-size-adjust: 100%;
+       padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: inherit; text-decoration-color: var(--acc); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+a:hover { color: var(--acc); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--cond); font-weight: 700; line-height: 1.02; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+kbd { font: 700 .84em/1 var(--cond); letter-spacing: .06em; padding: .24em .5em .16em; border-radius: 5px; background: var(--tile);
+      border: 1px solid var(--line); box-shadow: 0 2px 0 var(--line); white-space: nowrap; }
+code { font: .86em var(--mono); background: var(--tile); padding: .1em .35em; border-radius: 4px; }
+
+.page { max-width: 1120px; margin: 0 auto; padding-block: 40px 72px; }
+.head { display: grid; gap: 14px; padding-bottom: 32px; border-bottom: 1px solid var(--line); }
+.eyebrow { font: 700 15px var(--cond); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.head h1 { font-size: clamp(54px, 10vw, 112px); text-transform: uppercase; letter-spacing: -.005em; }
+.head h1 span { color: var(--acc); }
+.lede { max-width: 40em; font-size: 19px; color: var(--dim); }
+
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; margin-top: 36px; }
+.rail { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); align-self: start; }
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.rail a { display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 8px; text-decoration: none;
+          font: 600 18px/1.15 var(--cond); padding: 6px 0; }
+.rail a b { display: grid; place-content: center; height: 30px; background: var(--c); color: var(--on-acc); font-size: 17px; }
+.rail a:hover span { color: var(--acc); }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .rail { position: static; }
+  .rail ol { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
+
+main { display: grid; gap: 64px; min-width: 0; }
+.chapter { display: grid; gap: 18px; min-width: 0; }
+.chapter > header { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: end;
+                    border-top: 6px solid var(--c); padding-top: 14px; }
+.chapter > header .n { font: 700 54px/0.8 var(--cond); color: var(--c); }
+.chapter > header h2 { font-size: clamp(32px, 4.6vw, 46px); text-transform: uppercase; }
+.chapter > p, .chapter > ul, .chapter > ol, .chapter > .steps { max-width: 44em; }
+.chapter h3 { font-size: 24px; margin-top: 8px; text-transform: uppercase; letter-spacing: .02em; }
+.chapter ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+
+/* a real sequence of presses: numbered */
+.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; display: grid; gap: 10px; }
+.steps > li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; }
+.steps > li::before { content: counter(s); display: grid; place-content: center; height: 34px; background: var(--tile);
+                      border: 1px solid var(--line); font: 700 19px var(--cond); grid-column: 1; grid-row: 1; }
+.steps > li > * { grid-column: 2; min-width: 0; }   /* (a step's text, table or list: all in the text column) */
+.steps ul { margin-top: 6px; }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--line);
+         border: 1px solid var(--line); max-width: 44em; }
+.facts div { background: var(--raise); padding: 12px 14px; display: grid; gap: 2px; }
+.facts dt { font: 700 13px var(--cond); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.facts dd { margin: 0; font: 700 28px/1.1 var(--cond); font-variant-numeric: tabular-nums; }
+.facts dd small { font: 500 15px var(--sans); color: var(--dim); }
+
+.note, .warn { max-width: 44em; padding: 12px 16px; border-left: 4px solid var(--acc); background: var(--note); display: grid; gap: 6px; }
+.warn { border-left-color: var(--warn-line); background: var(--warn); }
+.note strong, .warn strong { font-family: var(--cond); font-size: 18px; letter-spacing: .04em; text-transform: uppercase; }
+
+.ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; max-width: 54em; }
+.way { background: var(--raise); border: 1px solid var(--line); padding: 16px; display: grid; gap: 8px; align-content: start; }
+.way h3 { margin: 0; font-size: 22px; }
+.way .tag { font: 700 13px var(--cond); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.tablebox { overflow-x: auto; max-width: 54em; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 700 14px var(--cond); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+td:first-child { font-family: var(--cond); font-weight: 700; font-size: 19px; white-space: nowrap; }
+
+/* the FM-1's 27 keys from F, the slice each one plays */
+.kbd-fig { background: var(--body); color: var(--keylabel); padding: 16px; display: grid; gap: 14px; max-width: 54em; }
+.kbd-ctl { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; }
+.kbd-ctl fieldset { border: 0; margin: 0; padding: 0; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.kbd-ctl legend { float: left; margin-right: 8px; font: 700 14px var(--cond); letter-spacing: .14em; text-transform: uppercase; }
+.kbd-ctl button { font: 700 16px/1 var(--cond); letter-spacing: .04em; min-width: 40px; padding: 8px 10px 6px; background: var(--keycap);
+                  color: var(--keylabel); border: 1px solid #3a3a3e; cursor: pointer; }
+.kbd-ctl button[aria-pressed="true"] { background: var(--t2); color: #000; border-color: var(--t2); }
+.keys-scroll { overflow-x: auto; padding-bottom: 4px; }
+.keys { position: relative; height: 150px; min-width: 640px; }
+.key { position: absolute; top: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+       padding-bottom: 8px; font-family: var(--cond); font-variant-numeric: tabular-nums; }
+.key.w { height: 150px; background: var(--white-key); color: var(--white-ink); border: 1px solid #2a2a2d; border-radius: 0 0 4px 4px; }
+.key.b { height: 92px; background: var(--keycap); color: var(--keylabel); border: 1px solid #3a3a3e; border-radius: 0 0 3px 3px; z-index: 2; }
+.key .s { font-size: 21px; font-weight: 700; line-height: 1; }
+.key .nm { font-size: 12px; font-weight: 500; opacity: .7; letter-spacing: .04em; }
+.key.first .s { color: var(--t1); }
+.key.b.first .s { color: var(--t3); }
+.kbd-cap { font-size: 14px; color: var(--keylabel); }
+.kbd-note { font-size: 15px; color: var(--dim); }
+
+footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--dim); font-size: 15px; display: grid; gap: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="head">
+    <div class="eyebrow">M-VAVE FM-1 · firmware on Skiff 2.1.1</div>
+    <h1>Grusel<span>Core</span> Guide</h1>
+    <p class="lede">What GruselCore adds to Skiff, step by step on the unit. This edition covers breaks: loading your own loops into the
+      SLICE engine, placing slices on the SLICE grid, letting EVOLVE chop them, and the dark DnB basses. Skiff's own manual,
+      <a href="../learn/">Learn Skiff</a>, covers everything else.</p>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" aria-label="Chapters">
+      <ol>
+        <li><a href="#loops" style="--c: var(--t1)"><b>1</b><span>Your loops in the slots</span></a></li>
+        <li><a href="#keys" style="--c: var(--t2)"><b>2</b><span>Which key plays which slice</span></a></li>
+        <li><a href="#steps" style="--c: var(--t3)"><b>3</b><span>The SLICE grid</span></a></li>
+        <li><a href="#whole" style="--c: var(--t4)"><b>4</b><span>The whole loop</span></a></li>
+        <li><a href="#evolve" style="--c: var(--t5)"><b>5</b><span>EVOLVE chops the break</span></a></li>
+        <li><a href="#basses" style="--c: var(--t6)"><b>6</b><span>Dark DnB basses</span></a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <!-- 1 -->
+      <section class="chapter" id="loops" style="--c: var(--t1)">
+        <header><span class="n">1</span><h2>Your loops in the slots</h2></header>
+        <p>SLICE plays your own recordings only. It has no built-in loops: GruselCore removed Skiff's BREAK and FUNK and the
+          PIANO source. A sound or project that used one of them plays <kbd>USR1</kbd> instead.</p>
+        <dl class="facts">
+          <div><dt>Slots</dt><dd>3 <small>USR1–USR3</small></dd></div>
+          <div><dt>Per slot</dt><dd>80 KiB <small>≈ 7.3 s</small></dd></div>
+          <div><dt>Files per slot</dt><dd>16 <small>WAVs</small></dd></div>
+          <div><dt>Stored as</dt><dd>22,050 Hz <small>mono, 4-bit</small></dd></div>
+        </dl>
+        <ol class="steps">
+          <li><p>Connect the FM-1 over USB and open the <a href="https://illuminus5.github.io/skiff/webapp/editor/">Skiff Editor</a>
+            in Chrome or Edge.</p></li>
+          <li><p>On its <b>Samples</b> tab, drop your WAV into a slot, trim it, listen to it as the FM-1 will store it, and upload.</p></li>
+          <li><p>On the FM-1, put <b>SLICE</b> on a track (EDIT › ENGINE), then set <b>SOURCE</b> to that slot and <b>DIV</b> to
+            8 or 16. AUTO puts one slice on every hit; MAN lets you set them by hand on EDIT › SLICES.</p></li>
+        </ol>
+        <h3>Preparing a break</h3>
+        <ul>
+          <li><b>Cut it exactly on the bar:</b> start on the first kick, end just before the next bar's first beat. Equal slices
+            (DIV 8, 16) only land on the hits when the loop is exact.</li>
+          <li><b>Trim the silence</b> at both ends, and put very short fades at the cuts so they don't click.</li>
+          <li><b>Any WAV works:</b> stereo is mixed to mono and every sample rate is converted. Make your loops about equally loud.
+            Best: give it mono at 22,050 Hz yourself, with a good resampler; the editor then stores it as it is.</li>
+          <li><b>Two bars is the sweet spot:</b> on a 2-bar loop, DIV 32 gives one slice per 16th (the grid's steps), DIV 16
+            one per 8th, and AUTO finds every hit. On a 4-bar loop AUTO stops at 32 slices, so split it into two halves.</li>
+          <li><b>Pick breaks near your song tempo.</b> SLICE doesn't stretch to the tempo: it plays at the recording's speed, and
+            PITCH makes it faster and higher or slower and lower together. One bar at 170 BPM lasts 1.41 s, so a slot holds about
+            five of them.</li>
+        </ul>
+        <div class="note"><strong>Several loops in one slot</strong>
+          <p>A slot's WAVs play back to back as one recording, so DIV cuts the whole chain, not each loop. One tidy way: four
+            one-bar loops of exactly the same length and <b>DIV 32</b>. Every 8 slices are then one loop, and <b>START</b>
+            0, 8, 16 or 24 picks the loop that sits on the first keys. For EVOLVE, one break per slot is cleanest.</p></div>
+        <div class="warn"><strong>Licences</strong>
+          <p>Classic breaks (Amen, Think, Apache …) are cut from records. They are fine on your own unit; only CC0 or CC BY loops
+            (credited) may go into the public GruselCore repository.</p></div>
+      </section>
+
+      <!-- 2 -->
+      <section class="chapter" id="keys" style="--c: var(--t2)">
+        <header><span class="n">2</span><h2>Which key plays which slice</h2></header>
+        <p>SLICE uses <b>all 27 keys, white and black, in order from the lowest F</b>. The first key plays slice 1, the next
+          slice 2, and so on; after the last slice it starts again at slice 1. The octave buttons shift the keys by 12 slices,
+          which changes which slice a key plays at DIV 8, 16 and 32. Keep the octave at 0 (both OCT lights off; <kbd>OCT−</kbd>
+          + <kbd>OCT+</kbd> together brings it back) and the chart below holds as shown.</p>
+        <figure class="kbd-fig" aria-labelledby="kbd-cap">
+          <div class="kbd-ctl">
+            <fieldset id="div-set"><legend>DIV</legend>
+              <button type="button" id="div-4" data-div="4" aria-pressed="false">4</button>
+              <button type="button" id="div-8" data-div="8" aria-pressed="true">8</button>
+              <button type="button" id="div-16" data-div="16" aria-pressed="false">16</button>
+              <button type="button" id="div-32" data-div="32" aria-pressed="false">32</button>
+            </fieldset>
+            <fieldset id="oct-set"><legend>Octave</legend>
+              <button type="button" id="oct-m1" data-oct="-1" aria-pressed="false">−1</button>
+              <button type="button" id="oct-0" data-oct="0" aria-pressed="true">0</button>
+              <button type="button" id="oct-p1" data-oct="1" aria-pressed="false">+1</button>
+            </fieldset>
+          </div>
+          <div class="keys-scroll"><div class="keys" id="keys-row" role="img" aria-label="The FM-1's 27 keys and the slice each plays"></div></div>
+          <figcaption class="kbd-cap" id="kbd-cap">The number on each key is the slice it plays (START 0, ROOT C). Keys marked in
+            colour play slice 1.</figcaption>
+        </figure>
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>Key</th><th>F</th><th>F♯</th><th>G</th><th>G♯</th><th>A</th><th>A♯</th><th>B</th><th>C</th></tr></thead>
+            <tbody><tr><td>DIV 8</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td></tr></tbody>
+          </table>
+        </div>
+        <p><b>START</b> (EDIT page, KNOB 3) moves the slices across the keys: START 3 puts slice 4 on the lowest F.</p>
+      </section>
+
+      <!-- 3 -->
+      <section class="chapter" id="steps" style="--c: var(--t3)">
+        <header><span class="n">3</span><h2>The SLICE grid</h2></header>
+        <p>On a SLICE track, <kbd>SEQ</kbd> › <b>NOTES</b> is the <b>SLICE grid</b>: eight slices down the side, the 16 steps of a
+          page across. A step plays one slice or nothing. Select a step with a white key, then give it a slice with a black
+          key. Nothing sounds while you do, so it never disturbs what is playing.</p>
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>Control</th><th>What it does on the grid</th></tr></thead>
+            <tbody>
+              <tr><td>White 1–16</td><td>Select that step (its key lights up). Nothing is written yet.</td></tr>
+              <tr><td>Black 1–8</td><td>Put that slice on the selected step, silently. A different slice there is replaced; the
+                step's own slice again removes it.</td></tr>
+              <tr><td>Black 9</td><td>The next eight slices (9–16, 17–24 …) at DIV 16 or 32; after the last eight, back to the first.</td></tr>
+              <tr><td>Black 10 / 11</td><td>The page down / up, for patterns longer than 16 steps.</td></tr>
+              <tr><td>PRESETS</td><td>Moves the selected step (the framed one), as the white keys do.</td></tr>
+              <tr><td>KNOB 1 SLICE</td><td>The selected step's slice, one slice per detent (after the last: the first). On an empty
+                step: the slice of the highlighted row.</td></tr>
+              <tr><td>KNOB 2 RATCH</td><td>The step plays ×1 to ×4.</td></tr>
+              <tr><td>KNOB 3 RANDOM</td><td><b>Right:</b> every step that has a slice gets a new random slice, with each detent.
+                <b>Left:</b> your own order comes back. No step is ever added or removed, so the rhythm stays.</td></tr>
+              <tr><td>KNOB 4 VELOCITY</td><td>How hard the step plays.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The selected step's white key is lit, and every step that has a slice glows brighter, so you see the pattern's
+          rhythm. The black key of the selected step's slice is lit, and its row is highlighted on the screen. A step playing
+          a slice of the other eights shows a short bar at the top or bottom of its column.
+          Hold a white key and turn a knob to lock a sound setting on that step, as everywhere in Skiff.</p>
+        <div class="note"><strong>One slice at a time</strong>
+          <p>SLICE always plays a single slice. When a new slice starts, the one before is cut with a very short fade, so a
+            slice on every step, a RATCH, or keys played fast give clean stutters, never two slices over each other. At DIV 8
+            a slice lasts two steps; put the next slice on the very next step and it cuts the first one short.</p></div>
+        <h3>The loop in order: DIV 8, a slice on every second step</h3>
+        <ol class="steps">
+          <li><p>Select the SLICE track, set <b>DIV 8</b> on its EDIT page, and open <kbd>SEQ</kbd> › <b>NOTES</b>.</p></li>
+          <li><p>Press <b>white 1</b> (step 1), then <b>black 1</b>: slice 1 on step 1.</p></li>
+          <li><p>Continue the same way, white key first:</p>
+            <div class="tablebox">
+              <table>
+                <thead><tr><th>White key (step)</th><th>1</th><th>3</th><th>5</th><th>7</th><th>9</th><th>11</th><th>13</th><th>15</th></tr></thead>
+                <tbody>
+                  <tr><td>Black key (slice)</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td></tr>
+                </tbody>
+              </table>
+            </div></li>
+          <li><p>Press <kbd>PLAY</kbd>. It works while playing too: tap steps in and out and hear the change on the next pass.</p></li>
+        </ol>
+        <h3>Ideas</h3>
+        <ul>
+          <li><b>Classic re-sequencing:</b> select a few off-beat steps one after another and give each the snare slice.</li>
+          <li><b>Rolls:</b> put the snare slice on steps 13–16 and give them RATCH ×2.</li>
+          <li><b>Stutters:</b> put the same slice on two or four steps in a row; each one cuts the last, so you hear the
+            slice's start repeated.</li>
+          <li><b>New ideas fast:</b> set the rhythm you like, then turn RANDOM right a detent at a time until a version grabs
+            you, or left to get your own order back. Fine-tune single steps afterwards with KNOB 1.</li>
+        </ul>
+        <div class="note"><strong>What "your own order" means</strong>
+          <p>The grid remembers the slices as they were when you first turned RANDOM right. Left brings that back as long as
+            you only randomize. Change a slice by hand in between, and the pattern as it is then becomes your own order.</p></div>
+        <div class="note"><strong>REC is not needed</strong>
+          <p>The grid writes the steps directly. REC on the grid just says "GRID: TAP THE STEPS".</p></div>
+      </section>
+
+      <!-- 4 -->
+      <section class="chapter" id="whole" style="--c: var(--t4)">
+        <header><span class="n">4</span><h2>The whole loop</h2></header>
+        <p>SLICE plays one slice per note. Four ways to hear the loop in full:</p>
+        <div class="ways">
+          <article class="way"><span class="tag">SLICE, one key</span><h3>Join it into one slice</h3>
+            <p>On EDIT › SLICES, use JOIN (<kbd>KNOB 4</kbd>, then <kbd>OCT+</kbd>) until one slice is left. The lowest key then plays
+              the whole loop: MODE ONE once, MODE LOOP for as long as you hold it. The slices are saved with the sample.</p></article>
+          <article class="way"><span class="tag">SAMPLE engine</span><h3>Play the recording</h3>
+            <p>Put SAMPLE on another track with SET USR1 (or USR2, USR3). A key plays the whole recording: at its root key at the
+              original speed, other keys faster or slower.</p></article>
+          <article class="way"><span class="tag">SLICE, the steps</span><h3>The slices in order</h3>
+            <p>Put the slices in order on the SLICE grid (chapter 3). That rebuilds the loop exactly, and every step stays editable.</p></article>
+          <article class="way"><span class="tag">Before upload</span><h3>The Skiff Editor</h3>
+            <p>The Samples tab plays the trimmed sample as the FM-1 will store it, at 22,050 Hz.</p></article>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section class="chapter" id="evolve" style="--c: var(--t5)">
+        <header><span class="n">5</span><h2>EVOLVE chops the break</h2></header>
+        <p>On a SLICE track, EVOLVE is a break generator. Hold <kbd>ARP</kbd>, turn <kbd>PRESETS</kbd> to KEYS EVOLVE and let go;
+          <kbd>F3</kbd> turns it on, <kbd>G3</kbd>–<kbd>E4</kbd> pick the track, and <kbd>KNOB 1</kbd> is that track's AMOUNT.
+          Each new version of the pattern changes some slices; your own pattern never changes.</p>
+        <h3>What AMOUNT does</h3>
+        <p>EVOLVE plays a copy of your pattern and makes a new version of it every pass (or every 2, 4, 8, 16 passes:
+          <kbd>KNOB 2</kbd>, EVERY). Each new version starts from the one before and does two things:</p>
+        <ol class="steps">
+          <li><p><b>Some steps go back to your pattern.</b> Each step returns to what you entered with a chance that falls as
+            AMOUNT rises, so a low AMOUNT keeps pulling the break home.</p></li>
+          <li><p><b>Then a few slices change.</b> AMOUNT sets how many: up to half the steps. Each change picks one step
+            (never a protected beat) and one move from the table below. The mix of moves is the same at every AMOUNT.</p></li>
+        </ol>
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>AMOUNT</th><th>Changes per version</th><th>Each step back to your pattern</th></tr></thead>
+            <tbody>
+              <tr><td>10</td><td>1</td><td>34 %</td></tr>
+              <tr><td>25</td><td>2</td><td>29 %</td></tr>
+              <tr><td>50</td><td>4</td><td>20 %</td></tr>
+              <tr><td>75</td><td>6</td><td>12 %</td></tr>
+              <tr><td>100</td><td>8</td><td>4 %</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="kbd-note">For a 16-step pattern; a 32-step one gets twice the changes.</p>
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>Move</th><th>Share</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td>Roll</td><td>24 %</td><td>The step plays the slice of the note before it again.</td></tr>
+              <tr><td>Swap</td><td>22 %</td><td>The step plays any other slice.</td></tr>
+              <tr><td>Walk</td><td>22 %</td><td>One slice on or back.</td></tr>
+              <tr><td>Retrigger</td><td>12 %</td><td>The step plays twice (RATCH ×2, a 32nd-note roll), or a retriggered one plays once again.</td></tr>
+              <tr><td>Jump</td><td>10 %</td><td>2 to 4 slices ahead.</td></tr>
+              <tr><td>Add</td><td>10 %</td><td>A slice goes into a rest 1 to 3 steps after it: the same slice or the next one.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>No slice of your pattern is ever left out, and there are no ×3 or ×4 stutters: even AMOUNT 100 stays a jungle
+          break, busy and far from the loop, never breakcore.</p>
+        <h3>The other controls</h3>
+        <ul>
+          <li><b>AMOUNT off at once:</b> hold <kbd>OCT−</kbd> and turn <kbd>KNOB 1</kbd> to the left. The track plays its own
+            pattern again straight away. With <kbd>F4</kbd> (ALL) held too, every track does.</li>
+          <li><b>PROTECT</b> (<kbd>C5</kbd>) keeps the slices on steps 1, 5, 9 and 13, the loop's kick and snare when it plays in order.</li>
+          <li><b>ARRANGE</b> (<kbd>KNOB 3</kbd>) adds ×2 fills on the last beat's rests, heard only in the last bar of each phrase.</li>
+          <li><b>CHORD</b> and <b>ROOT</b> leave SLICE tracks alone.</li>
+          <li><b>An empty SLICE track</b> plays its loop in order as soon as EVOLVE starts, then changes it.</li>
+        </ul>
+        <h3>Shortcut: the loop in order as a pattern</h3>
+        <ol class="steps">
+          <li><p>Leave the SLICE track empty and start playback.</p></li>
+          <li><p>Turn EVOLVE on and give the track some AMOUNT. It plays the loop in order straight away.</p></li>
+          <li><p>Before the first bar ends, press <kbd>D5</kbd> (FREEZE). That stops it from changing.</p></li>
+          <li><p>Press <kbd>A4</kbd> (KEEP). That stores the in-order pattern as a new entry in the track's list, to edit like any other.</p></li>
+        </ol>
+        <div class="warn"><strong>Not yet tried on the unit</strong>
+          <p>This shortcut follows from how EVOLVE works, but it hasn't been tested on an FM-1 yet; the timing may need a second
+            try. The SLICE grid (chapter 3) is the reliable way.</p></div>
+      </section>
+      <!-- 6 -->
+      <section class="chapter" id="basses" style="--c: var(--t6)">
+        <header><span class="n">6</span><h2>Dark DnB basses</h2></header>
+        <p>Ten sounds for dark jungle, drum and bass and neurofunk, built from the firmware's own engines and modelled on
+          reference one-shots by measuring them: pitch, envelope, brightness over time, wobble speed. None of the reference
+          audio is in the firmware. Find them under <kbd>SAVE</kbd> › PRESETS with LIST on <b>BASS</b> (DARK AIR: <b>PAD</b>).</p>
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>Sound</th><th>Engine</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td>SWELL SUB</td><td>ANALOG</td><td>A sub whose filter opens over a third of a second and stays open.</td></tr>
+              <tr><td>GROWL WOB</td><td>ANALOG</td><td>A driven growl with a fast, shallow filter wobble (~3.8 Hz); the level holds.</td></tr>
+              <tr><td>HOLLOW 8</td><td>ANALOG</td><td>A hollow, square-ish bass pulsing in 8ths with the tempo.</td></tr>
+              <tr><td>LASER DIVE</td><td>ANALOG</td><td>Dives in pitch as it fades, through a slow flanger: the neuro "laser".</td></tr>
+              <tr><td>NEURO MID</td><td>ANALOG</td><td>A resonant growl whose filter jumps at random in 8th triplets over a steady sub.</td></tr>
+              <tr><td>YOY BASS</td><td>ANALOG</td><td>A resonant filter up, down and up again per quarter note: "yoy".</td></tr>
+              <tr><td>SCOOP CHOP</td><td>ANALOG</td><td>Scoops up into each note; made for short, chopped steps.</td></tr>
+              <tr><td>SUB DRONE</td><td>ANALOG</td><td>A dark, slowly moving sub drone.</td></tr>
+              <tr><td>GATE REESE</td><td>TRIO</td><td>A reese gated in 16ths with the tempo.</td></tr>
+              <tr><td>DARK AIR</td><td>TRIO</td><td>An airy atmosphere: two high tones over a low one, pulsing gently.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>The wobbles follow the tempo</b> (HOLLOW 8, NEURO MID, YOY BASS, GATE REESE); GROWL WOB's runs at its own speed.</li>
+          <li><b>All are MONO</b> with legato, except DARK AIR. They sit about as loud as the other basses.</li>
+          <li><b>Octave:</b> they play at the pitch of the keys; for the deepest subs, play them an octave lower with
+            <kbd>OCT−</kbd> or the track's transpose.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <p>GruselCore is free software under GPL-3.0, based on Skiff by illuminus5 and Felucca by Leo Kuroshita (Hügelton
+      Instruments). EVOLVE's slice choice follows BB Gen (schwung-breakbeat by mestela), via X0X by charlesvestal and FMX by
+      ErnestoRebane. M-VAVE and FM-1 are trademarks of their owners; GruselCore is not affiliated with them.</p>
+  </footer>
+</div>
+
+<script>
+/* the 27 keys from F: the slice each plays is ((12 x octave + key) mod DIV) + 1 (eng_slice.c slice_keys and
+   slc_note_slice, START 0 and ROOT C) */
+(function () {
+  var NAMES = ["F", "F♯", "G", "G♯", "A", "A♯", "B", "C", "C♯", "D", "D♯", "E"];
+  var BLACK = [0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0];
+  var row = document.getElementById("keys-row");
+  var state = { div: 8, oct: 0 };
+  var keys = [], whites = 16, wi = 0, k;
+  for (k = 0; k < 27; k++) {
+    var el = document.createElement("div"), b = BLACK[k % 12];
+    el.className = "key " + (b ? "b" : "w");
+    if (b) {
+      el.style.left = "calc(" + (wi * 100 / whites) + "% - " + (100 / whites * 0.32) + "%)";
+      el.style.width = (100 / whites * 0.64) + "%";
+    } else {
+      el.style.left = (wi * 100 / whites) + "%";
+      el.style.width = (100 / whites) + "%";
+      wi++;
+    }
+    el.innerHTML = '<span class="s"></span><span class="nm">' + NAMES[k % 12] + "</span>";
+    row.appendChild(el);
+    keys.push(el);
+  }
+  function draw() {
+    keys.forEach(function (el, i) {
+      var s = (((12 * state.oct + i) % state.div) + state.div) % state.div;
+      el.querySelector(".s").textContent = s + 1;
+      el.classList.toggle("first", s === 0);
+    });
+  }
+  function group(id, key) {
+    var set = document.getElementById(id);
+    set.addEventListener("click", function (e) {
+      var btn = e.target.closest("button");
+      if (!btn) return;
+      state[key] = Number(btn.getAttribute(key === "div" ? "data-div" : "data-oct"));
+      set.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === btn)); });
+      draw();
+    });
+  }
+  group("div-set", "div");
+  group("oct-set", "oct");
+  draw();
+})();
+</script>
+</body>
+</html>

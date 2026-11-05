@@ -203,6 +203,52 @@ static uint32_t grid_glow(void)
     return m;
 }
 
+#if FELUCCA_SLICE
+/* (GruselCore) the SLICE grid's key LEDs, bit k = key k: the white keys light the selected step (the cursor) on the page
+ * shown, the step playing inverted; the black keys the cursor step's slice (among the eight shown), key 9 past the
+ * first eight, the page keys while there is more than one page */
+static uint32_t sgrid_leds(void)
+{
+    const track_t *t = TSEL;
+    uint32_t k, m = 0, len = (uint32_t)t->p[P_SLEN];
+    uint32_t ph = song.playing && t->seq_idx < len && t->seq_idx / 16u == ui.bank ? t->seq_idx % 16u : 0xFFu;
+    int32_t j = ui.cursor < len ? sg_of(t, &t->step[ui.cursor]) : -1;
+    for (k = 0; k < 27u; k++) {
+        uint32_t p = key_place(k), on;
+        if (!key_black(k))
+            on = (uint32_t)(ui.bank * 16u + p == ui.cursor && ui.cursor < len) ^ (uint32_t)(p == ph);
+        else
+            on = p < 8u ? (int32_t)(sg_base + p) == j : p == GK_SLICES ? sg_base > 0u : len > 16u;
+        m |= on << k;
+    }
+    return m;
+}
+/* .. brighter than the glow: the steps of the page that have a slice (the pattern's rhythm) */
+static uint32_t sgrid_beats(void)
+{
+    const track_t *t = TSEL;
+    uint32_t k, m = 0, len = (uint32_t)t->p[P_SLEN];
+    for (k = 0; k < 27u; k++) {
+        uint32_t p = key_place(k), i = ui.bank * 16u + p;
+        if (!key_black(k) && i < len)
+            m |= (uint32_t)(sg_of(t, &t->step[i]) >= 0) << k;
+    }
+    return m;
+}
+/* .. the keys that do something: the page's steps within LEN, the slice keys there are, key 9 past eight slices, the
+ * page keys while there is more than one page */
+static uint32_t sgrid_glow(void)
+{
+    uint32_t k, m = 0, len = (uint32_t)TSEL->p[P_SLEN], n = sg_count(TSEL);
+    for (k = 0; k < 27u; k++) {
+        uint32_t p = key_place(k);
+        m |= (uint32_t)(!key_black(k) ? ui.bank * 16u + p < len
+                                      : p < 8u ? sg_base + p < n : p == GK_SLICES ? n > 8u : len > 16u) << k;
+    }
+    return m;
+}
+#endif
+
 /* an ARP playing on any part flashes the ARP button on the beat, the bar's first beat longer: 1 lit, 0 dark,
  * 2 no ARP playing */
 static uint32_t arp_led(void)
@@ -290,7 +336,7 @@ static uint32_t step_leds(void)
  * dark; 0: the keys held and the notes playing, over the idle glow */
 static int keys_own(void)
 {
-    return (name_on() && !ui.menu) || ui.layer || grid_on()
+    return (name_on() && !ui.menu) || ui.layer || grid_on() || sgrid_on()
 #if FELUCCA_SLICE
            || (!ui.menu && !name_on() && slice_page_on())
 #endif
@@ -338,6 +384,9 @@ static uint32_t key_leds(uint32_t *br)                 /* (*br: a layer's keys t
     if (br)
         *br = 0;
     c = name_on() && !ui.menu ? name_leds(br) : ui.layer ? layer_leds(br) : grid_on() ? grid_leds() :
+#if FELUCCA_SLICE
+        sgrid_on() ? sgrid_leds() :
+#endif
                  (fm1_in.notes & ~kb_layer) | play_leds() | step_leds();
 #if FELUCCA_SLICE
     if (!ui.layer && !ui.menu && !name_on() && slice_page_on())
@@ -412,6 +461,12 @@ static void ui_leds(void)
     c = key_leds(&br);
     g = !keys_map ? 0u : grid_on() && !ui.layer && !name_on() ? grid_glow() : 0u;   /* (key_leds: the grid's map) */
     beat = g ? grid_beats() & ~c : 0u;                  /* (the grid's empty beat starts: brighter than the glow) */
+#if FELUCCA_SLICE
+    if (keys_map && sgrid_on() && !ui.layer && !name_on()) {   /* (GruselCore) the SLICE grid: its keys, the other */
+        g = sgrid_glow();                               /* slices' steps brighter */
+        beat = sgrid_beats() & ~c;
+    }
+#endif
     sc = keys_map ? 0u : scale_leds(&sr);               /* SCALE LEDS: the scale's keys glow, the root's brighter */
     for (k = 0; k < 27u; k++) {
         uint32_t in = (sc >> k) & 1u, rt = (sr >> k) & 1u, idle = !((c >> k) & 1u);
@@ -520,7 +575,8 @@ static void tracks_edit(uint32_t slot, int32_t steps)
 /* SEQ > NOTES' piano roll (not the DRUM grid, whose white keys stay its steps): where step recording writes */
 static int roll_on(void)
 {
-    return !ui.home && !ui.menu && !ui.confirm && song.seq_mode && step_page(cur_page()->graph) && !drum_track(TSEL);
+    return !ui.home && !ui.menu && !ui.confirm && song.seq_mode && step_page(cur_page()->graph) && !drum_track(TSEL) &&
+           !sgrid_on();                                 /* ((GruselCore) a SLICE track: its grid) */
 }
 
 /* REC tap on every page: arm / disarm recording on the selected track without navigating; arming while stopped
@@ -536,6 +592,10 @@ static int rec_tap(void)                                /* 1: the arming changed
     song.rec = (uint8_t)(song.rec & bit ? 0u : song.rec | bit);
     ui.force = 1;                                     /* also refresh the status on MENU / ABOUT */
     rec_pass_undo((song.rec & bit) != 0u);            /* ((Skiff U2) what this arming records: one undo) */
+    if ((song.rec & bit) && sgrid_on()) {             /* ((GruselCore) the SLICE grid: its keys are silent, nothing to */
+        ui_message("GRID: TAP THE STEPS");            /* record: the transport stays as it is) */
+        return 1;
+    }
     if ((song.rec & bit) && !song.playing && !seq_counting() && roll_on()) {
         ui_message("KEYS WRITE STEPS");               /* step recording: stopped, at the cursor */
         return 1;
@@ -1094,6 +1154,83 @@ static void grid_edit(uint32_t slot, int32_t steps)
     run_done(t);
 }
 
+#if FELUCCA_SLICE
+/* (GruselCore) the SLICE grid's knobs (PRESETS the cursor): 1 SLICE (the selection's slices one on or back; an empty
+ * cursor step: the row shown), 2 RATCH (x1..x4), 3 RANDOM (right: every step that has a slice a new random one, each
+ * detent; left: the slices as they were before the first right turn; no step set or cleared: the rhythm stays. ROTATE
+ * was here: it left gaps while playing, the user had it replaced), 4 VELOCITY. A detent is one slice, one ratchet, one
+ * new draw: nothing to count.
+ * RANDOM's original: the slices (+ 1, 0 none) of the track's steps taken at the first right turn; it holds while the
+ * steps are as RANDOM left them (sg_rnd_sig): an edit by hand, another track or pattern makes the steps as they are then
+ * the next original */
+static const char SN_SLC[] = "SLICES", SN_RND[] = "RANDOM";
+static uint8_t sg_orig[NSTEP], sg_orig_trk = 0xFFu;
+static uint32_t sg_rnd_sig;
+static void sgrid_edit(uint32_t slot, int32_t steps)
+{
+    track_t *t = TSEL;
+    uint32_t i, n = sg_count(t), len = (uint32_t)t->p[P_SLEN], d = steps > 0 ? 1u : 0u;
+    int32_t j;
+    sg_fit();
+    if (slot == 3u) {
+        sel_velocity(t, accel(EN_K4, steps, 126));
+        return;
+    }
+    if (slot == 2u) {                                   /* RANDOM: right new random slices, left the original back */
+        int held = sg_orig_trk == song.sel && steps_sig(t) == sg_rnd_sig;   /* (the steps as RANDOM left them) */
+        if (n < 2u)
+            return;
+        if (!d) {
+            if (!held) {
+                ui_message("ORIGINAL ALREADY");
+                return;
+            }
+            run_undo(t, SN_RND);
+            for (i = 0; i < len; i++)
+                if (sg_orig[i] && sg_of(t, &t->step[i]) >= 0)
+                    sg_put(t, i, sg_orig[i] - 1u);
+            run_done(t);
+            ui_message("ORIGINAL ORDER");
+        } else {
+            if (!held) {                                /* the steps by hand: the original from now */
+                for (i = 0; i < NSTEP; i++)
+                    sg_orig[i] = (uint8_t)(i < len && (j = sg_of(t, &t->step[i])) >= 0 ? j + 1 : 0);
+                sg_orig_trk = (uint8_t)song.sel;
+            }
+            run_undo(t, SN_RND);
+            for (i = 0; i < len; i++)
+                if ((j = sg_of(t, &t->step[i])) >= 0)
+                    sg_put(t, i, ((uint32_t)j + 1u + rng() % (n - 1u)) % n);
+            run_done(t);
+            ui_message("RANDOM");
+        }
+        sg_rnd_sig = steps_sig(t);
+        sg_fit();
+        ui.force = 1;
+        return;
+    }
+    run_undo(t, SN_SLC);
+    if (slot == 0u && sel_lo() == sel_hi() && sg_of(t, &t->step[ui.cursor]) < 0) {
+        if (ui.cursor < len)
+            sg_put(t, ui.cursor, sg_slice);             /* (an empty step: the picked slice first) */
+    } else {
+        for (i = sel_lo(); i <= sel_hi() && i < len; i++) {
+            if ((j = sg_of(t, &t->step[i])) < 0)
+                continue;
+            if (slot == 0u)
+                sg_put(t, i, ((uint32_t)j + (d ? 1u : n - 1u)) % n);
+            else
+                step_set_ratchet(&t->step[i], (uint32_t)clamp((int32_t)step_ratchet(&t->step[i]) + (d ? 1 : -1), 1, 4));
+        }
+    }
+    run_done(t);
+    if (slot == 0u && (j = sg_of(t, &t->step[ui.cursor])) >= 0)
+        sg_slice = (uint8_t)j;                          /* (the rows follow the cursor step's slice) */
+    sg_fit();
+    ui.force = 1;
+}
+#endif
+
 /* SHIFT + OCT- on NOTES or FEEL: the selected notes copied (picked: those; none: every one starting in it, with its
  * step's hits), each as long as it is, from the first one's step (two bars at most: longer ones cut), their steps'
  * values along; kept unfolded (a start, its tied steps). (2.0) On NOTES' DRUM grid: the LANE card's lane alone, its
@@ -1340,6 +1477,47 @@ static void grid_keys(uint32_t pressed)
     }
 }
 
+#if FELUCCA_SLICE
+/* (GruselCore) the SLICE grid's keys (presses), silent (seq.c song.grid 3): a white key selects its step of the page
+ * (the cursor); black keys 1..8 put that slice of the eight shown on the cursor step (another one there: replaced), or
+ * take it away when the step has it; 9 the next eight (after the last: the first), 10 / 11 the page */
+static void sgrid_keys(uint32_t pressed)
+{
+    track_t *t = TSEL;
+    uint32_t k, len = (uint32_t)t->p[P_SLEN], n = sg_count(t);
+    sg_fit();
+    for (k = 0; k < 27u; k++) {
+        uint32_t p = key_place(k);
+        if (!((pressed >> k) & 1u))
+            continue;
+        if (!key_black(k)) {
+            uint32_t i = ui.bank * 16u + p;
+            if (i < len)                                /* (past LEN: no step there) */
+                cursor_set((int32_t)i);
+        } else if (p < 8u) {
+            uint32_t sj = sg_base + p;
+            if (sj < n && ui.cursor < len) {
+                run_undo(t, SN_SLC);
+                if (sg_of(t, &t->step[ui.cursor]) == (int32_t)sj)
+                    step_clear_ties(t, ui.cursor);      /* (its slice again: the step empty) */
+                else
+                    sg_put(t, ui.cursor, sj);
+                run_done(t);
+                sg_slice = (uint8_t)sj;
+            }
+        } else if (p == GK_SLICES) {
+            sg_base = (uint8_t)(sg_base + 8u < n ? sg_base + 8u : 0u);
+            ui.force = 1;
+            continue;                                   /* (the eight shown; the cursor step as it is) */
+        } else {
+            page_go(p == GK_PGUP ? 1 : -1);
+        }
+        ui.force = 1;
+        sg_fit();
+    }
+}
+#endif
+
 /* ------------------------------------------------- parameter locks --- */
 /* 1.1 (Discussions #75, #53): on SEQ > NOTES, hold a step and turn KNOB 1..4: the step gets a lock of the parameter
  * that knob edits on the sound page shown last (ui.plk_src: HOME's four, ENV, LFO, FX, EDIT 1 / 2, OP ENV, ..; the
@@ -1356,7 +1534,7 @@ static uint64_t lock_held(void)
     if (ui.home || ui.menu || ui.confirm || ui.layer || name_on() || !song.seq_mode || !step_page(cur_page()->graph) ||
         !keys)
         return 0;
-    if (!grid_on())                                     /* the roll: the step being entered */
+    if (!grid_on() && !sgrid_on())                      /* the roll: the step being entered */
         return ui.entry_open && !live_rec_sel() && ui.cursor < len ? (uint64_t)1 << ui.cursor : 0u;
     for (k = 0; k < 27u; k++)
         if (((keys >> k) & 1u) && !key_black(k) && ui.bank * 16u + key_place(k) < len)
@@ -1429,6 +1607,12 @@ static void step_edit(uint32_t slot, int32_t steps)
         grid_edit(slot, steps);
         return;
     }
+#if FELUCCA_SLICE
+    if (sgrid_on()) {
+        sgrid_edit(slot, steps);
+        return;
+    }
+#endif
     follow_hold();                                        /* ((1.3) what is edited stays on the screen) */
     if (slot == 0u)
         sel_pitch(t, steps);
@@ -2464,6 +2648,11 @@ static void ui_input(void)
         slice_keys_pick(notes);
 #endif
     lock_keys();                                        /* (a grid key on a hit let go: the hit goes) */
+#if FELUCCA_SLICE
+    if (song.grid == 3u) {
+        sgrid_keys(notes);                              /* ((GruselCore) the SLICE grid) */
+    } else
+#endif
     if (song.grid) {
         grid_keys(notes);
     } else if (song.seq_mode && step_page(cur_page()->graph)) {   /* NOTES (not FEEL: its knobs only) */

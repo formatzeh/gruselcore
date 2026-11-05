@@ -86,10 +86,6 @@ static const menu_credit_t MENU_CREDITS[] = {
     {"https://github.com/sgossner/VSCO-2-CE", MC_URL},
     {"https://github.com/sgossner/VCSL", MC_URL},
     {"", MC_TEXT},
-    {"YUE2", MC_TITLE},                          /* (Skiff phase 9) the music model SLICE's BREAK and FUNK were made with */
-    {"Multimodal Art Projection: SLICE's BREAK and FUNK", MC_TEXT},
-    {"https://github.com/multimodal-art-projection/YuE", MC_URL},
-    {"", MC_TEXT},
     {"VOICE", MC_TITLE},
     {"Dennis H. Klatt (1980)", MC_TEXT},
     {"https://doi.org/10.1121/1.383940", MC_URL},

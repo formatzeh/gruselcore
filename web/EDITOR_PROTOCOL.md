@@ -193,6 +193,9 @@ it ever sees one. Today: SAMPLE SET and GRAIN SRC 1 and 4 (once TRANH, PERC) = 0
 1, 2, 3 (once HAND, CYM, H+CYM; 1.0.5) = 6 (66), 5 (10), 8 (77): its names are STD 66 10 77 80 10 66 55 77, the
 device's knob steps STD 80 10 66 55 77. An editor of before 1.0.5 (first of a name = original) offers 66 10 77
 at 1..3 and hides 6 5 8: what it sets still plays the right kit, and the device answers with 6 5 8.
+(GruselCore) SLICE SOURCE (engine 13, E0) 0, 4, 5 (once BREAK, PIANO, FUNK) = 1 USR1: its names are USR1 USR1 USR2
+USR3 USR1 USR1. Here the device's original is 1, not the first of the name: an editor offers 0 as USR1, the device
+lands on 1 and answers with 1 (shown by its name).
 
 ## Commands
 

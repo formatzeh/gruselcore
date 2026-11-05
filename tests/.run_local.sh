@@ -363,9 +363,9 @@ EOF
     mkdir -p build/fm6_demo
     run "FM6: algorithms, envelopes, retrigger, DC, clipping, macros, patch formats, voices, cost, demos" "$OUT/fm6_test" build/fm6_demo
     # SLICE is in the standard build (firmware/src/core.h): its test always runs (after #22 by andreahaku)
-    if grep -q '^#define SLC_BREAK_BPM ' build/gen/felucca_samples.h; then
+    if [ "${FELUCCA_SLICE:-1}" != 0 ]; then
         mkdir -p build/slice_demo
-        python3 tools/gen_waves.py build/genwav >/dev/null      # (the loop's drums; the BREAK no longer uses them)
+        python3 tools/gen_waves.py build/genwav >/dev/null      # (the test loop's drums)
         python3 tests/slice_loop.py build/slice_demo/loop
         python3 tools/fm1_sample_upload.py build LOOP build/slice_demo/loop build/slice_demo/loop.wav:60 >/dev/null
         $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/slice_test" tests/slice_test.c -lm
@@ -374,7 +374,7 @@ EOF
         $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/smpmix_test" tests/smpmix_test.c -lm
         run "(#21) a user slot's sounds: LEVEL, REV, DLY, their store with the slot, old slots as uploaded; (#35) a slot as DRUM's KIT" "$OUT/smpmix_test"
     else
-        echo "== SLICE: build/ was made with FELUCCA_SLICE=0 (no BREAK); run ./build.sh without it first"
+        echo "== SLICE: FELUCCA_SLICE=0 builds without it; run without it for its test"
         fail=1
     fi
 else

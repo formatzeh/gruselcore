@@ -223,6 +223,16 @@ static const preset_t ANALOG_PRESETS[] = {
     {"BOOM SUB", {3, 0, 0, 0, 80, 0, 30, 64}, {0, 90, 60, 40}, 0, 1, FX(20, 0, 0, 0), MORE({P_M1SRC, 9}, {P_M1DST, 1}, {P_M1AMT, 40}), TAG(PT_BASS)},
     {"PUNCH BASS", {1, 0, 0, 0, 40, 30, 30, 64}, {0, 50, 50, 20}, 50, 1, FX(30, 0, 0, 5), MORE({P_DTYPE, 1}), TAG(PT_BASS)},
     {"KNOCK BASS", {6, 0, 100, 0, 46, 20, 40, 64}, {0, 46, 30, 16}, 54, 1, FX(25, 0, 0, 0), MORE({P_M1SRC, 9}, {P_M1DST, 1}, {P_M1AMT, 24}), TAG(PT_BASS), TRIM(6)},
+    /* (GruselCore, 2026-11-05) dark jungle / DnB / neurofunk basses modelled on the user's reference one-shots
+     * (measured: pitch, envelope, brightness over time, wobble; no audio of them in the firmware); kept after the trial */
+    {"SWELL SUB", {0, 8, 64, 0, 4, 30, 20, 64}, {80, 64, 127, 20}, 63, 1, FX(20, 0, 0, 0), TAG(PT_BASS), TRIM(-9)},              /* the filter opens and stays */
+    {"GROWL WOB", {0, 25, 64, 0, 52, 50, 75, 64}, {0, 64, 127, 10}, 0, 1, FX(40, 0, 0, 0), MORE({P_LRATE, 82}, {P_LD_FLT, 18}, {P_DTYPE, 1}), TAG(PT_BASS), TRIM(-11)},   /* ~3.8 Hz growl */
+    {"HOLLOW 8", {1, 0, 64, 0, 50, 10, 20, 64}, {0, 64, 127, 10}, 0, 1, FX(15, 0, 0, 0), MORE({P_LSYNC, 6}, {P_LD_AMP, 25}, {P_LD_FLT, 25}), TAG(PT_BASS), TRIM(-5)},  /* hollow, 8ths */
+    {"LASER DIVE", {0, 10, 64, 0, 60, 40, 30, 64}, {0, 114, 0, 40}, 0, 1, FX(20, 0, 0, 0), MORE({P_ED_PIT, 48}, {P_ITYPE, 7}, {P_IA, 38}), TAG(PT_BASS), TRIM(1)},     /* dives, flanged */
+    {"NEURO MID", {0, 12, 64, 0, 55, 70, 50, 64}, {0, 64, 127, 10}, 0, 1, FX(25, 0, 0, 0), MORE({P_LSYNC, 7}, {P_LWAVE, 4}, {P_LD_FLT, 12}), TAG(PT_BASS), TRIM(-12)},  /* S&H growl */
+    {"YOY BASS", {0, 15, 64, 0, 60, 100, 40, 64}, {0, 64, 127, 10}, 0, 1, FX(30, 0, 0, 0), MORE({P_LSYNC, 5}, {P_LD_FLT, 40}, {P_LPHASE, 50}, {P_DTYPE, 1}), TAG(PT_BASS), TRIM(-11)},
+    {"SCOOP CHOP", {0, 15, 64, 0, 50, 40, 40, 64}, {0, 64, 127, 8}, 0, 1, FX(30, 0, 0, 0), MORE({P_M1SRC, 9}, {P_M1DST, 1}, {P_M1AMT, -40}, {P_EG2_DEC, 66}), TAG(PT_BASS), TRIM(-10)},
+    {"SUB DRONE", {0, 30, 64, 0, 20, 30, 20, 64}, {68, 64, 127, 60}, 0, 1, FX(0, 0, 0, 30), MORE({P_LRATE, 40}, {P_LD_FLT, 18}), TAG(PT_BASS), TRIM(8)},           /* dark drone */
 };
 
 static const engine_t ENG_ANALOG = {

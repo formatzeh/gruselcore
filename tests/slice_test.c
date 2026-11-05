@@ -5,14 +5,13 @@
  * LOOP.hdr / LOOP.bin: a user slot image written by `fm1_sample_upload.py build` from tests/slice_loop.py's
  * WAV (two bars of drums at 96 BPM with a swing), LOOP.hits its onsets (s). The slot is put into a RAM
  * image of the flash slots (SMP_USER_XIP) and read by smp_user_scan as at boot.
- * 1. BREAK's build-time table (gen_samples.py ima_states) == the firmware decoder's states.
- * 2. AUTO: the detector (slc_scan) on BREAK finds its hits; on the user loop every onset has a slice
- *    start at most 6 ms before it and 1 ms after it, and no slice starts away from an onset.
+ * 1. (GruselCore) the built-in sources are retired (BREAK, PIANO, FUNK): their numbers are aliases of USR1.
+ * 2. AUTO: on the user loop every onset has a slice start at most 6 ms before it and 1 ms after it, and no
+ *    slice starts away from an onset; its table == the firmware decoder's states.
  * 3. REV: a slice read backwards (64-sample windows from checkpoints) == the forward decode reversed.
  * 4. keys / steps -> slices (mod the count, START, ROOT, an empty slot plays the sine); ONE / GATE / LOOP.
- * 5. demos into DEMO_DIR: both presets with their patterns, BREAK re-sequenced, the user loop sliced AUTO and MAN.
- * 8. PIANO (SRC 4, 1.0.4): the SAMPLE PIANO zone of middle C itself (no copy), its table, one AUTO slice, played;
- *    a missing sample (SLICE / SAMPLE / GRAIN on an empty slot) plays a sine at the note's pitch: zero crossings,
+ * 5. demos into DEMO_DIR: the preset with its patterns, the user loop sliced 16 / 32 / AUTO, re-sequenced.
+ * 8. a missing sample (SLICE / SAMPLE / GRAIN on an empty slot) plays a sine at the note's pitch: zero crossings,
  *    level, no click, no other sample, it ends after the note-off.
  * 6. MAN, the slices set by hand (the SLICES page; ported from hugelton/Felucca#27 by andreahaku): none set = AUTO,
  *    move / end / split / join within their limits, the decoder states, keys / bounds / REV after a commit, a slot
@@ -342,30 +341,6 @@ int main(int argc, char **argv)
     int32_t worst;
     long n;
 
-    /* 1, 2: the built-in loops (Skiff phase 9: BREAK and FUNK from assets/breaks/): their build-time tables == the
-     * decoder's states, and their AUTO slices == what the detector finds in them (gen_samples.py runs slc_scan's
-     * integer steps: the same starts, to the sample) */
-    {
-        static const slc_src_t *const BUILT[] = {&SLC_BREAK, &SLC_FUNK};
-        static slc_src_t tmp;
-        char what[96];
-        for (i = 0; i < NELEM(BUILT); i++) {
-            const slc_src_t *b = BUILT[i];
-            const char *name = i ? "FUNK" : "BREAK";
-            snprintf(what, sizeof what, "%s: build-time table == decoder states", name);
-            check(what, !(bad = table_check(b)), "%u of %u differ", bad, SLC_GRID + b->nauto);
-            tmp = *b;
-            tmp.len = 0;
-            slc_scan(&tmp, b->len);
-            tmp.len = b->len;
-            snprintf(what, sizeof what, "%s: slc_scan grid == build-time grid", name);
-            check(what, !memcmp(tmp.grid, b->grid, sizeof tmp.grid), 0);
-            snprintf(what, sizeof what, "%s: slc_scan finds its AUTO slices, exactly", name);
-            check(what, match(&tmp, b->apos, b->nauto, 132, 22, msg, sizeof msg, &worst) && tmp.nauto == b->nauto &&
-                  !memcmp(tmp.apos, b->apos, b->nauto * sizeof b->apos[0]), "%s", msg);
-        }
-    }
-
     /* 2: the user loop, through the slot image and smp_user_scan */
     snprintf(path, sizeof path, "%s.hdr", loop);
     n = load(path, host_slots, SMP_USER_DATA);
@@ -406,16 +381,14 @@ int main(int argc, char **argv)
 
     /* 3 */
     for (bad = 0, i = 0; i < 16u; i++)
-        bad += rev_check(0, 2, i);
-    for (i = 0; i < 4u; i++)
-        bad += rev_check(0, 0, i);
-    for (i = 0; i < SLC_BREAK.nauto; i++)
-        bad += rev_check(0, SLC_DIV_AUTO, i);
+        bad += rev_check(1, 2, i);
+    for (i = 0; i < 32u; i++)
+        bad += rev_check(1, 3, i);
     for (i = 0; i < 4u; i++)
         bad += rev_check(1, 0, i);
     for (i = 0; i < slc_usr[0].nauto; i++)
         bad += rev_check(1, SLC_DIV_AUTO, i);
-    check("REV: backwards == forwards reversed (BREAK, USR1; 4 / 16 / AUTO)", !bad, "%u samples differ", bad);
+    check("REV: backwards == forwards reversed (USR1; 4 / 16 / 32 / AUTO)", !bad, "%u samples differ", bad);
 
     /* 4: keys / steps -> slices */
     {
@@ -423,10 +396,10 @@ int main(int argc, char **argv)
         voice_t *v;
         uint32_t a, b, st, ok = 1;
         host_tracks_init();
-        host_preset(t, SLC_ENG, 0);                              /* BREAK 16 */
+        host_preset(t, SLC_ENG, 0);                              /* CHOP: USR1, 16 */
         trk_note_on(t, 65, 100);
         v = voice_of(t, 65);
-        slc_bounds(&SLC_BREAK, 2, 5, &a, &b, &st);
+        slc_bounds(slc_get(1), 2, 5, &a, &b, &st);
         ok &= v && slice_of(v) == 5u && v->ph[0] == a && v->ph[2] == b;
         trk_note_on(t, 59, 100);
         ok &= (v = voice_of(t, 59)) && slice_of(v) == 15u;
@@ -443,8 +416,8 @@ int main(int argc, char **argv)
         ok = 1;
         t->p[P_ROOT] = 0;
         t->p[P_E1] = SLC_DIV_AUTO;
-        trk_note_on(t, 72, 100);                           /* 12 mod 10 hits */
-        ok &= (v = voice_of(t, 72)) && slice_of(v) == 12u % SLC_BREAK.nauto && v->ph[0] == SLC_BREAK.apos[12u % SLC_BREAK.nauto];
+        trk_note_on(t, 72, 100);                           /* 12 mod the AUTO hits */
+        ok &= (v = voice_of(t, 72)) && slice_of(v) == 12u % slc_usr[0].nauto && v->ph[0] == slc_usr[0].apos[12u % slc_usr[0].nauto];
         t->p[P_E0] = 2;                                    /* USR2: empty -> the sine */
         trk_note_on(t, 61, 100);
         ok &= (v = voice_of(t, 61)) && ((uint32_t)v->s[4] & 7u) == SLC_SINE;
@@ -454,11 +427,10 @@ int main(int argc, char **argv)
         check("keys: AUTO count, an empty slot plays the sine, USR1", ok, 0);
         ok = 1;
         song.octave = 0;
-        t->p[P_E0] = 0;
         ok &= kb_map(t, 0) == 60u && kb_map(t, 9) == 69u;
         check("keys: the lowest key is slice 0 (no scale)", ok, 0);
     }
-    {   /* ONE / GATE / LOOP: a 125 ms slice, the note released after 10 ms */
+    {   /* ONE / GATE / LOOP: a 156 ms slice (USR1's 5 s in 32), the note released after 10 ms */
         static const char *const MN[3] = {"ONE", "GATE", "LOOP"};
         uint32_t m;
         for (m = 0; m < 3u; m++) {
@@ -467,6 +439,7 @@ int main(int argc, char **argv)
             uint32_t held, after, k;
             host_tracks_init();
             host_preset(t, SLC_ENG, 0);
+            t->p[P_E1] = 3;                                /* DIV 32 */
             t->p[P_E4] = (int16_t)m;
             t->p[P_REL] = 10;
             trk_note_on(t, 60, 100);
@@ -489,6 +462,39 @@ int main(int argc, char **argv)
         }
     }
 
+    {   /* (GruselCore) one slice at a time: a new slice cuts the one sounding (a fade over a block, then it ends), no click */
+        track_t *t = &trk[0];
+        voice_t *v1, *v2;
+        int32_t o[2 * CTL], prev = 0, big = 0, pk = 0;
+        uint32_t k, ok;
+        host_tracks_init();
+        host_preset(t, SLC_ENG, 0);                    /* USR1, DIV 16, MODE ONE */
+        trk_note_on(t, 60, 100);
+        v1 = voice_of(t, 60);
+        blocks(20);                                     /* (well into slice 1) */
+        trk_note_on(t, 61, 100);
+        v2 = voice_of(t, 61);
+        ok = v1 && v2 && v1 != v2 && v1->s[6] == SLC_CUT;
+        for (k = 0; k < 3u; k++) {
+            uint32_t i;
+            mix_block(o, CTL);
+            for (i = 0; i < CTL; i++) {
+                int32_t d = o[2 * i] - prev;
+                big = abs(d) > big ? abs(d) : big;
+                pk = abs(o[2 * i]) > pk ? abs(o[2 * i]) : pk;
+                prev = o[2 * i];
+            }
+        }
+        ok &= !v1->active && v2->active;
+        for (k = 0, ok = ok ? 1u : 0u; k < NVOICE; k++)
+            ok &= !t->v[k].active || &t->v[k] == v2;
+        check("ONE SLICE AT A TIME: a new slice cuts the one sounding within two blocks (only it sounds then)", ok,
+              "largest step %d, peak %d", big, pk);
+        trk_note_off(t, 60);
+        trk_note_off(t, 61);
+        blocks(200);
+    }
+
     /* 6: MAN, the slices set by hand (the SLICES page; from hugelton/Felucca#27 by andreahaku) */
     {
         const slc_src_t *s = slc_get(1);
@@ -501,8 +507,8 @@ int main(int argc, char **argv)
               (ENG_SLICE.presets[0].tag & PT_HIDE), 0);
         slc_bounds(s, SLC_DIV_MAN, 3, &a, &b, &st);
         ok &= slc_count(s, SLC_DIV_MAN) == s->nauto && a == s->apos[3] && b == s->apos[4] && st == s->ast[3];
-        ok &= slc_count(&SLC_BREAK, SLC_DIV_MAN) == SLC_BREAK.nauto && !slc_man_begin(SMP_USER_SLOTS);   /* BREAK: AUTO */
-        check("MAN: none set = the AUTO slices (BREAK always)", ok, 0);
+        ok &= !slc_man_begin(SMP_USER_SLOTS);              /* no slot: nothing to edit */
+        check("MAN: none set = the AUTO slices", ok, 0);
 
         ok = 1;
         m = slc_man_begin(0);
@@ -676,7 +682,7 @@ int main(int argc, char **argv)
             }
 
             ok = 1;
-            tiny = SLC_BREAK;                              /* a material shorter than two slices */
+            tiny = slc_usr[0];                             /* a material shorter than two slices */
             tiny.len = 100;
             memset(&t2, 0, sizeof t2);
             t2.n = 1;
@@ -811,9 +817,8 @@ int main(int argc, char **argv)
         const demo_t D[] = {
             {"preset_chop.wav", 0, 120, 16, 4, CHOP, -1, -1},
             {"preset_stutter.wav", 1, 120, 16, 4, STUTTER, -1, -1},
-            {"break_in_order.wav", 0, 120, 16, 2, SLICES, -1, -1},
-            {"break_resequenced.wav", 0, 120, 32, 4, RESEQ, -1, -1},
-            {"break_resequenced_32.wav", 0, 120, 32, 4, RESEQ, -1, 3},
+            {"usr_loop_16_in_order.wav", 0, 96, 16, 2, SLICES, 1, 2},
+            {"usr_loop_32_resequenced.wav", 0, 96, 32, 4, RESEQ, 1, 3},
             {"usr_empty_plays_sine.wav", 0, 120, 16, 2, SLICES, 2, SLC_DIV_AUTO},    /* USR2 empty: a sine per key */
             {"usr_loop_auto_in_order.wav", 0, 96, 16, 2, SLICES, 1, SLC_DIV_AUTO},
             {"usr_loop_auto_resequenced.wav", 0, 96, 32, 4, USR, 1, SLC_DIV_AUTO},
@@ -825,66 +830,24 @@ int main(int argc, char **argv)
         check("demos rendered (peak above -24 dBFS, no clipping)", !df, "%s", dir);
     }
 
-    /* 8: PIANO (SRC 4), a missing sample's sine */
-#ifdef SLC_PIANO_NOTE
-    check("PIANO: build-time table == decoder states", !(bad = table_check(&SLC_PIANO)), "%u of %u differ", bad,
-          SLC_GRID + SLC_PIANO.nauto);
-    for (i = 0; i < NELEM(SMP_ZONES) && !(SMP_ZONES[i].root16 == SLC_PIANO_NOTE * 16 &&
-                                          SMP_ZONES[i].off == SLC_PIANO.seg[0].off); i++)
-        ;
-    check("PIANO (SRC 4): the SAMPLE PIANO zone itself (no copy), one AUTO slice at 0",
-          slc_get(SLC_SRC_PIANO) == &SLC_PIANO && i < NELEM(SMP_ZONES) && SLC_PIANO.nseg == 1u &&
-          SLC_PIANO.len == SMP_ZONES[i].n && SLC_PIANO.seg[0].n == SLC_PIANO.len && SLC_PIANO.rate == SMP_ZONES[i].rate &&
-          SLC_PIANO.nauto == 1u && SLC_PIANO.apos[0] == 0u && SLC_PIANO.ast[0] == 0u,
-          "%u samples, %u AUTO", SLC_PIANO.len, SLC_PIANO.nauto);
-    {   /* SRC 4 plays the zone from its start */
-        track_t *t = &trk[0];
-        voice_t *v;
-        uint32_t ok;
-        int32_t o[2 * CTL], pk = 0;
-        voices_off();
-        host_tracks_init();
-        host_preset(t, SLC_ENG, 0);
-        t->p[P_E0] = (int16_t)SLC_SRC_PIANO;
-        t->p[P_E1] = SLC_DIV_AUTO;
-        trk_note_on(t, 60, 100);
-        v = voice_of(t, 60);
-        ok = v && ((uint32_t)v->s[4] & 7u) == SLC_SRC_PIANO && v->ph[0] == 0u && v->ph[2] == SLC_PIANO.len;
-        for (i = 0; i < 40u; i++) {
-            mix_block(o, CTL);
-            for (n = 0; n < (long)CTL; n++)
-                pk = abs(o[2 * n]) > pk ? abs(o[2 * n]) : pk;
+    /* 1: (GruselCore) the built-in sources retired: SRC 0 (BREAK), 4 (PIANO), 5 (FUNK) are USR1, everywhere */
+    {
+        const param_desc_t *d = &ENG_SLICE.edit[0];
+        int16_t p[P_COUNT];
+        uint32_t ok = 1, v;
+        memset(p, 0, sizeof p);
+        ok &= ENG_SLICE.edit[0].max == 5 && str_eq(N_SLC_SRC[1], "USR1") && str_eq(N_SLC_SRC[3], "USR3");
+        for (v = 0; v <= 5u; v++) {
+            uint32_t want = v >= 1u && v <= 3u ? v : 1u;
+            p[P_E0] = (int16_t)v;
+            ok &= slc_src_of(p) == want && slc_get(v) == slc_get(want) && enum_orig(d, (int32_t)v) == (int32_t)want &&
+                  param_fit(d, (int32_t)v) == (int32_t)want;
         }
-        check("PIANO (SRC 4): a key plays the zone (AUTO: the whole note), sounding", ok && pk > 2000, "peak %d", pk);
+        ok &= enum_step(d, 1, 0) == 1 && enum_step(d, 3, 4) == 3 && enum_step(d, 1, 2) == 2;   /* the knob: USR1..3 */
+        ok &= ENG_SLICE.presets[0].e[0] == 1 && d->def == 1;                                  /* CHOP, the default: USR1 */
+        check("SRC: BREAK, PIANO, FUNK retired: USR1 (shown, played, loaded; the knob steps USR1..USR3)", ok, 0);
     }
-#else
-    check("PIANO (SRC 4): none in a build without the CC0 samples", !slc_get(SLC_SRC_PIANO), 0);
-#endif
-    check("SRC: BREAK USR1 USR2 USR3 PIANO FUNK (append-only: 1.0.3's numbers kept)",
-          ENG_SLICE.edit[0].max == 5 && str_eq(N_SLC_SRC[0], "BREAK") && str_eq(N_SLC_SRC[1], "USR1") &&
-          str_eq(N_SLC_SRC[3], "USR3") && str_eq(N_SLC_SRC[4], "PIANO") && str_eq(N_SLC_SRC[5], "FUNK") &&
-          SLC_BREAK.len != 0u && slc_get(SLC_SRC_FUNK) == &SLC_FUNK && !SLC_SRC_USR(SLC_SRC_FUNK) &&
-          !SLC_SRC_USR(SLC_SRC_PIANO) && !SLC_SRC_USR(0u) && SLC_SRC_USR(1u) && SLC_SRC_USR(3u), 0);
-    {   /* (Skiff phase 9) SRC 5 FUNK: DIV 8, the lowest key plays its first eighth of the material */
-        track_t *t = &trk[0];
-        voice_t *v;
-        uint32_t ok;
-        int32_t o[2 * CTL], pk = 0;
-        voices_off();
-        host_tracks_init();
-        host_preset(t, SLC_ENG, 0);
-        t->p[P_E0] = (int16_t)SLC_SRC_FUNK;
-        t->p[P_E1] = 1;
-        trk_note_on(t, 60, 100);
-        v = voice_of(t, 60);
-        ok = v && ((uint32_t)v->s[4] & 7u) == SLC_SRC_FUNK && v->ph[0] == 0u && v->ph[2] == slc_gpos(&SLC_FUNK, 16u);
-        for (i = 0; i < 40u; i++) {
-            mix_block(o, CTL);
-            for (n = 0; n < (long)CTL; n++)
-                pk = abs(o[2 * n]) > pk ? abs(o[2 * n]) : pk;
-        }
-        check("FUNK (SRC 5): DIV 8, a key plays its slice, sounding", ok && pk > 2000, "peak %d", pk);
-    }
+    /* 8: a missing sample's sine */
     sine_ok("SLICE on an empty USR2: A4", sine_run(SLC_ENG, 2, 69), 440.0);
     sine_ok("SLICE on an empty USR2: A3", sine_run(SLC_ENG, 2, 57), 220.0);
     sine_ok("SAMPLE on an empty USR2: A4", sine_run(4u, (int16_t)(SMP_NSETS + 1), 69), 440.0);

@@ -79,7 +79,7 @@ static void smk_pads_steps(void)
 static void smk_pads_out(const uint8_t *nl, const uint8_t *nd, const uint8_t *nb, const uint8_t *nm)
 {
     uint32_t w, k, col = smk_rgb(T_TRK(song.sel), SMK_PAD_FULL);
-    if (!smk_pads_keys() || grid_on()) {
+    if (!smk_pads_keys() || grid_on() || sgrid_on()) {
         smk_pads_steps();
         return;
     }

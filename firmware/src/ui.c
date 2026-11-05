@@ -865,6 +865,61 @@ static void step_clear(step_t *st)
  * the lane its own (grid_own). Live recording on a DRUM track writes hits (seq.c rec_note) */
 static int grid_on(void) { return !ui.home && !ui.menu && !ui.confirm && step_page(cur_page()->graph) && drum_track(TSEL); }   /* (NOTES only: FEEL is SC_STEP too) */
 
+/* ------------------------------------------------ (GruselCore) the SLICE grid --- */
+/* SEQ > NOTES on a SLICE track is the SLICE grid (the user's wish: slices by hand without counting KNOB 1's detents):
+ * 8 slices x the 16 steps of a page, a step one slice or none. A white key selects its step (the cursor); black keys
+ * 1..8 then put that slice on it, or (the slice it has) take it away; all silent (seq.c song.grid 3: never disturbing
+ * the playback). Black key 9 the next eight slices (DIV 16, 32), 10 / 11 the page down / up. The rows show the cursor
+ * step's slice (sg_slice follows it). KNOB 1 SLICE (the selection's slices one on or back; an empty cursor step: the
+ * row shown), 2 RATCH, 3 RANDOM (right: the steps with a slice a new random one each, none set or cleared; left: the
+ * slices as set by hand back), 4 VELOCITY.
+ * Drawn by ui_graph.c graph_sgrid */
+#if FELUCCA_SLICE
+static uint8_t sg_slice;                       /* the slice picked (its eight: sg_base, seq.c) */
+static int sgrid_on(void)
+{
+    return !ui.home && !ui.menu && !ui.confirm && step_page(cur_page()->graph) && eng_idx(TSEL->eng_req) == ENGI_SLICE;
+}
+static uint32_t sg_count(const track_t *t) { return slc_sound_slices(t->p); }
+/* the slice step s plays, -1 = none (a rest, a TIE, a drum hit) */
+static int32_t sg_of(const track_t *t, const step_t *s)
+{
+    return s->time == ST_NOTE && s->n && !s->hit ? (int32_t)slc_note_slice(t->p, s->note[0], sg_count(t)) : -1;
+}
+/* step i plays slice j alone (its ratchet, velocity, chance and the rest kept; a rest or a TIE becomes a note) */
+static void sg_put(track_t *t, uint32_t i, uint32_t j)
+{
+    step_t *s = &t->step[i % NSTEP];
+    if (s->time != ST_NOTE || !s->n || s->hit) {
+        uint8_t keep = s->time == ST_NOTE ? s->vel : 0u;
+        step_clear(s);
+        s->vel = keep;
+        s->time = ST_NOTE;
+    }
+    s->note[0] = slc_slice_note(t->p, j, sg_count(t));
+    s->note[1] = s->note[2] = s->note[3] = 0;
+    s->n = 1;
+    s->acc = 0;                                 /* (one note, a new one: not tied on) */
+}
+/* the picked slice inside the count (DIV changed), and the eight shown for the keys (seq.c sg_base) */
+static void sg_fit(void)
+{
+    static uint16_t seen = 0xFFFFu;                     /* the cursor and its slice last looked at */
+    uint32_t n = sg_count(TSEL);
+    int32_t j = ui.cursor < (uint32_t)TSEL->p[P_SLEN] ? sg_of(TSEL, &TSEL->step[ui.cursor]) : -1;
+    uint16_t now = (uint16_t)(ui.cursor | (uint32_t)(j + 1) << 8);
+    if (j >= 0)
+        sg_slice = (uint8_t)j;                          /* (the row shown: the cursor step's slice) */
+    if (sg_slice >= n)
+        sg_slice = 0;
+    if (now != seen || sg_base >= n)                    /* another step or slice: its eight shown (black key 9 */
+        sg_base = (uint8_t)(sg_slice & ~7u);            /* browses the others meanwhile) */
+    seen = now;
+}
+#else
+static int sgrid_on(void) { return 0; }
+#endif
+
 /* black key place p (seq.c key_place) held, 0 = not */
 static int black_held(uint32_t p)
 {
@@ -958,7 +1013,7 @@ static void follow_hold(void)
 static void follow_poll(void)                          /* ui_input, every pass */
 {
     uint32_t len = (uint32_t)TSEL->p[P_SLEN], want, g = cur_page()->graph;
-    if (!song.playing || ui.home || ui.menu || ui.confirm || drum_track(TSEL) || !(step_page(g) || g == GR_FEEL)) {
+    if (!song.playing || ui.home || ui.menu || ui.confirm || drum_track(TSEL) || sgrid_on() || !(step_page(g) || g == GR_FEEL)) {
         follow.hold = 0;
         return;
     }

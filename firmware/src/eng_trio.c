@@ -364,6 +364,9 @@ static const preset_t TRIO_PRESETS[] = {
     {"TRIO WOBBLE", {1, 0, -12, 10, 0, 50, 80, 40}, {0, 64, 127, 20}, 0, 1, FX(40, 0, 0, 5), MORE({P_LSYNC, 7}, {P_LD_FLT, 48}, {P_DTYPE, 1}), TAG(PT_BASS)},
     {"BP WOBBLE", {0, 7, -12, 12, 1, 60, 90, 64}, {0, 64, 127, 20}, 0, 1, FX(45, 0, 0, 5), MORE({P_LSYNC, 6}, {P_LD_FLT, 40}, {P_DTYPE, 2}), TAG(PT_BASS)},
     {"PWM WOBBLE", {1, 0, -12, 6, 0, 56, 60, 64}, {0, 64, 127, 20}, 0, 1, FX(30, 0, 0, 5), MORE({P_LSYNC, 8}, {P_LD_SHP, 50}, {P_LD_FLT, 20}), TAG(PT_BASS)},
+    /* (GruselCore, 2026-11-05) modelled on the user's reference sounds (measured, no audio of them here); kept after the trial */
+    {"GATE REESE", {0, 0, -12, 20, 0, 58, 30, 64}, {0, 64, 127, 20}, 0, 1, FX(20, 30, 0, 0), MORE({P_LSYNC, 8}, {P_LWAVE, 3}, {P_LD_AMP, 90}, {P_LD_FLT, 20}), TAG(PT_BASS), TRIM(6)},   /* gated in 16ths (a square LFO: the SLICER is the track's) */
+    {"DARK AIR", {4, 15, -24, 8, 0, 100, 20, 64}, {70, 64, 127, 70}, 0, 0, FX(0, 40, 30, 60), MORE({P_LRATE, 70}, {P_LD_AMP, 35}), TAG(PT_PAD)},   /* airy atmos */
 };
 
 static const engine_t ENG_TRIO = {

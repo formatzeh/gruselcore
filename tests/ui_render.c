@@ -782,7 +782,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_GLO_PEEK, S_GLO_ACTIVE, S_GLO_EXT, S_SCL_PEEK, S_SCL_ACTIVE, S_EDIT_PEEK, S_EDIT_ACTIVE, S_EDIT_USER, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX,
        S_SEQ_TOOLS, S_SEQ_TOOLS_DRUM,
        S_NAME_USER, S_NAME_TYPING, S_NAME_123, S_NAME_EMPTY, S_NAME_FULL, S_NAME_PLAYING, S_PROJECT_NAMED,
-       S_USER_FOOT, S_SLICES_BREAK, S_SLICES_USR, S_SLICES_NOFILE, S_SAMPLES,
+       S_USER_FOOT, S_SLICES_BREAK, S_SLICES_USR, S_SLICES_NOFILE, S_SAMPLES, S_SLICE_GRID,
        S_ROLL_EMPTY, S_ROLL_ACID, S_ROLL_CHORDS, S_ROLL_TIES, S_ROLL_LEN32, S_ROLL_HIGH, S_ROLL_LOW, S_ROLL_WIDE, S_ROLL_PLAYING,
        S_ROLL_LOCKS, S_ROLL_LOCK_HELD, S_DRUM_LOCKS, S_DRUM_LOCK_HELD, S_MOTION_LOCKS, S_AUTO_LIST, S_AUTO_LIST_ADD, S_AUTO_LIST_DRUM, S_AUTO_LIST_DEL, S_REC_LAYER, S_REC_LAYER_SET,
        S_COUNTIN, S_COUNTIN2, S_MENU_AUDIO, S_HEAD_PLAY_REC, S_HEAD_REC_OTHER, S_HEAD_BPM_TURN, S_HEAD_BPM_LOCK,
@@ -823,7 +823,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "layer_edit_active", "layer_edit_user", "layer_hint", "layer_lock", "layer_lock_fx",
     "layer_seq_tools", "layer_seq_tools_drum",
     "name_user", "name_typing", "name_123", "name_empty", "name_full", "name_playing", "project_named",
-    "user_foot", "slices_break", "slices_usr", "slices_nofile", "samples",
+    "user_foot", "slices_break", "slices_usr", "slices_nofile", "samples", "slice_grid",
     "roll_empty", "roll_acid", "roll_chords", "roll_ties", "roll_len32_p2", "roll_high", "roll_low", "roll_wide", "roll_playing",
     "roll_locks", "roll_lock_held", "drum_locks", "drum_lock_held", "motion_locks", "auto_list", "auto_list_add", "auto_list_drum", "auto_list_delete", "layer_rec", "layer_rec_set",
     "countin", "countin_2bars", "menu_audio", "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock",
@@ -1771,9 +1771,13 @@ static void setup(int s)
     case S_USER_FOOT: song.playing = 0; up_store(3, "MY BASS"); ui.uslot = 3; go_page(GR_USER);   /* ((U2) KNOB 3 one */
         ui.act = 3; ui.act2 = 1; break;                                                              /* past ERASE: NAME) */
 #if FELUCCA_SLICE
-    /* EDIT > SLICES: BREAK's 16 slices (slice 6 selected); a user sample's slices set by hand: DIV 8 taken as MAN,
-     * slice 3's start moved (KNOB 2 hot), SPLIT picked (OCT+ lit) */
-    case S_SLICES_BREAK: eng(13u); go_page(GR_SLICES); sp.sel = 5; break;
+    /* EDIT > SLICES: (GruselCore: no BREAK any more, the name kept) a user sample's 16 slices (slice 6 selected); a user
+     * sample's slices set by hand: DIV 8 taken as MAN, slice 3's start moved (KNOB 2 hot), SPLIT picked (OCT+ lit) */
+    case S_SLICES_BREAK:
+        eng(13u); host_slot_make(0); smp_user_scan(0);
+        TSEL->p[P_E0] = 1; TSEL->p[P_E1] = 2;
+        go_page(GR_SLICES); sp.sel = 5; ui.msg_t = 0;
+        break;
     case S_SLICES_USR:
         eng(13u); host_slot_make(0); smp_user_scan(0);
         TSEL->p[P_E0] = 1; TSEL->p[P_E1] = 1;
@@ -1781,6 +1785,22 @@ static void setup(int s)
         ui.hot_col = 1; ui.hot_t = 30;
         break;
     case S_SLICES_NOFILE: eng(13u); TSEL->p[P_E0] = 2; go_page(GR_SLICES); ui.msg_t = 0; break;   /* USR2 empty: SAMPLE NOT FOUND */
+    /* (GruselCore) SEQ > NOTES on a SLICE track: the SLICE grid, USR1 at DIV 8, a re-sequenced break (step 7 a x2 roll),
+     * slice 3 picked, the cursor on step 5 */
+    case S_SLICE_GRID: {
+        static const int8_t SL[16] = {0, -1, 1, -1, 2, 2, 3, -1, 4, -1, 5, 6, 7, -1, 2, 3};
+        uint32_t i;
+        eng(13u); host_slot_make(0); smp_user_scan(0);
+        TSEL->p[P_E0] = 1; TSEL->p[P_E1] = 1; TSEL->p[P_SLEN] = 16;
+        for (i = 0; i < NSTEP; i++)
+            step_clear(&TSEL->step[i]);
+        for (i = 0; i < 16u; i++)
+            if (SL[i] >= 0)
+                sg_put(TSEL, i, (uint32_t)SL[i]);
+        step_set_ratchet(&TSEL->step[6], 2);
+        go_page(GR_ROLL); ui.cursor = 4; sg_slice = 2; sg_fit(); ui.msg_t = 0;
+        break;
+    }
 #endif
     /* (#21) EDIT > SAMPLES: USR1 a kit of 8 sounds (one key each, C4 up), D#4 played (its sound, 4), its LEVEL 50 %, REVERB
      * 35 % (KNOB 3 hot), DELAY 16 % */

@@ -10,7 +10,7 @@
  *   KNOB 3  SPLIT  picked (right): OCT+ splits the slice at its middle (up to 32 slices)
  *   KNOB 4  JOIN   picked (right): OCT+ joins the slice to the one before (its start goes)
  *   OCT-    drops the pick, or (none) goes HOME
- * Edits are for a user slot (USR1..3: SRC); BREAK and PIANO show their slices only, a source with no material (it
+ * Edits are for the user slot SRC plays (USR1..3; (GruselCore) the only sources), a slot with no material (it
  * plays a sine) says SAMPLE NOT FOUND (the no-file icon). The first edit takes
  * the slices shown into the slot's MAN table (eng_slice.c) and sets DIV to MAN; later edits change that table (the
  * audio side switches tables between notes). Leaving the page saves them with the sample (slice_store.c, once
@@ -76,15 +76,15 @@ static void slice_view(uint32_t *a, uint32_t *b, uint32_t *len)
 }
 
 /* the edit table of the selected part's slot, the first time from the slices shown (DIV becomes MAN); 0 = a
- * built-in source (BREAK, PIANO, FUNK) or an empty slot: nothing to edit (says so) */
+ * an empty slot: nothing to edit (says so) */
 static slc_man_t *slice_edit_begin(uint32_t *k)
 {
     uint32_t src, div, n, i, a, b, st;
     const slc_src_t *s = slice_src(&src, &div);
     slc_man_t *m;
-    if (!s || !SLC_SRC_USR(src)) {
+    if (!s) {
         static const char *const EMPTY[3] = {"USR1 EMPTY", "USR2 EMPTY", "USR3 EMPTY"};
-        ui_message(SLC_SRC_USR(src) ? EMPTY[src - 1u] : "PICK A USR SAMPLE FIRST");
+        ui_message(EMPTY[(src - 1u) % 3u]);
         return 0;
     }
     *k = src - 1u;
@@ -158,7 +158,7 @@ static int slice_act_ready(uint32_t c)
 {
     uint32_t src, div, n = slice_count(), j = slice_sel();
     const slc_src_t *s = slice_src(&src, &div);
-    if (!s || slc_slot_of(s) >= SMP_USER_SLOTS || j >= n)   /* (BREAK, PIANO: no edits) */
+    if (!s || slc_slot_of(s) >= SMP_USER_SLOTS || j >= n)
         return 0;
     if (c == 3u)
         return j > 0u;
