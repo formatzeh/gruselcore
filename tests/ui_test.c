@@ -6356,7 +6356,7 @@ static int test_layer_lock(void)
     key_down(white(1)); frame(); key_up(white(1)); frame();   /* G3: ROOT G */
     ok = TSEL->p[P_ROOT] == 7 && !gates();
     turn(EN_K2, 1);
-    ok &= TSEL->p[P_SCALE] == 1 && str_eq(cur_page()->title, "ENV");
+    ok &= TSEL->p[P_SCALE] == 6 && str_eq(cur_page()->title, "ENV");   /* ((GruselCore) MIN by default: MPEN next) */
     bad += check("  SCL locked: a key sets ROOT, KNOB 2 SCL, the page stays ENV", ok);
     ui_power_on();
     go_title("ENV"); frame();

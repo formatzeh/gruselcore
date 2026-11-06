@@ -16,7 +16,7 @@
 /* Layout: one reading column with a sticky chapter rail on wide screens; the FM-1's keys drawn as the one figure.
    The palette and faces are the Learn Skiff page's (web/learn): its six track colours, Barlow Condensed, Inter Tight. */
 :root {
-  --t1: #ff5a36; --t2: #22c3b4; --t3: #ffbf00; --t4: #9580ff; --t5: #ff6fae; --t6: #a3e635;
+  --t1: #ff5a36; --t2: #22c3b4; --t3: #ffbf00; --t4: #9580ff; --t5: #ff6fae; --t6: #a3e635; --t7: #38bdf8;
   --bg: #f3f2ee; --fg: #121212; --dim: #5f5e63; --line: #d8d6cf; --tile: #e9e7e1; --raise: #ffffff;
   --acc: #ff5a36; --on-acc: #000000; --note: #fff1ec; --warn: #fff6d6; --warn-line: #e8c55a;
   --body: #1d1d1f; --keycap: #0c0c0d; --keylabel: #c9c9cd; --white-key: #ecebe6; --white-ink: #1d1d1f;
@@ -139,7 +139,7 @@ footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
     <div class="eyebrow">M-VAVE FM-1 · firmware on Skiff 2.1.1</div>
     <h1>Grusel<span>Core</span> Guide</h1>
     <p class="lede">What GruselCore adds to Skiff, step by step on the unit. This edition covers breaks: loading your own loops into the
-      SLICE engine, placing slices on the SLICE grid, letting EVOLVE chop them, and the dark DnB basses. Skiff's own manual,
+      SLICE engine, placing slices on the SLICE grid, letting EVOLVE chop them, the dark DnB basses, and the scales. Skiff's own manual,
       <a href="../learn/">Learn Skiff</a>, covers everything else.</p>
   </header>
 
@@ -152,6 +152,7 @@ footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
         <li><a href="#whole" style="--c: var(--t4)"><b>4</b><span>The whole loop</span></a></li>
         <li><a href="#evolve" style="--c: var(--t5)"><b>5</b><span>EVOLVE chops the break</span></a></li>
         <li><a href="#basses" style="--c: var(--t6)"><b>6</b><span>Dark DnB basses</span></a></li>
+        <li><a href="#scales" style="--c: var(--t7)"><b>7</b><span>Scales on the keys</span></a></li>
       </ol>
     </nav>
 
@@ -404,6 +405,52 @@ footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
           <li><b>Octave:</b> they play at the pitch of the keys; for the deepest subs, play them an octave lower with
             <kbd>OCT−</kbd> or the track's transpose.</li>
         </ul>
+      </section>
+
+      <!-- 7 -->
+      <section class="chapter" id="scales" style="--c: var(--t7)">
+        <header><span class="n">7</span><h2>Scales on the keys</h2></header>
+        <p>Every melodic track has a <b>ROOT</b> and a <b>SCALE</b>. GruselCore starts every new track in <b>C minor</b> (MIN;
+          Skiff starts on CHR, every note). A saved project keeps the scale it was saved with. The scale shapes the in-key chords,
+          the NOTES page's PITCH knob, EVOLVE's melodies and chord follow, and it can light up the keys. It changes which notes
+          the keys play only when QNT is on (below). Drum tracks have no scale.</p>
+        <ol class="steps">
+          <li><p><b>See the scale on the keys:</b> hold <kbd>HOME</kbd> and let it go for the menu, then CONTROL ›
+            <b>SCALE LEDS</b> › ON. The keys of the selected track's scale glow, the root's brighter; the others stay dark.
+            It stays on and follows the track you select.</p></li>
+          <li><p><b>Pick the root:</b> hold <kbd>SEL</kbd> and press a key: its note is the ROOT (the F key sets F, and so on).</p></li>
+          <li><p><b>Pick the scale:</b> still holding SEL, turn <b>KNOB 2</b>. The screen shows all 23 scales; the minor and dark
+            ones come first, in the top four rows.</p></li>
+          <li><p><b>Play only the scale (optional):</b> on the SCALE page (press <kbd>SEL</kbd>), set <b>QNT</b> to WHITE: C4 plays
+            the root and each white key the next note of the scale, so no wrong note is possible. SNAP keeps every key but moves
+            notes outside the scale down onto it; OFF plays every key as it is.</p></li>
+        </ol>
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>On screen</th><th>Scale</th><th>Notes from E</th><th>Character</th></tr></thead>
+            <tbody>
+              <tr><td>MIN</td><td>natural minor</td><td>E F♯ G A B C D</td><td>The default. Dark, all-round.</td></tr>
+              <tr><td>MPEN</td><td>minor pentatonic</td><td>E G A B D</td><td>Five notes, nothing clashes: basslines, riffs.</td></tr>
+              <tr><td>HARM</td><td>harmonic minor</td><td>E F♯ G A B C D♯</td><td>Minor with a leading note up to the root.</td></tr>
+              <tr><td>MEL</td><td>melodic minor</td><td>E F♯ G A B C♯ D♯</td><td>Minor below, brighter on top.</td></tr>
+              <tr><td>DOR</td><td>Dorian</td><td>E F♯ G A B C♯ D</td><td>Minor with a lighter sixth: hypnotic techno.</td></tr>
+              <tr><td>PHRY</td><td>Phrygian</td><td>E F G A B C D</td><td>The half step above the root: the psytrance colour.</td></tr>
+              <tr><td>LOC</td><td>Locrian</td><td>E F G A B♭ C D</td><td>The darkest mode; an unstable flat fifth.</td></tr>
+              <tr><td>BLUES</td><td>minor blues</td><td>E G A B♭ B D</td><td>Minor pentatonic with the blue note.</td></tr>
+              <tr><td>NEAP</td><td>Neapolitan minor</td><td>E F G A B C D♯</td><td>Phrygian pulling hard to the root.</td></tr>
+              <tr><td>HUNG</td><td>Hungarian minor</td><td>E F♯ G A♯ B C D♯</td><td>Two exotic leaps; dramatic.</td></tr>
+              <tr><td>PDOM</td><td>Phrygian dominant</td><td>E F G♯ A B C D</td><td>The "eastern" psytrance and darkpsy scale.</td></tr>
+              <tr><td>DHARM</td><td>double harmonic</td><td>E F G♯ A B C D♯</td><td>Like PDOM, even more exotic.</td></tr>
+              <tr><td>HIRA</td><td>Hirajoshi</td><td>E F♯ G B C</td><td>Five dark notes, Japanese.</td></tr>
+              <tr><td>INSEN</td><td>In-sen</td><td>E F A B D</td><td>Five notes with the Phrygian half step.</td></tr>
+              <tr><td>KUMOI</td><td>Kumoi</td><td>E F♯ G B C♯</td><td>Five notes, minor with a lighter sixth.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>After them come the others: CHR (every note), MAJ, MIX, PEN (major pentatonic), LYD, WHOLE, DIMHW and DIMWH.</p>
+        <div class="note"><strong>Older firmware</strong>
+          <p>NEAP, HUNG, PDOM, DHARM, HIRA, INSEN and KUMOI are GruselCore's own. Skiff, or a GruselCore before them, opens a
+            track set to one of them as DIMWH.</p></div>
       </section>
     </main>
   </div>

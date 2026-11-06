@@ -747,7 +747,7 @@ minor pentatonic (MPEN), harmonic minor (HARM), ascending melodic minor (MEL), D
 (LOC), minor blues (BLUES), Neapolitan minor (NEAP), Hungarian minor (HUNG), Phrygian dominant (PDOM), double harmonic
 (DHARM), Hirajoshi (HIRA), In-sen (INSEN) and Kumoi (KUMOI); then chromatic (CHR), major (MAJ), Mixolydian (MIX), major
 pentatonic (PEN), Lydian (LYD), whole tone (WHOLE), half-whole diminished (DIMHW) and whole-half diminished (DIMWH).
-The seven from NEAP on are GruselCore's; a firmware without them opens such a track as DIMWH. MENU › CONTROL › SCALE
+The seven from NEAP on are GruselCore's; a firmware without them opens such a track as DIMWH. A new track starts on MIN (GruselCore; Skiff starts on CHR); a saved project keeps its scale. MENU › CONTROL › SCALE
 LEDS ON keeps the selected track's scale lit on the keys, its root brighter. Scales
 with other than seven notes continue across the white keys without repeating notes. Drum kits and incoming MIDI keep
 their own note mapping. Press **SEL** again for the **CHORD** page: CHRD picks the chord keys (OFF, the scale's triads
