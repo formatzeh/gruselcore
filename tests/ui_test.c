@@ -1452,16 +1452,16 @@ static int test_preset_tags(void)
     {   /* (GruselCore) the factory sounds kept (2026-11-02; the genre sounds of the same day), in the PRESETS list's order: nothing else listed */
         static const char *const KEEP[] = {
             "SAW LEAD", "SOFT PAD", "SQR BASS", "PWM STR", "ACID", "RAVE", "SYNTH BRASS", "WIND SWEEP", "STRINGS",
-            "WAR HORN", "NEON LEAD", "SUNSET PAD", "HERO BRASS", "QUANTA", "REESE", "DRIVE BASS", "HARD SYNC", "SUB SAW", "PROG BASS", "HARDTEK BAS", "MENTAL ACID", "MENTAL STAB", "TRIBE PLUCK", "RUMBLE", "DUB STAB", "DARK DRONE", "INDUS LEAD", "HYPNO SEQ", "TRANCE SAW", "SAW PLUCK", "GATE PAD", "SQUELCH", "ZAP", "DEEP SPACE", "CHILL PAD", "DNB REESE", "WOBBLE 8", "WOBBLE 8T", "WOBBLE 16", "WUB SLOW", "JUNGLE SUB", "BOOM SUB", "PUNCH BASS", "KNOCK BASS", "SWELL SUB", "GROWL WOB", "HOLLOW 8", "LASER DIVE", "NEURO MID", "YOY BASS", "SCOOP CHOP", "SUB DRONE",
-            "FM MARIMBA", "NYLON PICK", "GLASS KEYS", "ISOTOPE", "DARK MATTER", "PICK BASS", "GROWL BASS", "FM PSYBASS", "FM HYPNO", "METAL PERC", "DARK BELL", "FM DRONE", "FM DNB BASS", "FM WOBBLE", "FM WOB 8T", "FM NEURO",
-            "PD BRASS", "PD ORGAN", "PD STRINGS", "WIRE", "NEUTRINO", "PD PSY BASS", "PD ACID", "PD MENTAL", "PD DARK BEL", "PD DRONE", "PD FOLD BAS", "PD WOBBLE",
-            "ARP 8BIT", "WAVE LEAD", "STEP LEAD", "TRI BASS", "CHIP BELL", "CRUSH BASS", "1BIT DRONE",
-            "CHOIR AAH", "VOX LEAD", "WOW BASS", "WHISPER", "CRYPT CHOIR", "MONK CHANT", "DREAM CHOIR", "TALK WOBBLE", "DARK CHANT",
-            "FAT BASS", "ARP LEAD", "SYNC LEAD", "NEON ARP", "DIRTY BASS", "TRIBE BASS", "MENTAL SAW", "SYNC SCREAM", "RING DARK", "DARK FIFTH", "TRIO SUPER", "HOOVER", "TRIO REESE", "TRIO WOBBLE", "BP WOBBLE", "PWM WOBBLE", "GATE REESE", "DARK AIR",
+            "WAR HORN", "NEON LEAD", "SUNSET PAD", "HERO BRASS", "REESE", "DRIVE BASS", "HARD SYNC", "SUB SAW", "PROG BASS", "HARDTEK BAS", "MENTAL STAB", "TRIBE PLUCK", "RUMBLE", "DUB STAB", "DARK DRONE", "INDUS LEAD", "TRANCE SAW", "GATE PAD", "SQUELCH", "DEEP SPACE", "CHILL PAD", "DNB REESE", "WOBBLE 8", "WOBBLE 8T", "WUB SLOW", "BOOM SUB", "PUNCH BASS", "KNOCK BASS", "SWELL SUB", "GROWL WOB", "HOLLOW 8", "LASER DIVE", "NEURO MID", "YOY BASS", "SCOOP CHOP", "SUB DRONE",
+            "FM MARIMBA", "NYLON PICK", "DARK MATTER", "PICK BASS", "GROWL BASS", "FM HYPNO", "METAL PERC",
+            "PD BRASS", "PD ORGAN", "PD STRINGS", "WIRE", "NEUTRINO", "PD ACID", "PD DARK BEL", "PD DRONE", "PD FOLD BAS", "PD WOBBLE",
+            "ARP 8BIT", "WAVE LEAD", "STEP LEAD", "TRI BASS", "CRUSH BASS", "1BIT DRONE",
+            "CHOIR AAH", "VOX LEAD", "WOW BASS", "CRYPT CHOIR", "MONK CHANT", "TALK WOBBLE", "DARK CHANT",
+            "FAT BASS", "ARP LEAD", "SYNC LEAD", "DIRTY BASS", "MENTAL SAW", "SYNC SCREAM", "RING DARK", "TRIO SUPER", "HOOVER", "TRIO REESE", "TRIO WOBBLE", "PWM WOBBLE", "GATE REESE", "DARK AIR",
             "FULL ORGAN",
-            "CLOUD PAD", "FROZEN", "SHIMMER", "PIANO HAZE", "SAX DRONE", "SCATTER", "GHOST CLOUD", "FOREST AIR", "ABYSS", "MIST VEIL", "SPORE DRIFT", "DEAD PIANO", "MOSS BED", "WRAITH", "STAR DUST",
-            "PLUCK", "BOWED METAL", "UPRIGHT", "TRIBE DRUM", "KALIMBA DRK", "DARK PLUCK", "SITAR DRONE",
-            "ARCADE", "CAVE WIND", "PLASMA", "OCEAN", "RISER", "VOID WIND", "DUST", "STORM HOWL", "SPECTRE", "TUNNEL"};
+            "CLOUD PAD", "FROZEN", "SHIMMER", "PIANO HAZE", "SAX DRONE", "SCATTER", "GHOST CLOUD", "FOREST AIR", "SPORE DRIFT", "WRAITH", "STAR DUST",
+            "UPRIGHT", "KALIMBA DRK", "DARK PLUCK", "SITAR DRONE",
+            "ARCADE", "CAVE WIND", "PLASMA", "OCEAN", "VOID WIND", "STORM HOWL", "SPECTRE", "TUNNEL"};
         uint32_t all2, n = 0;
         preset_all_pos(&all2);
         for (i = 0, ok = 1; i < all2; i++) {
@@ -4580,8 +4580,8 @@ static int test_fm4_retired(void)
     int16_t p[P_COUNT];
     uint8_t v[FP_SIZE + 1u];
     ui_power_on();
-    bad += check("power-on: track 2 is FM6 GLASS KEYS (TRK_DEF; GruselCore: FM6 PAD removed)", trk[1].eng_req == ENGI_FM6 &&
-                 str_eq(ENGINES[ENGI_FM6]->presets[trk[1].preset].name, "GLASS KEYS"));
+    bad += check("power-on: track 2 is ANALOG SOFT PAD (TRK_DEF; GruselCore: FM6 GLASS KEYS removed)", trk[1].eng_req == 0 &&
+                 str_eq(ENGINES[0]->presets[trk[1].preset].name, "SOFT PAD"));
     preset_all_pos(&total);
     for (i = 0; i < total; i++) {
         e = preset_all_at(i, &k);

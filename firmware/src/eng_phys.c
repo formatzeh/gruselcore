@@ -222,12 +222,9 @@ static void phys_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
  * 98 1 : 3.57 : 7.65, 116 1 : 4.0 : 9.0 (a tuned bar: 1 : 4 : 10) */
 static const preset_t PHYS_PRESETS[] = {
     /* name, {MODEL, STRC, BRIT, DAMP, POS, ACC, BOW, EXC}, {A D S R}, fenv, mono */
-    {"PLUCK", {PM_STRING, 56, 72, 84, 40, 96, 0, 0}, {0, 100, 127, 58}, 0, 0, FX(0, 10, 30, 30), TAG(PT_PLUCK), TRIM(12)},
-    {"BOWED METAL", {PM_MODAL, 98, 70, 112, 10, 80, 90, 0}, {60, 90, 127, 90}, 0, 0, FX(0, 40, 20, 70), TAG(PT_PAD), TRIM(29)},
     /* (Skiff phase 9) more for every engine: basses, kits */
     {"UPRIGHT", {PM_STRING, 60, 60, 90, 20, 127, 0, 60}, {0, 100, 127, 40}, 0, 1, FX(20, 0, 5, 20), TAG(PT_BASS), TRIM(24)},
     /* (GruselCore) 2026-11-02: dark, hypnotic sounds for the genres; jungle / DnB basses */
-    {"TRIBE DRUM", {PM_MEMB, 60, 60, 60, 30, 110, 0, 0}, {0, 80, 0, 40}, 0, 0, FX(0, 0, 30, 40), TAG(PT_DRUM)},
     {"KALIMBA DRK", {PM_MODAL, 40, 50, 70, 30, 90, 0, 0}, {0, 90, 0, 60}, 0, 0, FX(0, 20, 60, 60), TAG(PT_PLUCK), TRIM(8)},
     {"DARK PLUCK", {PM_STRING, 50, 40, 70, 30, 100, 0, 0}, {0, 90, 0, 50}, 0, 0, FX(0, 10, 60, 50), TAG(PT_PLUCK), TRIM(21)},
     {"SITAR DRONE", {PM_SYMP, 64, 70, 100, 20, 90, 0, 0}, {0, 100, 127, 80}, 0, 0, FX(0, 30, 30, 80), TAG(PT_PAD), TRIM(21)},

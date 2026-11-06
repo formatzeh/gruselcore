@@ -619,7 +619,7 @@ static int phase_test(const char *dir)
 }
 
 /* Skiff: the parts' shared engine area (engines.c eng_mem). Track 1 plays three PHYS notes (its three slots in its
- * area), then switches to GRAIN: the switch zeroes the area, so past GRAIN's own part it stays zero (PHYS's third
+ * area; (GruselCore) DARK PLUCK, a POLY string: UPRIGHT, PHYS's first sound now, is MONO), then switches to GRAIN: the switch zeroes the area, so past GRAIN's own part it stays zero (PHYS's third
  * slot is gone); GRAIN sounds; back on PHYS a note sounds again; track 2's area (ANALOG: no one's) is never touched */
 static int32_t engmem_run(uint32_t blocks)            /* blocks rendered; their peak */
 {
@@ -653,7 +653,9 @@ static int engmem_test(void)
         grain++;
     host_tracks_init();
     memset(&eng_mem[1], 0x5A, sizeof eng_mem[1]);
-    host_preset(t, ENGI_PHYS, 0);
+    for (i = 0; i < ENGINES[ENGI_PHYS]->npresets && strcmp(ENGINES[ENGI_PHYS]->presets[i].name, "DARK PLUCK"); i++)
+        ;
+    host_preset(t, ENGI_PHYS, i);
     for (i = 0; i < 3u; i++)
         trk_note_on(t, 48u + 7u * i, 100);
     engmem_run(50);

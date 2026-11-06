@@ -1955,9 +1955,9 @@ const FM4 = (() => {
     P("FUNK KEY", [3, 1, 3, 5, 90, 25, 20, 0], [0, 45, 30, 30], 0, 0, [0, 20, 30, 20], 6)];
   const TO_FM6 = [0, 1, 2, 3, 6, 4, 5, 7];        /* DIGITAL preset k -> the FM6 factory patch (its PTCH) covering it */
   /* (GruselCore) FM6's presets are no longer F1..F8 in order: the first one on slot s, 0 when none (fm4_convert.c
-     fm6_preset_of_slot; FM6's table: FM MARIMBA F6, NYLON PICK F8, GLASS KEYS F1, ISOTOPE F2, DARK MATTER F3, ..
-     GROWL BASS F4) */
-  const SLOT_PRESET = [2, 3, 4, 6, 0, 0, 0, 1];
+     fm6_preset_of_slot; FM6's table: FM MARIMBA F6, NYLON PICK F8, DARK MATTER F3, ..
+     GROWL BASS F4; GruselCore removed the F1, F2 and F5 presets) */
+  const SLOT_PRESET = [0, 0, 2, 4, 0, 0, 0, 1];
   const ALG = [[0, [3, 4, 5, 6], [1, 1, 1, 1]], [13, [3, 4, 5, 6], [1, 1, 2, 2]], [7, [3, 5, 6, 4], [1, 2, 1, 2]],
     [6, [3, 4, 5, 6], [1, 2, 2, 1]], [4, [1, 2, 5, 6], [2, 1, 2, 1]], [21, [3, 4, 5, 6], [3, 3, 3, 1]],
     [28, [1, 2, 5, 6], [3, 3, 3, 1]], [31, [1, 2, 3, 6], [4, 4, 4, 4]]];
@@ -2168,7 +2168,7 @@ function makeMockDevice(opt = {}) {
   const ENG = [
     { name: "ANALOG", titles: ["OSC", "FLT"], edit: [E("WAVE", ["SAW", "SQR", "TRI", "SIN", "PWM", "SYNC", "SUB"], 0), D("DETUNE", F.INT, 0, 127, 10, null, "ct"), D("MIX", F.PCT, 0, 127, 64),
         D("NOISE", F.PCT, 0, 127, 0), D("CUTOFF", F.CUTOFF, 0, 127, 90), D("RES", F.PCT, 0, 127, 30), D("DRIVE", F.PCT, 0, 127, 0), D("KEYTRK", F.PCT, 0, 127, 64)],
-      presets: [P("SAW LEAD", [0, 12, 64, 0, 90, 30, 10, 64], [4, 70, 100, 50], 1, 4), P("SOFT PAD", [0, 20, 64, 4, 60, 10, 0, 32], [80, 90, 110, 95], 0, 5), P("SQR BASS", [1, 0, 0, 0, 50, 70, 40, 64], [0, 60, 40, 30], 1, 2), P("PWM STR", [4, 8, 40, 0, 75, 20, 0, 48], [60, 80, 110, 85], 0, 5), P("ACID", [0, 0, 0, 0, 50, 100, 25, 64], [0, 55, 20, 30], 1, 1), P("RAVE", [4, 30, 64, 0, 85, 20, 30, 64], [20, 80, 110, 60], 1, 13), P("SYNTH BRASS", [0, 10, 64, 0, 45, 20, 10, 64], [35, 70, 90, 45], 0, 6), P("WIND SWEEP", [0, 0, 0, 90, 30, 90, 0, 0], [60, 90, 60, 80], 0, 5), P("STRINGS", [4, 6, 64, 0, 92, 8, 0, 48], [48, 90, 118, 72], 0, 5, [[15, 20], [9, 72], [13, 8], [12, 80]]), P("WAR HORN", [0, 5, 64, 4, 42, 12, 20, 64], [72, 80, 110, 80], 1, 0, [[9, 80], [12, 96], [13, 8]]), P("NEON LEAD", [0, 14, 64, 0, 92, 25, 12, 64], [6, 70, 110, 55], 1, 0, [[9, 86], [12, 92], [13, 11], [38, 28]]), P("SUNSET PAD", [4, 9, 55, 0, 74, 15, 0, 48], [78, 90, 115, 92], 0, 0, [[10, 1], [9, 52], [15, 48]]), P("HERO BRASS", [0, 16, 64, 0, 50, 18, 8, 56], [50, 75, 95, 55]), P("QUANTA", [3, 0, 0, 0, 127, 0, 0, 0], [0, 64, 127, 50], 1, 0, [[10, 4], [9, 96], [13, 50]]),
+      presets: [P("SAW LEAD", [0, 12, 64, 0, 90, 30, 10, 64], [4, 70, 100, 50], 1, 4), P("SOFT PAD", [0, 20, 64, 4, 60, 10, 0, 32], [80, 90, 110, 95], 0, 5), P("SQR BASS", [1, 0, 0, 0, 50, 70, 40, 64], [0, 60, 40, 30], 1, 2), P("PWM STR", [4, 8, 40, 0, 75, 20, 0, 48], [60, 80, 110, 85], 0, 5), P("ACID", [0, 0, 0, 0, 50, 100, 25, 64], [0, 55, 20, 30], 1, 1), P("RAVE", [4, 30, 64, 0, 85, 20, 30, 64], [20, 80, 110, 60], 1, 13), P("SYNTH BRASS", [0, 10, 64, 0, 45, 20, 10, 64], [35, 70, 90, 45], 0, 6), P("WIND SWEEP", [0, 0, 0, 90, 30, 90, 0, 0], [60, 90, 60, 80], 0, 5), P("STRINGS", [4, 6, 64, 0, 92, 8, 0, 48], [48, 90, 118, 72], 0, 5, [[15, 20], [9, 72], [13, 8], [12, 80]]), P("WAR HORN", [0, 5, 64, 4, 42, 12, 20, 64], [72, 80, 110, 80], 1, 0, [[9, 80], [12, 96], [13, 8]]), P("NEON LEAD", [0, 14, 64, 0, 92, 25, 12, 64], [6, 70, 110, 55], 1, 0, [[9, 86], [12, 92], [13, 11], [38, 28]]), P("SUNSET PAD", [4, 9, 55, 0, 74, 15, 0, 48], [78, 90, 115, 92], 0, 0, [[10, 1], [9, 52], [15, 48]]), P("HERO BRASS", [0, 16, 64, 0, 50, 18, 8, 56], [50, 75, 95, 55]),
         /* (Skiff phase 9) more for every engine (src/eng_*.c) */
         P("REESE", [0, 40, 64, 0, 52, 15, 30, 32], [0, 64, 127, 30], 1, 0, [[9, 30], [14, 8]]), P("DRIVE BASS", [0, 14, 64, 0, 62, 20, 10, 64], [0, 64, 64, 25], 1, 0, [[95, 1], [96, -32]]),
         /* (1.3, from Felucca) WAVE SYNC and SUB */
@@ -2188,7 +2188,7 @@ function makeMockDevice(opt = {}) {
       presets: [
         P("ARP 8BIT", [2, 0, 96, 0, 0, 0, 2, 110], [0, 60, 80, 40], 0, 13), P("WAVE LEAD", [0, 4, 92, 0, 0, 18, 0, 110], [0, 70, 90, 30], 1, 3), P("STEP LEAD", [4, 0, 40, 34, 0, 16, 0, 127], [0, 64, 127, 55], 1, 4),
         /* (Skiff phase 9) more for every engine (src/eng_*.c) */
-        P("TRI BASS", [0, 1, 64, 0, 0, 0, 0, 100], [0, 60, 90, 20], 1), P("CHIP BELL", [2, 0, 20, 0, 30, 0, 0, 110], [0, 70, 0, 50])] },
+        P("TRI BASS", [0, 1, 64, 0, 0, 0, 0, 100], [0, 60, 90, 20], 1)] },
     { name: "SAMPLE", titles: ["SET", "TONE"], edit: [E("SET", ["PIANO", "PIANO", "FLUTE", "SAX", "PIANO", "USR1", "USR2", "USR3"], 0), D("PITCH", F.SEMI, -24, 24, 0), D("BITS", F.INT, 0, 127, 0),
         E("LOOP", NONOFF, 1), D("CUTOFF", F.INT, 0, 127, 127), NONE, D("DRIVE", F.PCT, 0, 127, 0), NONE],
       presets: [P("PIANO", [0, 0, 0, 1, 127, 0, 0, 0], [0, 127, 127, 70]), P("PIANO", [0, 0, 0, 1, 127, 0, 0, 0], [0, 127, 127, 70]), P("FLUTE", [2, 0, 0, 1, 127, 0, 0, 0], [12, 80, 120, 60]), P("SAX", [3, 0, 0, 1, 127, 0, 0, 0], [12, 80, 120, 60]),
@@ -2196,13 +2196,13 @@ function makeMockDevice(opt = {}) {
         P("PIANO", [0, 0, 0, 1, 127, 0, 0, 0], [0, 127, 127, 70])] },
     { name: "VOICE", titles: ["VOWEL", "TONE"], edit: [D("VOWEL", F.INT, 0, 127, 0), D("VOWEL2", F.INT, 0, 127, 64), D("TALK", F.TIME, 0, 127, 0),
         D("PITCH", F.SEMI, -12, 12, 0), D("BUZZ", F.PCT, 0, 127, 64), D("BREATH", F.PCT, 0, 127, 10), D("Q", F.PCT, 0, 127, 64), D("RANDOM", F.PCT, 0, 127, 0)],
-      presets: [P("CHOIR AAH", [0, 0, 0, 0, 40, 22, 60, 0], [85, 90, 115, 95], 0, 5), P("VOX LEAD", [32, 0, 0, 2, 90, 8, 72, 0], [6, 70, 105, 55], 1, 4), P("WOW BASS", [95, 0, 68, 0, 100, 0, 80, 0], [0, 70, 70, 30], 1, 8), P("WHISPER", [0, 95, 88, 3, 50, 120, 50, 0], [50, 90, 110, 90], 0, 5),
+      presets: [P("CHOIR AAH", [0, 0, 0, 0, 40, 22, 60, 0], [85, 90, 115, 95], 0, 5), P("VOX LEAD", [32, 0, 0, 2, 90, 8, 72, 0], [6, 70, 105, 55], 1, 4), P("WOW BASS", [95, 0, 68, 0, 100, 0, 80, 0], [0, 70, 70, 30], 1, 8),
         /* (Skiff) the themes' sounds (src/eng_*.c) */
-        P("CRYPT CHOIR", [112, 0, 0, -3, 34, 30, 64, 14], [90, 90, 118, 100], 0, 0, [[9, 70], [13, 8]]), P("MONK CHANT", [95, 0, 96, -5, 80, 12, 80, 0], [50, 80, 115, 85], 1, 0, [[9, 82], [12, 96], [13, 8]]), P("DREAM CHOIR", [0, 20, 0, 3, 55, 45, 55, 8], [80, 90, 118, 95])] },
+        P("CRYPT CHOIR", [112, 0, 0, -3, 34, 30, 64, 14], [90, 90, 118, 100], 0, 0, [[9, 70], [13, 8]]), P("MONK CHANT", [95, 0, 96, -5, 80, 12, 80, 0], [50, 80, 115, 85], 1, 0, [[9, 82], [12, 96], [13, 8]])] },
     { name: "TRIO", titles: ["OSC", "TONE"], edit: [E("WAVE", ["SAW3", "PLS3", "PPT", "SST", "TRI3", "S&T", "P&S", "P+N", "NOIS", "SYNC", "SYNCP", "SYNC3",
         "RING", "RING3", "R+S", "R+SP"], 0), D("PITCH2", F.SEMI, -24, 24, 0), D("PITCH3", F.SEMI, -24, 24, -12), D("DETUNE", F.INT, 0, 50, 6, null, "ct"),
         E("MODE", ["LP", "BP", "HP", "NOT"], 0), D("CUTOFF", F.CUTOFF, 0, 127, 80), D("RES", F.PCT, 0, 127, 40), D("PW", F.PCT, 0, 127, 64)],
-      presets: [P("FAT BASS", [0, 0, -12, 9, 0, 62, 45, 64], [0, 62, 60, 25], 1, 2), P("ARP LEAD", [2, 12, 0, 4, 0, 88, 25, 32], [0, 60, 90, 30], 0, 13), P("SYNC LEAD", [9, 9, 0, 0, 0, 82, 30, 64], [2, 70, 100, 40], 1, 4), P("NEON ARP", [1, 12, 0, 5, 0, 70, 35, 40], [0, 66, 0, 45]),
+      presets: [P("FAT BASS", [0, 0, -12, 9, 0, 62, 45, 64], [0, 62, 60, 25], 1, 2), P("ARP LEAD", [2, 12, 0, 4, 0, 88, 25, 32], [0, 60, 90, 30], 0, 13), P("SYNC LEAD", [9, 9, 0, 0, 0, 82, 30, 64], [2, 70, 100, 40], 1, 4),
         /* (Skiff phase 9) more for every engine (src/eng_*.c) */
         P("DIRTY BASS", [1, -12, 0, 8, 1, 62, 85, 30], [0, 50, 50, 20], 1, 0, [[95, 1], [96, -10]])] },
     { name: "WHEEL", titles: ["BARS", "TONE"], edit: [E("REG", ["FLUTE", "MELLOW", "HOLLOW", "SMOOTH", "3BAR", "BLUES", "GOSPEL", "ROCK",
@@ -2219,7 +2219,6 @@ function makeMockDevice(opt = {}) {
         D("BRIGHT", F.PCT, 0, 127, 80), D("DAMP", F.PCT, 0, 127, 80), D("POS", F.PCT, 0, 127, 20), D("ACCENT", F.PCT, 0, 127, 90),
         D("BOW", F.PCT, 0, 127, 0), D("EXCITE", F.PCT, 0, 127, 0)],
       presets: [
-        P("PLUCK", [1, 56, 72, 84, 40, 96, 0, 0], [0, 100, 127, 58], 0, 3), P("BOWED METAL", [0, 98, 70, 112, 10, 80, 90, 0], [60, 90, 127, 90], 0, 5),
         /* (Skiff phase 9) more for every engine (src/eng_*.c) */
         P("UPRIGHT", [1, 60, 60, 90, 20, 127, 0, 60], [0, 100, 127, 40], 1)] },
     { name: "DRUM", titles: ["KIT", "HIT"], edit: [E("KIT", ["HRDTK", "TRBTK", "MNTTK", "TECHN", "DKTEC", "TRANC", "PSY", "DKPSY", "DKPRG", "CHILL", "TRB P", "MNT P", "PRG P", "FORST", "FRS P", "PSY P", "JUNGL", "DNB", "USR1", "USR2", "USR3"], 0), D("PITCH", F.ST16, 0, 127, 64),   /* (GruselCore: its kits, then USR1..3 a user sample slot) */
@@ -2256,7 +2255,7 @@ function makeMockDevice(opt = {}) {
     { name: "FM6", titles: ["OPS", "PATCH"], edit: [D("ALGO", F.INT, 0, 32, 0), D("FEEDBACK", F.INT, -7, 7, 0), D("MOD LVL", F.BIPCT, -64, 63, 0),
         D("RATIO", F.INT, -16, 16, 0), D("MOD ENV", F.BIPCT, -64, 63, 0), D("VEL MOD", F.INT, -7, 7, 0), D("DETUNE", F.PCT, 0, 127, 0),
         D("PATCH", F.INT, 0, FM6.FACTORY_PK.length, 0)],   /* F1..F8, then OWN (eng_fm6.c, 1.0.3) */
-      presets: [P("FM MARIMBA", [0, 0, 0, 0, 0, 0, 0, 5], [0, 0, 127, 0], 0, 3), P("NYLON PICK", [0, 0, 0, 0, 0, 0, 0, 7], [0, 0, 127, 0], 0, 13), P("GLASS KEYS", [0, 0, 8, 0, 0, 0, 24, 0], [0, 0, 127, 0]), P("ISOTOPE", [0, 0, 14, 2, -10, 0, 50, 1], [0, 0, 127, 0]), P("DARK MATTER", [0, 4, 16, 0, 10, 0, 0, 2], [0, 0, 127, 0], 1),
+      presets: [P("FM MARIMBA", [0, 0, 0, 0, 0, 0, 0, 5], [0, 0, 127, 0], 0, 3), P("NYLON PICK", [0, 0, 0, 0, 0, 0, 0, 7], [0, 0, 127, 0], 0, 13), P("DARK MATTER", [0, 4, 16, 0, 10, 0, 0, 2], [0, 0, 127, 0], 1),
         /* (Skiff phase 9) more for every engine (src/eng_*.c) */
         P("PICK BASS", [0, 2, 12, 0, 16, 2, 0, 7], [0, 0, 127, 0], 1), P("GROWL BASS", [0, 5, 8, 0, 20, 0, 8, 3], [0, 0, 127, 0], 1, 0, [[14, 36], [9, 80], [95, 2]])] },
     { name: "SLICE", titles: ["SLICE", "PLAYBACK"], edit: [E("SOURCE", ["USR1", "USR1", "USR2", "USR3", "USR1", "USR1"], 1),   /* (GruselCore) 0, 4, 5 retired: USR1 */
@@ -2463,8 +2462,8 @@ function makeMockDevice(opt = {}) {
     st.bank[slot] = snapshot(name);
     clearSteps(); st.p[29] = 16;
   });
-  /* the power-on sounds (engines.c TRK_DEF): ACID, (GruselCore) GLASS KEYS, ARP 8BIT, DRUM KIT, (Skiff phase 6) PIANO, DRUM KIT */
-  [[1, FM6_E, 2], [2, 3, 0], [3, 10, 0], [4, 4, 0], [5, 10, 0], [0, 0, 4]].forEach(([i, e, p]) => { st.sel = i; setEngine(e); applyPreset(p); });
+  /* the power-on sounds (engines.c TRK_DEF): ACID, (GruselCore) SOFT PAD, ARP 8BIT, DRUM KIT, (Skiff phase 6) PIANO, DRUM KIT */
+  [[1, 0, 1], [2, 3, 0], [3, 10, 0], [4, 4, 0], [5, 10, 0], [0, 0, 4]].forEach(([i, e, p]) => { st.sel = i; setEngine(e); applyPreset(p); });
   /* the device powers on with its sequencers empty; the mock starts as a little demo to look at: track 1 with
      the ACID pattern, track 4 with BEAT (as SEQ > PATTERNS would load them), pads left, lead right */
   st.sel = 3; loadPattern(11);

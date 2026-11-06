@@ -130,6 +130,21 @@ td:first-child { font-family: var(--cond); font-weight: 700; font-size: 19px; wh
 .kbd-cap { font-size: 14px; color: var(--keylabel); }
 .kbd-note { font-size: 15px; color: var(--dim); }
 
+/* chapter 8: one card per sound, a page name and its values on each row */
+.recipes { display: grid; gap: 14px; max-width: 54em; }
+.recipe { background: var(--raise); border: 1px solid var(--line); border-top: 3px solid var(--c); padding: 16px;
+          display: grid; gap: 10px; min-width: 0; }
+.recipe h3 { margin: 0; font-size: 24px; }
+.recipe .tag { font: 700 13px var(--cond); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.recipe > p { margin: 0; max-width: 44em; }
+.set { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 5px 12px; margin: 0; }
+.set dt { font: 700 14px/1.5 var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.set dd { margin: 0; font-variant-numeric: tabular-nums; }
+.set dd b { font-family: var(--cond); font-size: 1.08em; letter-spacing: .02em; }
+.recipe .trick { padding: 10px 12px; background: var(--tile); }
+.recipe .trick strong { font: 700 15px var(--cond); letter-spacing: .1em; text-transform: uppercase; margin-right: 6px; }
+.group { font: 700 15px var(--cond); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-top: 14px; }
+
 footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--dim); font-size: 15px; display: grid; gap: 6px; }
 </style>
 </head>
@@ -139,7 +154,8 @@ footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
     <div class="eyebrow">M-VAVE FM-1 · firmware on Skiff 2.1.1</div>
     <h1>Grusel<span>Core</span> Guide</h1>
     <p class="lede">What GruselCore adds to Skiff, step by step on the unit. This edition covers breaks: loading your own loops into the
-      SLICE engine, placing slices on the SLICE grid, letting EVOLVE chop them, the dark DnB basses, and the scales. Skiff's own manual,
+      SLICE engine, placing slices on the SLICE grid, letting EVOLVE chop them, the dark DnB basses, the scales, and how to build
+      17 of the factory sounds yourself. Skiff's own manual,
       <a href="../learn/">Learn Skiff</a>, covers everything else.</p>
   </header>
 
@@ -153,6 +169,7 @@ footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
         <li><a href="#evolve" style="--c: var(--t5)"><b>5</b><span>EVOLVE chops the break</span></a></li>
         <li><a href="#basses" style="--c: var(--t6)"><b>6</b><span>Dark DnB basses</span></a></li>
         <li><a href="#scales" style="--c: var(--t7)"><b>7</b><span>Scales on the keys</span></a></li>
+        <li><a href="#recipes" style="--c: var(--t2)"><b>8</b><span>Build the sounds yourself</span></a></li>
       </ol>
     </nav>
 
@@ -451,6 +468,346 @@ footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
         <div class="note"><strong>Older firmware</strong>
           <p>NEAP, HUNG, PDOM, DHARM, HIRA, INSEN and KUMOI are GruselCore's own. Skiff, or a GruselCore before them, opens a
             track set to one of them as DIMWH.</p></div>
+      </section>
+
+      <!-- 8 -->
+      <section class="chapter" id="recipes" style="--c: var(--t2)">
+        <header><span class="n">8</span><h2>Build the sounds yourself</h2></header>
+        <p>Seventeen of the factory sounds, rebuilt step by step, so you can make your own in the same way. Every value is the
+          one the screen shows.</p>
+        <ol class="steps">
+          <li><p><b>Start clean:</b> load the engine's first sound from <kbd>SAVE</kbd> › PRESETS (LIST ALL): SAW LEAD for
+            ANALOG, CHOIR AAH for VOICE, FAT BASS for TRIO, CLOUD PAD for GRAIN, ARCADE for NOISE. Loading a sound resets the
+            LFO and the MOD routes, so nothing from the sound before is left over.</p></li>
+          <li><p><b>Turn what the card lists.</b> Anything not listed stays as it is.</p></li>
+          <li><p><b>Save it</b> as your own sound when it's done (<kbd>SAVE</kbd>). Your version can be a little louder or quieter
+            than the factory one; set its LEVEL on the MIXER (tap <kbd>GLO</kbd>).</p></li>
+        </ol>
+        <h3>Where the values are</h3>
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>On the card</th><th>How to get there</th><th>The knobs</th></tr></thead>
+            <tbody>
+              <tr><td>OSC, FLT …</td><td>Tap <kbd>EDIT</kbd>: the engine's two pages (ANALOG: OSC, then FLT)</td><td>KNOB 1–4 in the order listed</td></tr>
+              <tr><td>VOICE</td><td>Tap <kbd>EDIT</kbd> on to VOICE</td><td>KNOB 1: POLY (chords) or LEG (one note, legato)</td></tr>
+              <tr><td>ENV</td><td>Tap <kbd>ENV</kbd></td><td>ATTACK, DECAY, SUSTAIN, RELEASE</td></tr>
+              <tr><td>LFO</td><td>Tap <kbd>LFO</kbd></td><td>RATE, WAVE, PHASE, FADE</td></tr>
+              <tr><td>MOD</td><td>Tap <kbd>LFO</kbd> twice more</td><td>KNOB 1 the ROUTE, KNOB 4 its AMOUNT. Routes 1–4: the LFO to PITCH, CUT, SHAPE,
+                AMP; 5–7: the envelope to PITCH, CUT, SHAPE</td></tr>
+              <tr><td>FX</td><td>Tap <kbd>FX</kbd></td><td>DIST, CHORUS, DELAY, REVERB</td></tr>
+              <tr><td>DRIVE, INSERT</td><td>Tap <kbd>FX</kbd> again, and again</td><td>DRIVE: KNOB 2 TYPE. INSERT: KNOB 1 TYPE, then its own knobs</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Making a sound move slowly</h3>
+        <p>Your favourite sounds change while they're held. These are the five ways the cards below make that happen. Mix them freely.</p>
+        <ul>
+          <li><b>Detune</b> (OSC › DETUNE): two oscillators a few cents apart drift in and out of step. More DETUNE makes them
+            beat faster, and higher notes beat faster too. TRANCE SAW, RAVE, DNB REESE.</li>
+          <li><b>A slow LFO on the filter</b> (LFO › RATE below 0.5 Hz, MOD route 2): the sound opens and closes over seconds.
+            DNB REESE, TRIO REESE, VOID WIND. For a sweep that follows the tempo, set LFO 2 › SYNC to 4BAR or 2BAR.</li>
+          <li><b>A slow envelope on the filter</b> (a long ATTACK plus MOD route 6): each note opens up as it swells. WAR HORN,
+            SWELL SUB.</li>
+          <li><b>A vibrato that fades in</b> (LFO › FADE around 1 s, MOD route 1 small): the note starts straight and starts
+            to waver after a moment, as a player would. WAR HORN, MONK CHANT.</li>
+          <li><b>Chorus and reverb</b> (FX): CHORUS adds its own slow sweep, and REVERB smears the changes together.</li>
+        </ul>
+
+        <p class="group">ANALOG</p>
+        <div class="recipes">
+          <article class="recipe">
+            <div><span class="tag">ANALOG · lead</span><h3>SAW LEAD</h3></div>
+            <p>ANALOG's first sound, and the start for the other ANALOG cards. Two saws slightly apart and a filter that bites
+              at the start of each note.</p>
+            <dl class="set">
+              <dt>OSC</dt><dd><b>WAVE</b> SAW · <b>DETUNE</b> 12 ct</dd>
+              <dt>FLT</dt><dd><b>CUTOFF</b> 2.5 kHz · <b>RES</b> 24&nbsp;% · <b>DRIVE</b> 8&nbsp;%</dd>
+              <dt>ENV</dt><dd>1.3 ms · 160 ms · 79&nbsp;% · 38 ms</dd>
+              <dt>MOD</dt><dd>route 6, ENV → CUT: <b>+31&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 8&nbsp;% · <b>DELAY</b> 35&nbsp;% · <b>REVERB</b> 24&nbsp;%</dd>
+              <dt>VOICE</dt><dd>LEG</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>The envelope opens the filter by +31&nbsp;% and the short DECAY (160 ms)
+              closes it again: every note starts bright and settles. That's the bite of a lead.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">ANALOG · pad</span><h3>SOFT PAD</h3></div>
+            <p>Slow in, slow out, dark and wide.</p>
+            <dl class="set">
+              <dt>OSC</dt><dd><b>WAVE</b> SAW · <b>DETUNE</b> 20 ct · <b>NOISE</b> 3&nbsp;%</dd>
+              <dt>FLT</dt><dd><b>CUTOFF</b> 583 Hz · <b>RES</b> 8&nbsp;% · <b>DRIVE</b> 0&nbsp;% · <b>KEYTRK</b> 25&nbsp;%</dd>
+              <dt>ENV</dt><dd>331 ms · 683 ms · 87&nbsp;% · 982 ms</dd>
+              <dt>MOD</dt><dd>route 6, ENV → CUT: <b>+15&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 47&nbsp;% · <b>DELAY</b> 16&nbsp;% · <b>REVERB</b> 55&nbsp;%</dd>
+              <dt>VOICE</dt><dd>POLY</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>A low CUTOFF, a slow ATTACK and RELEASE, and lots of CHORUS and REVERB.
+              A touch of NOISE adds air. KEYTRK 25&nbsp;% keeps high chords from getting bright.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">ANALOG · lead</span><h3>RAVE</h3></div>
+            <p>The swirling rave lead.</p>
+            <dl class="set">
+              <dt>OSC</dt><dd><b>WAVE</b> PWM · <b>DETUNE</b> 30 ct</dd>
+              <dt>FLT</dt><dd><b>CUTOFF</b> 2.0 kHz · <b>RES</b> 16&nbsp;% · <b>DRIVE</b> 24&nbsp;%</dd>
+              <dt>ENV</dt><dd>4.3 ms · 331 ms · 87&nbsp;% · 78 ms</dd>
+              <dt>MOD</dt><dd>route 6, ENV → CUT: <b>+15&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>DIST</b> 24&nbsp;% · <b>CHORUS</b> 31&nbsp;% · <b>DELAY</b> 24&nbsp;% · <b>REVERB</b> 24&nbsp;%</dd>
+              <dt>VOICE</dt><dd>LEG</dd>
+            </dl>
+            <p class="trick"><strong>The swirl</strong>Two pulse waves 30 cents apart keep sliding in and out of step, so the
+              tone sweeps between hollow and full a few times a second (faster on higher notes). CHORUS adds a second, slower
+              sweep, and DIST thickens both. More DETUNE swirls faster.</p>
+            <p><b>Even more swirl:</b> with WAVE on PWM, SHAPE sets the pulse width. Set MOD route 3 (LFO → SHAPE) to about
+              +40&nbsp;% with LFO › RATE near 0.5 Hz and the width sweeps too: classic PWM.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">ANALOG · lead</span><h3>WAR HORN</h3></div>
+            <p>A horn that blooms open and starts to waver as you hold it.</p>
+            <dl class="set">
+              <dt>OSC</dt><dd><b>WAVE</b> SAW · <b>DETUNE</b> 5 ct · <b>NOISE</b> 3&nbsp;%</dd>
+              <dt>FLT</dt><dd><b>CUTOFF</b> 239 Hz · <b>RES</b> 9&nbsp;% · <b>DRIVE</b> 16&nbsp;%</dd>
+              <dt>ENV</dt><dd>185 ms · 331 ms · 87&nbsp;% · 331 ms</dd>
+              <dt>LFO</dt><dd><b>RATE</b> 3.37 Hz · <b>FADE</b> 1.05 s</dd>
+              <dt>MOD</dt><dd>route 6, ENV → CUT: <b>+47&nbsp;%</b> · route 1, LFO → PITCH: <b>+12&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 8&nbsp;% · <b>DELAY</b> 8&nbsp;% · <b>REVERB</b> 71&nbsp;%</dd>
+              <dt>VOICE</dt><dd>LEG</dd>
+            </dl>
+            <p class="trick"><strong>The movement</strong>Two things change while you hold a note. The filter starts almost closed
+              (239 Hz) and the envelope opens it by +47&nbsp;% as the note swells in. Then FADE brings the vibrato in over about a
+              second, so the note starts straight and slowly begins to waver. Hold long notes to hear it.</p>
+            <p><b>Slower still:</b> raise ATTACK (the filter opens more slowly) and FADE (the vibrato comes in later). Add MOD
+              route 2 (LFO → CUT) at +10&nbsp;% so the vibrato also moves the brightness.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">ANALOG · lead</span><h3>TRANCE SAW</h3></div>
+            <p>A wide, shimmering saw for chords.</p>
+            <dl class="set">
+              <dt>OSC</dt><dd><b>WAVE</b> SAW · <b>DETUNE</b> 40 ct</dd>
+              <dt>FLT</dt><dd><b>CUTOFF</b> 2.8 kHz · <b>RES</b> 12&nbsp;% · <b>DRIVE</b> 0&nbsp;%</dd>
+              <dt>ENV</dt><dd>1.2 ms · 331 ms · 87&nbsp;% · 78 ms</dd>
+              <dt>MOD</dt><dd>route 6, ENV → CUT: <b>+15&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 47&nbsp;% · <b>DELAY</b> 39&nbsp;% · <b>REVERB</b> 47&nbsp;%</dd>
+              <dt>VOICE</dt><dd>POLY</dd>
+            </dl>
+            <p class="trick"><strong>The movement</strong>There's no LFO here. The motion is DETUNE: two saws 40 cents apart beat
+              against each other, and in a chord every note beats at its own speed, so the sound shimmers. CHORUS at 47&nbsp;%
+              adds a slow sweep on top, and DELAY and REVERB smear it.</p>
+            <p><b>Slower still:</b> add MOD route 2 (LFO → CUT) at about +10&nbsp;% with LFO › RATE 0.2 Hz, or set LFO 2 ›
+              SYNC to 4BAR so the filter rises and falls over four bars.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">ANALOG · bass</span><h3>DNB REESE</h3></div>
+            <p>The tearing, phasing drum &amp; bass reese.</p>
+            <dl class="set">
+              <dt>OSC</dt><dd><b>WAVE</b> SAW · <b>DETUNE</b> 60 ct</dd>
+              <dt>FLT</dt><dd><b>CUTOFF</b> 355 Hz · <b>RES</b> 20&nbsp;% · <b>DRIVE</b> 31&nbsp;% · <b>KEYTRK</b> 25&nbsp;%</dd>
+              <dt>ENV</dt><dd>1.0 ms · 104 ms · 100&nbsp;% · 6.1 ms</dd>
+              <dt>LFO</dt><dd><b>RATE</b> 0.19 Hz</dd>
+              <dt>MOD</dt><dd>route 6, ENV → CUT: <b>+15&nbsp;%</b> · route 2, LFO → CUT: <b>+19&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>DIST</b> 20&nbsp;% · <b>CHORUS</b> 31&nbsp;% · <b>DELAY</b> 0&nbsp;% · <b>REVERB</b> 4&nbsp;%</dd>
+              <dt>VOICE</dt><dd>LEG</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>A wide DETUNE (60 ct) makes the two saws phase against each other: the
+              reese tear. The low CUTOFF keeps it a bass, and a very slow LFO (one cycle in about 5 s) opens and closes the
+              filter.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">ANALOG · bass</span><h3>SWELL SUB</h3></div>
+            <p>A sub whose filter opens over a third of a second and stays open.</p>
+            <dl class="set">
+              <dt>OSC</dt><dd><b>WAVE</b> SAW · <b>DETUNE</b> 8 ct</dd>
+              <dt>FLT</dt><dd><b>CUTOFF</b> 37 Hz · <b>RES</b> 24&nbsp;% · <b>DRIVE</b> 16&nbsp;%</dd>
+              <dt>ENV</dt><dd>331 ms · 104 ms · 100&nbsp;% · 4.3 ms</dd>
+              <dt>MOD</dt><dd>route 6, ENV → CUT: <b>+100&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>DIST</b> 16&nbsp;% · <b>CHORUS</b> 0&nbsp;% · <b>DELAY</b> 0&nbsp;% · <b>REVERB</b> 0&nbsp;%</dd>
+              <dt>VOICE</dt><dd>LEG</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>The filter is almost shut (37 Hz) and the envelope opens it at full
+              strength. The filter rides the ATTACK, so ATTACK sets how long the swell takes. With SUSTAIN at 100&nbsp;% it stays
+              open.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">ANALOG · bass</span><h3>GROWL WOB</h3></div>
+            <p>A driven growl with a fast, shallow wobble.</p>
+            <dl class="set">
+              <dt>OSC</dt><dd><b>WAVE</b> SAW · <b>DETUNE</b> 25 ct</dd>
+              <dt>FLT</dt><dd><b>CUTOFF</b> 392 Hz · <b>RES</b> 39&nbsp;% · <b>DRIVE</b> 59&nbsp;%</dd>
+              <dt>ENV</dt><dd>1.0 ms · 104 ms · 100&nbsp;% · 2.1 ms</dd>
+              <dt>LFO</dt><dd><b>RATE</b> 3.74 Hz</dd>
+              <dt>MOD</dt><dd>route 6, ENV → CUT: <b>0&nbsp;%</b> · route 2, LFO → CUT: <b>+28&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>DIST</b> 31&nbsp;% · <b>CHORUS</b> 0&nbsp;% · <b>DELAY</b> 0&nbsp;% · <b>REVERB</b> 0&nbsp;%</dd>
+              <dt>DRIVE</dt><dd><b>TYPE</b> HARD</dd>
+              <dt>VOICE</dt><dd>LEG</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>Lots of DRIVE into a resonant filter makes the growl, and a fast LFO on the
+              cutoff makes it talk. For a wobble that follows the tempo, set LFO 2 › SYNC to 1/8 or 8T instead of RATE.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">ANALOG · bass</span><h3>LASER DIVE</h3></div>
+            <p>Dives in pitch as it fades, through a slow flanger: the neuro laser.</p>
+            <dl class="set">
+              <dt>OSC</dt><dd><b>WAVE</b> SAW · <b>DETUNE</b> 10 ct</dd>
+              <dt>FLT</dt><dd><b>CUTOFF</b> 583 Hz · <b>RES</b> 31&nbsp;% · <b>DRIVE</b> 24&nbsp;%</dd>
+              <dt>ENV</dt><dd>1.0 ms · 3.89 s · 0&nbsp;% · 18 ms</dd>
+              <dt>MOD</dt><dd>route 6, ENV → CUT: <b>0&nbsp;%</b> · route 5, ENV → PITCH: <b>+76&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>DIST</b> 16&nbsp;% · <b>CHORUS</b> 0&nbsp;% · <b>DELAY</b> 0&nbsp;% · <b>REVERB</b> 0&nbsp;%</dd>
+              <dt>INSERT</dt><dd><b>TYPE</b> FLANG · <b>RATE</b> 0.37 Hz</dd>
+              <dt>VOICE</dt><dd>LEG</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>The envelope also bends the pitch (route 5). It starts high and falls over the
+              long DECAY to SUSTAIN 0&nbsp;%, so the note dives as it fades. The FLANG insert adds the metallic swoosh. A shorter
+              DECAY gives a faster dive.</p>
+          </article>
+        </div>
+
+        <p class="group">VOICE</p>
+        <div class="recipes">
+          <article class="recipe">
+            <div><span class="tag">VOICE · lead</span><h3>VOX LEAD</h3></div>
+            <p>A singing lead voice.</p>
+            <dl class="set">
+              <dt>VOWEL</dt><dd><b>VOWEL</b> 32 · <b>VOWEL2</b> 0 · <b>TALK</b> at its minimum (off) · <b>PITCH</b> +2 st</dd>
+              <dt>TONE</dt><dd><b>BUZZ</b> 71&nbsp;% · <b>BREATH</b> 6&nbsp;% · <b>Q</b> 57&nbsp;% · <b>RANDOM</b> 0&nbsp;%</dd>
+              <dt>ENV</dt><dd>1.5 ms · 160 ms · 83&nbsp;% · 54 ms</dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 16&nbsp;% · <b>DELAY</b> 35&nbsp;% · <b>REVERB</b> 31&nbsp;%</dd>
+              <dt>VOICE</dt><dd>LEG</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>VOWEL runs through A, E, I, O and U from 0 to 127 (32 is near E). BUZZ is
+              how hard the voice hums, and Q how sharp the vowel is. A fast attack and LEG let it sing lines.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">VOICE · pad</span><h3>MONK CHANT</h3></div>
+            <p>A low chant whose mouth opens on every note.</p>
+            <dl class="set">
+              <dt>VOWEL</dt><dd><b>VOWEL</b> 95 · <b>VOWEL2</b> 0 · <b>TALK</b> 1.05 s · <b>PITCH</b> −5 st</dd>
+              <dt>TONE</dt><dd><b>BUZZ</b> 63&nbsp;% · <b>BREATH</b> 9&nbsp;% · <b>Q</b> 63&nbsp;% · <b>RANDOM</b> 0&nbsp;%</dd>
+              <dt>ENV</dt><dd>38 ms · 331 ms · 91&nbsp;% · 476 ms</dd>
+              <dt>LFO</dt><dd><b>RATE</b> 3.74 Hz · <b>FADE</b> 1.05 s</dd>
+              <dt>MOD</dt><dd>route 1, LFO → PITCH: <b>+12&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 16&nbsp;% · <b>DELAY</b> 8&nbsp;% · <b>REVERB</b> 87&nbsp;%</dd>
+              <dt>VOICE</dt><dd>LEG</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>TALK glides from VOWEL (95, an "O") to VOWEL2 (0, an "A") over about a
+              second after each note starts: "oh-ah". The vibrato fades in over the same second, and REVERB at 87&nbsp;% gives
+              the stone hall.</p>
+          </article>
+        </div>
+
+        <p class="group">TRIO</p>
+        <div class="recipes">
+          <article class="recipe">
+            <div><span class="tag">TRIO · bass</span><h3>TRIO REESE</h3></div>
+            <p>A three-oscillator reese, heavier than ANALOG's.</p>
+            <dl class="set">
+              <dt>OSC</dt><dd><b>WAVE</b> SAW3 · <b>PITCH2</b> 0 st · <b>PITCH3</b> −12 st · <b>DETUNE</b> 25 ct</dd>
+              <dt>TONE</dt><dd><b>MODE</b> LP · <b>CUTOFF</b> 455 Hz · <b>RES</b> 24&nbsp;% · <b>PW</b> 50&nbsp;%</dd>
+              <dt>ENV</dt><dd>1.0 ms · 104 ms · 100&nbsp;% · 6.1 ms</dd>
+              <dt>LFO</dt><dd><b>RATE</b> 0.16 Hz</dd>
+              <dt>MOD</dt><dd>route 6, ENV → CUT: <b>+7&nbsp;%</b> · route 2, LFO → CUT: <b>+15&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>DIST</b> 16&nbsp;% · <b>CHORUS</b> 24&nbsp;% · <b>DELAY</b> 0&nbsp;% · <b>REVERB</b> 4&nbsp;%</dd>
+              <dt>VOICE</dt><dd>LEG</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>Three saws detuned against each other, the third an octave down for weight.
+              The same very slow filter LFO as DNB REESE breathes through it.</p>
+          </article>
+        </div>
+
+        <p class="group">GRAIN</p>
+        <div class="recipes">
+          <article class="recipe">
+            <div><span class="tag">GRAIN · pad</span><h3>FOREST AIR</h3></div>
+            <p>A breathy, drifting atmosphere.</p>
+            <dl class="set">
+              <dt>GRAIN</dt><dd><b>SOURCE</b> FLUTE · <b>POS</b> 31&nbsp;% · <b>SIZE</b> 55&nbsp;% · <b>DENSITY</b> 71&nbsp;%</dd>
+              <dt>SPRAY</dt><dd><b>PITCH</b> +12 st · <b>SPREAD</b> 55&nbsp;% · <b>RANDOM</b> 39&nbsp;% · <b>TONE</b> 71&nbsp;%</dd>
+              <dt>ENV</dt><dd>78 ms · 683 ms · 91&nbsp;% · 683 ms</dd>
+              <dt>LFO</dt><dd><b>RATE</b> 0.41 Hz</dd>
+              <dt>MOD</dt><dd>route 3, LFO → SHAPE: <b>+31&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 39&nbsp;% · <b>DELAY</b> 39&nbsp;% · <b>REVERB</b> 71&nbsp;%</dd>
+              <dt>VOICE</dt><dd>POLY</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>A flute cut into small overlapping grains, an octave up, sounds like air.
+              In GRAIN, SHAPE moves the reading position (POS), so the slow LFO walks the grains back and forth through the flute
+              and the sound keeps changing.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">GRAIN · pad</span><h3>WRAITH</h3></div>
+            <p>A ghostly, smeared drone.</p>
+            <dl class="set">
+              <dt>GRAIN</dt><dd><b>SOURCE</b> SAX · <b>POS</b> 16&nbsp;% · <b>SIZE</b> 55&nbsp;% · <b>DENSITY</b> 63&nbsp;%</dd>
+              <dt>SPRAY</dt><dd><b>PITCH</b> −5 st · <b>SPREAD</b> 71&nbsp;% · <b>RANDOM</b> 63&nbsp;% · <b>TONE</b> 43&nbsp;%</dd>
+              <dt>ENV</dt><dd>683 ms · 683 ms · 94&nbsp;% · 982 ms</dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 31&nbsp;% · <b>DELAY</b> 31&nbsp;% · <b>REVERB</b> 79&nbsp;%</dd>
+              <dt>VOICE</dt><dd>POLY</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>Sax grains pitched down, with high RANDOM and SPREAD scattering them, so no
+              two moments sound the same. TONE at 43&nbsp;% darkens it and the long ATTACK lets it fade in.</p>
+          </article>
+        </div>
+
+        <p class="group">NOISE</p>
+        <div class="recipes">
+          <article class="recipe">
+            <div><span class="tag">NOISE · fx</span><h3>PLASMA</h3></div>
+            <p>A crackling, pitched energy tone.</p>
+            <dl class="set">
+              <dt>SOURCE</dt><dd><b>MODE</b> META · <b>COLOR</b> 0&nbsp;% · <b>CUTOFF</b> 2.5 kHz · <b>RES</b> 71&nbsp;%</dd>
+              <dt>MOVE</dt><dd><b>KEYTRK</b> 79&nbsp;% · <b>LEN</b> 93 · <b>DRIFT</b> 63&nbsp;% · <b>CLK</b> 0</dd>
+              <dt>ENV</dt><dd>78 ms · 683 ms · 87&nbsp;% · 683 ms</dd>
+              <dt>LFO</dt><dd><b>RATE</b> 0.95 Hz</dd>
+              <dt>MOD</dt><dd>route 2, LFO → CUT: <b>+28&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 24&nbsp;% · <b>DELAY</b> 24&nbsp;% · <b>REVERB</b> 63&nbsp;%</dd>
+              <dt>VOICE</dt><dd>POLY</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>META plays a short metallic pattern at the key's pitch. A resonant filter
+              (RES 71&nbsp;%) that follows the keys (KEYTRK) makes it ring, and the LFO sweeps it about once a second. DRIFT
+              wanders the filter at random on top.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">NOISE · fx</span><h3>VOID WIND</h3></div>
+            <p>A dark wind that howls up and down.</p>
+            <dl class="set">
+              <dt>SOURCE</dt><dd><b>MODE</b> META · <b>COLOR</b> 16&nbsp;% · <b>CUTOFF</b> 355 Hz · <b>RES</b> 79&nbsp;%</dd>
+              <dt>MOVE</dt><dd><b>KEYTRK</b> 47&nbsp;% · <b>LEN</b> 127B · <b>DRIFT</b> 87&nbsp;% · <b>CLK</b> 0</dd>
+              <dt>ENV</dt><dd>683 ms · 683 ms · 94&nbsp;% · 982 ms</dd>
+              <dt>LFO</dt><dd><b>RATE</b> 0.24 Hz</dd>
+              <dt>MOD</dt><dd>route 2, LFO → CUT: <b>+39&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 31&nbsp;% · <b>DELAY</b> 24&nbsp;% · <b>REVERB</b> 79&nbsp;%</dd>
+              <dt>VOICE</dt><dd>POLY</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>A low, very resonant filter swept deep and slowly (one cycle in about 4 s),
+              with a strong DRIFT so the gusts never repeat exactly.</p>
+          </article>
+
+          <article class="recipe">
+            <div><span class="tag">NOISE · fx</span><h3>SPECTRE</h3></div>
+            <p>A wavering, ghostly tone.</p>
+            <dl class="set">
+              <dt>SOURCE</dt><dd><b>MODE</b> META · <b>COLOR</b> 24&nbsp;% · <b>CUTOFF</b> 583 Hz · <b>RES</b> 71&nbsp;%</dd>
+              <dt>MOVE</dt><dd><b>KEYTRK</b> 63&nbsp;% · <b>LEN</b> 63 · <b>DRIFT</b> 79&nbsp;% · <b>CLK</b> 0</dd>
+              <dt>ENV</dt><dd>683 ms · 683 ms · 94&nbsp;% · 982 ms</dd>
+              <dt>LFO</dt><dd><b>RATE</b> 0.24 Hz</dd>
+              <dt>MOD</dt><dd>route 1, LFO → PITCH: <b>+6&nbsp;%</b></dd>
+              <dt>FX</dt><dd><b>CHORUS</b> 39&nbsp;% · <b>DELAY</b> 31&nbsp;% · <b>REVERB</b> 79&nbsp;%</dd>
+              <dt>VOICE</dt><dd>POLY</dd>
+            </dl>
+            <p class="trick"><strong>The trick</strong>Close to VOID WIND, but the slow LFO bends the pitch instead of the filter.
+              With KEYTRK on, the ringing filter follows the pitch, so the whole tone slowly wavers like a voice.</p>
+          </article>
+        </div>
       </section>
     </main>
   </div>
