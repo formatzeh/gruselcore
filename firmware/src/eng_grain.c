@@ -450,11 +450,7 @@ static const preset_t GRAIN_PRESETS[] = {
     {"GHOST CLOUD", {1, 60, 100, 80, -12, 60, 40, 60}, {80, 90, 120, 95}, 0, 0, FX(0, 40, 30, 90), TAG(PT_PAD), TRIM(-15)},
     {"FOREST AIR", {2, 40, 70, 90, 12, 70, 50, 90}, {60, 90, 115, 90}, 0, 0, FX(0, 50, 50, 90), MORE({P_LRATE, 40}, {P_LD_SHP, 20}), TAG(PT_PAD), TRIM(-11)},
     /* (GruselCore) 2026-11-02, round 2: atmospheres in the way of VOID WIND, FOREST AIR, GHOST CLOUD */
-    {"ABYSS", {3, 50, 120, 70, -24, 40, 20, 50}, {100, 90, 120, 98}, 0, 0, FX(0, 30, 20, 100), MORE({P_LRATE, 20}, {P_LD_SHP, 25}), TAG(PT_PAD), TRIM(-11)},
-    {"MIST VEIL", {2, 30, 110, 90, 0, 80, 30, 70}, {90, 90, 120, 95}, 0, 0, FX(0, 60, 30, 95), TAG(PT_PAD), TRIM(-23)},
     {"SPORE DRIFT", {2, 60, 40, 60, 12, 100, 60, 80}, {70, 90, 110, 90}, 0, 0, FX(0, 30, 60, 90), MORE({P_LRATE, 25}, {P_LD_SHP, 30}), TAG(PT_PAD), TRIM(-9)},
-    {"DEAD PIANO", {0, 70, 100, 70, -12, 50, 30, 45}, {80, 90, 120, 95}, 0, 0, FX(0, 40, 30, 100), TAG(PT_PAD), TRIM(-9)},
-    {"MOSS BED", {2, 45, 90, 85, -12, 60, 15, 60}, {90, 90, 120, 95}, 0, 0, FX(0, 70, 20, 90), MORE({P_LRATE, 15}, {P_LD_FLT, 15}), TAG(PT_PAD), TRIM(-23)},
     {"WRAITH", {3, 20, 70, 80, -5, 90, 80, 55}, {90, 90, 120, 95}, 0, 0, FX(0, 40, 40, 100), TAG(PT_PAD), TRIM(-11)},
     {"STAR DUST", {2, 80, 30, 98, 24, 110, 50, 100}, {60, 90, 110, 90}, 0, 0, FX(0, 40, 70, 90), TAG(PT_PAD), TRIM(-11)},
 };

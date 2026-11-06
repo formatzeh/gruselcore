@@ -180,6 +180,7 @@ static uint32_t eng_step_for(uint32_t k, uint32_t e, int32_t dir)   /* eng_step 
 }
 
 /* the parts at power-on (engine, preset; the sequencers empty): bass, pad, lead, drums, (phase 6) a sample sound
- * and a second kit: ANALOG ACID, (GruselCore) FM6 GLASS KEYS (FM6 PAD removed), LOFI ARP 8BIT, DRUM KIT, PIANO (hidden), DRUM KIT */
-static const uint8_t TRK_DEF[NPART][2] = {{0, 4}, {ENGI_FM6, 2}, {3, 0}, {ENGI_DRUM, 0}, {ENGI_SAMPLE, 0}, {ENGI_DRUM, 0}};
+ * and a second kit: ANALOG ACID, (GruselCore) ANALOG SOFT PAD (FM6 GLASS KEYS removed), LOFI ARP 8BIT, DRUM KIT, PIANO
+ * (hidden), DRUM KIT */
+static const uint8_t TRK_DEF[NPART][2] = {{0, 4}, {0, 1}, {3, 0}, {ENGI_DRUM, 0}, {ENGI_SAMPLE, 0}, {ENGI_DRUM, 0}};
 static uint32_t trk_def_engine(uint32_t i) { return TRK_DEF[i % NPART][0]; }

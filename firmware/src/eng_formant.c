@@ -214,11 +214,9 @@ static const preset_t FORMANT_PRESETS[] = {
     {"CHOIR AAH", {0, 0, 0, 0, 40, 22, 60, 0}, {85, 90, 115, 95}, 0, 0, FX(0, 70, 15, 90), TAG(PT_PAD)},
     {"VOX LEAD", {32, 0, 0, 2, 90, 8, 72, 0}, {6, 70, 105, 55}, 0, 1, FX(0, 20, 45, 40), TAG(PT_LEAD)},
     {"WOW BASS", {95, 0, 68, 0, 100, 0, 80, 0}, {0, 70, 70, 30}, 0, 1, FX(10, 0, 10, 10), TAG(PT_BASS)},
-    {"WHISPER", {0, 95, 88, 3, 50, 120, 50, 0}, {50, 90, 110, 90}, 0, 0, FX(0, 40, 30, 70), TAG(PT_FX)},
     /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
     {"CRYPT CHOIR", {112, 0, 0, -3, 34, 30, 64, 14}, {90, 90, 118, 100}, 0, 0, FX(0, 75, 10, 110), MORE({P_LRATE, 70}, {P_LD_PIT, 8}), TAG(PT_PAD)},
     {"MONK CHANT", {95, 0, 96, -5, 80, 12, 80, 0}, {50, 80, 115, 85}, 0, 1, FX(0, 20, 10, 110), MORE({P_LRATE, 82}, {P_LFADE, 96}, {P_LD_PIT, 8}), TAG(PT_PAD), TRIM(-8)},
-    {"DREAM CHOIR", {0, 20, 0, 3, 55, 45, 55, 8}, {80, 90, 118, 95}, 0, 0, FX(0, 90, 30, 80), TAG(PT_PAD)},
     /* (GruselCore) 2026-11-02: dark, hypnotic sounds for the genres; jungle / DnB basses */
     {"TALK WOBBLE", {95, 0, 68, 0, 100, 0, 80, 0}, {0, 70, 127, 20}, 0, 1, FX(20, 0, 0, 5), MORE({P_LSYNC, 6}, {P_LD_FLT, 50}), TAG(PT_BASS)},
     {"DARK CHANT", {112, 20, 90, -5, 60, 30, 70, 10}, {70, 90, 118, 95}, 0, 0, FX(0, 40, 30, 100), MORE({P_LRATE, 40}, {P_LD_FLT, 15}), TAG(PT_PAD)},

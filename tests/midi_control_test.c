@@ -294,7 +294,7 @@ static int cc_map_test(void)
     };
     int bad = 0, ok = 1; uint32_t i, e; int16_t before[P_COUNT];
     midi_test_reset();
-    bad += check("power-on parts: ANALOG, FM6, LOFI, DRUM, SAMPLE, DRUM", trk[0].eng_req == 0u && trk[1].eng_req == ENGI_FM6 &&
+    bad += check("power-on parts: ANALOG, ANALOG, LOFI, DRUM, SAMPLE, DRUM", trk[0].eng_req == 0u && trk[1].eng_req == 0u &&
                  trk[2].eng_req == 3u && trk[3].eng_req == ENGI_DRUM && trk[4].eng_req == ENGI_SAMPLE && trk[5].eng_req == ENGI_DRUM);
     for (i = 0; i < NELEM(COMMON); i++) {
         queued(0xB0, COMMON[i].cc, 127, 1);
@@ -311,6 +311,7 @@ static int cc_map_test(void)
     bad += check("CC10 PAN: 0 left, 64 centre, 127 right", ok);
     queued(0xB0, 74, 127, 1); queued(0xB0, 71, 0, 1);
     bad += check("CC74 / CC71 on ANALOG: CUT / RES", trk[0].p[P_E4] == 127 && trk[0].p[P_E5] == 0);
+    trk[1].eng_req = trk[1].engine = ENGI_FM6;        /* (GruselCore) track 2 powers on as ANALOG SOFT PAD */
     queued(0xB1, 74, 64, 1); queued(0xB1, 74, 127, 1);
     bad += check("CC74 on FM6 (channel 2): MLVL, bipolar (127: +63)", trk[1].p[P_E2] == 63);
     memcpy(before, trk[1].p, sizeof before); queued(0xB1, 71, 99, 1);

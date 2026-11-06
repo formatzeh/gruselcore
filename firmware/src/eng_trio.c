@@ -348,21 +348,16 @@ static const preset_t TRIO_PRESETS[] = {
     {"FAT BASS", {0, 0, -12, 9, 0, 62, 45, 64}, {0, 62, 60, 25}, 40, 1, FX(10, 0, 10, 10), TAG(PT_BASS)},
     {"ARP LEAD", {2, 12, 0, 4, 0, 88, 25, 32}, {0, 60, 90, 30}, 8, 0, FX(0, 0, 35, 20), TAG(PT_LEAD)},
     {"SYNC LEAD", {9, 9, 0, 0, 0, 82, 30, 64}, {2, 70, 100, 40}, 18, 1, FX(0, 10, 40, 25), TAG(PT_LEAD)},
-    /* (Skiff) for the themes: CRYPT (dungeon synth), NEON (synthwave), QUARK (particles) */
-    {"NEON ARP", {1, 12, 0, 5, 0, 70, 35, 40}, {0, 66, 0, 45}, 36, 0, FX(0, 25, 70, 25), TAG(PT_PLUCK)},
     /* (Skiff phase 9) more for every engine: basses, kits */
     {"DIRTY BASS", {1, -12, 0, 8, 1, 62, 85, 30}, {0, 50, 50, 20}, 35, 1, FX(72, 0, 5, 5), MORE({P_DTYPE, 1}, {P_DTONE, -10}), TAG(PT_BASS)},
     /* (GruselCore) 2026-11-02: dark, hypnotic sounds for the genres; jungle / DnB basses */
-    {"TRIBE BASS", {2, 0, -12, 5, 0, 50, 50, 64}, {0, 52, 20, 20}, 40, 1, FX(30, 0, 0, 0), MORE({P_DTYPE, 1}), TAG(PT_BASS), TRIM(5)},
     {"MENTAL SAW", {0, 12, 7, 20, 0, 70, 50, 64}, {0, 55, 0, 30}, 30, 0, FX(50, 0, 40, 20), MORE({P_DTYPE, 4}), TAG(PT_PLUCK), TRIM(10)},
     {"SYNC SCREAM", {9, 19, 0, 0, 0, 90, 30, 64}, {0, 70, 90, 40}, 20, 1, FX(40, 0, 50, 30), MORE({P_DTYPE, 1}, {P_GLIDE, 20}), TAG(PT_LEAD)},
     {"RING DARK", {12, 7, 0, 0, 0, 84, 40, 64}, {0, 60, 30, 40}, 30, 1, FX(45, 20, 70, 60), TAG(PT_LEAD)},
-    {"DARK FIFTH", {3, 7, -12, 10, 0, 60, 40, 64}, {0, 60, 0, 45}, 35, 0, FX(10, 20, 70, 60), TAG(PT_PLUCK), TRIM(8)},
     {"TRIO SUPER", {0, 7, 12, 30, 0, 90, 15, 64}, {5, 80, 110, 70}, 10, 0, FX(0, 70, 50, 70), TAG(PT_LEAD)},
     {"HOOVER", {0, 12, -12, 40, 0, 80, 20, 64}, {10, 80, 110, 60}, 10, 1, FX(20, 60, 30, 40), MORE({P_GLIDE, 40}, {P_LRATE, 70}, {P_LD_PIT, 10}), TAG(PT_LEAD)},
     {"TRIO REESE", {0, 0, -12, 25, 0, 55, 30, 64}, {0, 64, 127, 25}, 5, 1, FX(20, 30, 0, 5), MORE({P_LRATE, 22}, {P_LD_FLT, 10}), TAG(PT_BASS)},
     {"TRIO WOBBLE", {1, 0, -12, 10, 0, 50, 80, 40}, {0, 64, 127, 20}, 0, 1, FX(40, 0, 0, 5), MORE({P_LSYNC, 7}, {P_LD_FLT, 48}, {P_DTYPE, 1}), TAG(PT_BASS)},
-    {"BP WOBBLE", {0, 7, -12, 12, 1, 60, 90, 64}, {0, 64, 127, 20}, 0, 1, FX(45, 0, 0, 5), MORE({P_LSYNC, 6}, {P_LD_FLT, 40}, {P_DTYPE, 2}), TAG(PT_BASS)},
     {"PWM WOBBLE", {1, 0, -12, 6, 0, 56, 60, 64}, {0, 64, 127, 20}, 0, 1, FX(30, 0, 0, 5), MORE({P_LSYNC, 8}, {P_LD_SHP, 50}, {P_LD_FLT, 20}), TAG(PT_BASS)},
     /* (GruselCore, 2026-11-05) modelled on the user's reference sounds (measured, no audio of them here); kept after the trial */
     {"GATE REESE", {0, 0, -12, 20, 0, 58, 30, 64}, {0, 64, 127, 20}, 0, 1, FX(20, 30, 0, 0), MORE({P_LSYNC, 8}, {P_LWAVE, 3}, {P_LD_AMP, 90}, {P_LD_FLT, 20}), TAG(PT_BASS), TRIM(6)},   /* gated in 16ths (a square LFO: the SLICER is the track's) */

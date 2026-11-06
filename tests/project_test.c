@@ -796,8 +796,8 @@ int main(void)
         w1.sum = proj_hash(&w1, sizeof w1 - 4u);
         memcpy(&buf, &w1, sizeof w1);
         ok = proj_import(&c, &buf, (int)sizeof w1) && c.t[0].engine == ENGI_FM6 && c.t[0].preset == fm6_preset_of_slot(FM4_TO_FM6[1]) &&
-             c.t[1].engine == ENGI_FM6 && c.t[1].preset == PROJ_DEF_SOUND;   /* (track 2: the power-on FM6 PAD) */
-        bad += check("FUN1 with DIGITAL: track 1 FM6 (BELL), track 2 the power-on sound (FM6 now)", ok);
+             c.t[1].engine == trk_def_engine(1) && c.t[1].preset == PROJ_DEF_SOUND;   /* (track 2: the power-on sound) */
+        bad += check("FUN1 with DIGITAL: track 1 FM6 (BELL), track 2 the power-on sound (ANALOG SOFT PAD now)", ok);
 #undef FM4_OK
     }
 #endif
